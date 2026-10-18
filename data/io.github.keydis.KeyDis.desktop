@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=KeyDis
+GenericName=Redis/Valkey Client
+Comment=Native Redis and Valkey client for KDE
+Exec=keydis %u
+Icon=keydis
+Terminal=false
+Categories=Development;Database;Qt;KDE;
+Keywords=Redis;Valkey;Database;Key-Value;GUI;
+StartupNotify=true
+StartupWMClass=keydis
+X-KDE-StartupNotify=true

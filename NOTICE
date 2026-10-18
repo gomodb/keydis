@@ -1,0 +1,46 @@
+KeyDis
+Copyright (c) 2026 KeyDis contributors
+
+KeyDis is licensed under the MIT License. See LICENSE and LICENSES/MIT.txt.
+
+Portions derived from NutSync
+-----------------------------
+
+Portions of this software are derived from NutSync:
+
+  Source:    https://github.com/gomodb/nutsync
+  Commit:    f7fd60730110f942911e56eefa8c6771abb3eb2a
+  Copyright: 2026 sunhowcn
+  Original license: GPL-3.0-or-later
+  Relicensed: MIT, 2026-10-18, by the NutSync copyright holder for KeyDis
+  Adapted:   namespaces, XDG paths, logging policy, diagnostics fields
+
+The NutSync repository remains available under GPL-3.0-or-later. The
+relicensed portions in KeyDis are distributed under the MIT License with the
+provenance above. If you are not the copyright holder, do not assume this
+relicensing applies to other NutSync code or third-party material.
+
+hiredis
+-------
+
+KeyDis links against hiredis v1.5.0 for RESP2/RESP3 parsing.
+
+  Source:  https://github.com/redis/hiredis
+  Version: v1.5.0 (commit 5bb7f030f6631b243438cf0fdd3be84352b905bb)
+  License: BSD-3-Clause
+
+Copyright (c) 2009-2011, Salvatore Sanfilippo <antirez at gmail dot com>
+Copyright (c) 2010-2011, Pieter Noordhuis <pcnoordhuis at gmail dot com>
+All rights reserved.
+
+See LICENSES/BSD-3-Clause.txt for the full license text.
+
+Qt 6 / KDE Frameworks 6
+-----------------------
+
+KeyDis dynamically links Qt 6 and KDE Frameworks 6 under their respective
+LGPL terms. Distribution packages must include the applicable license texts
+and information about obtaining the corresponding library sources.
+
+This project is not affiliated with Redis Ltd., the Valkey project, or KDE e.V.
+"Redis" and "Valkey" are used only to describe protocol compatibility.

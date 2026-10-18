@@ -1,0 +1,1345 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 KeyDis contributors
+
+#include "app/mainwindow.h"
+
+#include "core/conn/profilestore.h"
+#include "core/conn/sentinelresolver.h"
+#include "core/net/sshtunnel.h"
+#include "core/security/secretstore.h"
+#include "ui/dialogs/profiledialog.h"
+#include "core/keyspace/keyscanner.h"
+#include "core/resp/commandencoder.h"
+#include "ui/dashboard/dashboardpage.h"
+#include "ui/tools/servertools.h"
+#include "ui/models/keytablemodel.h"
+#include "ui/models/namespacetreemodel.h"
+#include "ui/values/valuepanel.h"
+
+#include <QCheckBox>
+#include <QDockWidget>
+#include <QClipboard>
+#include <QMenu>
+
+#include <algorithm>
+#include <functional>
+#include <QComboBox>
+#include <QDir>
+#include <QFile>
+#include <QFontDatabase>
+#include <QGroupBox>
+#include <QGuiApplication>
+#include <QHBoxLayout>
+#include <QHeaderView>
+#include <QInputDialog>
+#include <QItemSelectionModel>
+#include <QLabel>
+#include <QLineEdit>
+#include <QListWidget>
+#include <QMessageBox>
+#include <QPlainTextEdit>
+#include <QPushButton>
+#include <QScrollBar>
+#include <QSignalBlocker>
+#include <QStackedWidget>
+#include <QTreeView>
+#include <QSpinBox>
+#include <QStandardPaths>
+#include <QSplitter>
+#include <QTabWidget>
+#include <QTableView>
+#include <QTemporaryFile>
+#include <QUuid>
+#include <QVBoxLayout>
+
+namespace KeyDis {
+
+MainWindow::MainWindow(QWidget *parent)
+    : KXmlGuiWindow(parent)
+{
+    setWindowTitle(QStringLiteral("KeyDis"));
+    resize(1200, 800);
+    buildUi();
+
+    loadProfiles();
+
+    QString uiFile = QStandardPaths::locate(QStandardPaths::GenericDataLocation,
+                                            QStringLiteral("keydis/keydisui.rc"));
+    if (uiFile.isEmpty()) {
+        const QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+        QDir().mkpath(dataDir);
+        const QString candidate = dataDir + QStringLiteral("/keydisui.rc");
+        if (!QFile::exists(candidate))
+            QFile::copy(QStringLiteral(":/keydis/keydisui.rc"), candidate);
+        if (QFile::exists(candidate))
+            uiFile = candidate;
+    }
+    if (uiFile.isEmpty()) {
+        m_uiFile = new QTemporaryFile(QDir::tempPath() + QStringLiteral("/keydisui-XXXXXX.rc"), this);
+        if (m_uiFile->open()) {
+            QFile resource(QStringLiteral(":/keydis/keydisui.rc"));
+            if (resource.open(QIODevice::ReadOnly))
+                m_uiFile->write(resource.readAll());
+            m_uiFile->close();
+            uiFile = m_uiFile->fileName();
+        }
+    }
+    setupGUI(Default, uiFile);
+}
+
+MainWindow::~MainWindow()
+{
+    if (m_sshTunnel)
+        m_sshTunnel->stop();
+}
+
+void MainWindow::setConnectionParameters(const QString &host, quint16 port, bool tls,
+                                         const QString &username, const QString &password, int db)
+{
+    m_hostEdit->setText(host);
+    m_portSpin->setValue(port);
+    m_tlsCheck->setChecked(tls);
+    m_usernameEdit->setText(username);
+    m_passwordEdit->setText(password);
+    m_dbSpin->setValue(db);
+}
+
+void MainWindow::connectNow()
+{
+    if (!m_connection.isReady())
+        connectOrDisconnect();
+}
+
+void MainWindow::showTab(const QString &name)
+{
+    if (name == QLatin1String("browser"))
+        m_tabs->setCurrentIndex(1);
+    else if (name == QLatin1String("cli"))
+        m_tabs->setCurrentIndex(2);
+    else if (name == QLatin1String("tools"))
+        m_tabs->setCurrentIndex(3);
+    else
+        m_tabs->setCurrentIndex(0);
+}
+
+void MainWindow::buildUi()
+{
+    auto *central = new QWidget(this);
+    auto *layout = new QVBoxLayout(central);
+
+    auto *connectionBox = new QGroupBox(tr("Connection"), central);
+    auto *connectionLayout = new QHBoxLayout(connectionBox);
+
+    m_hostEdit = new QLineEdit(QStringLiteral("127.0.0.1"), connectionBox);
+    m_hostEdit->setObjectName(QStringLiteral("hostEdit"));
+    m_hostEdit->setPlaceholderText(tr("Host"));
+    connectionLayout->addWidget(m_hostEdit, 2);
+
+    m_portSpin = new QSpinBox(connectionBox);
+    m_portSpin->setObjectName(QStringLiteral("portSpin"));
+    m_portSpin->setRange(1, 65535);
+    m_portSpin->setValue(6379);
+    connectionLayout->addWidget(m_portSpin);
+
+    m_tlsCheck = new QCheckBox(tr("TLS"), connectionBox);
+    m_tlsCheck->setObjectName(QStringLiteral("tlsCheck"));
+    connectionLayout->addWidget(m_tlsCheck);
+
+    m_readOnlyCheck = new QCheckBox(tr("Read-only"), connectionBox);
+    m_readOnlyCheck->setObjectName(QStringLiteral("readOnlyCheck"));
+    m_readOnlyCheck->setToolTip(tr("Disable editing and CLI write access for this session"));
+    connectionLayout->addWidget(m_readOnlyCheck);
+
+    m_usernameEdit = new QLineEdit(connectionBox);
+    m_usernameEdit->setObjectName(QStringLiteral("usernameEdit"));
+    m_usernameEdit->setPlaceholderText(tr("ACL user (optional)"));
+    connectionLayout->addWidget(m_usernameEdit, 1);
+
+    m_passwordEdit = new QLineEdit(connectionBox);
+    m_passwordEdit->setObjectName(QStringLiteral("passwordEdit"));
+    m_passwordEdit->setPlaceholderText(tr("Password (optional)"));
+    m_passwordEdit->setEchoMode(QLineEdit::Password);
+    connectionLayout->addWidget(m_passwordEdit, 1);
+
+    m_dbSpin = new QSpinBox(connectionBox);
+    m_dbSpin->setObjectName(QStringLiteral("dbSpin"));
+    m_dbSpin->setRange(0, 15);
+    m_dbSpin->setPrefix(tr("DB "));
+    connectionLayout->addWidget(m_dbSpin);
+
+    m_connectButton = new QPushButton(tr("Connect"), connectionBox);
+    m_connectButton->setObjectName(QStringLiteral("connectButton"));
+    connectionLayout->addWidget(m_connectButton);
+
+    layout->addWidget(connectionBox);
+
+    m_statusLabel = new QLabel(tr("Disconnected"), central);
+    m_statusLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    layout->addWidget(m_statusLabel);
+
+    m_tabs = new QTabWidget(central);
+    m_tabs->setObjectName(QStringLiteral("tabs"));
+
+    m_dashboard = new DashboardPage(&m_connection, m_tabs);
+    m_tabs->addTab(m_dashboard, tr("Dashboard"));
+
+    auto *browser = new QWidget(m_tabs);
+    auto *browserLayout = new QVBoxLayout(browser);
+
+    auto *filterRow = new QHBoxLayout;
+
+    m_dbCombo = new QComboBox(browser);
+    m_dbCombo->setObjectName(QStringLiteral("dbCombo"));
+    for (int db = 0; db < 16; ++db)
+        m_dbCombo->addItem(tr("DB %1").arg(db), db);
+    filterRow->addWidget(m_dbCombo);
+
+    m_filterEdit = new QLineEdit(browser);
+    m_filterEdit->setObjectName(QStringLiteral("filterEdit"));
+    m_filterEdit->setPlaceholderText(tr("SCAN pattern, e.g. user:* or *session*"));
+    filterRow->addWidget(m_filterEdit, 1);
+
+    m_typeCombo = new QComboBox(browser);
+    m_typeCombo->setObjectName(QStringLiteral("typeCombo"));
+    m_typeCombo->addItem(tr("All types"), QStringLiteral("all"));
+    m_typeCombo->addItem(QStringLiteral("string"), QStringLiteral("string"));
+    m_typeCombo->addItem(QStringLiteral("hash"), QStringLiteral("hash"));
+    m_typeCombo->addItem(QStringLiteral("list"), QStringLiteral("list"));
+    m_typeCombo->addItem(QStringLiteral("set"), QStringLiteral("set"));
+    m_typeCombo->addItem(QStringLiteral("zset"), QStringLiteral("zset"));
+    m_typeCombo->addItem(QStringLiteral("stream"), QStringLiteral("stream"));
+    filterRow->addWidget(m_typeCombo);
+
+    m_viewMode = new QComboBox(browser);
+    m_viewMode->setObjectName(QStringLiteral("viewMode"));
+    m_viewMode->addItem(tr("Tree"), 0);
+    m_viewMode->addItem(tr("List"), 1);
+    filterRow->addWidget(m_viewMode);
+
+    m_scanButton = new QPushButton(tr("Scan"), browser);
+    m_scanButton->setObjectName(QStringLiteral("scanButton"));
+    m_scanButton->setEnabled(false);
+    filterRow->addWidget(m_scanButton);
+
+    m_loadMoreButton = new QPushButton(tr("Load more"), browser);
+    m_loadMoreButton->setObjectName(QStringLiteral("loadMoreButton"));
+    m_loadMoreButton->setEnabled(false);
+    filterRow->addWidget(m_loadMoreButton);
+
+    m_indexAllButton = new QPushButton(tr("Index all"), browser);
+    m_indexAllButton->setObjectName(QStringLiteral("indexAllButton"));
+    m_indexAllButton->setToolTip(tr("Scan the entire DB to make namespace counts exact"));
+    m_indexAllButton->setEnabled(false);
+    filterRow->addWidget(m_indexAllButton);
+    browserLayout->addLayout(filterRow);
+
+    m_scanStatus = new QLabel(tr("Not connected"), browser);
+    m_scanStatus->setObjectName(QStringLiteral("scanStatus"));
+    browserLayout->addWidget(m_scanStatus);
+
+    auto *splitter = new QSplitter(Qt::Horizontal, browser);
+    auto *keyPane = new QWidget(splitter);
+    keyPane->setMinimumWidth(380);
+    auto *keyLayout = new QVBoxLayout(keyPane);
+    keyLayout->setContentsMargins(0, 0, 0, 0);
+
+    m_keyViews = new QStackedWidget(keyPane);
+    m_keyViews->setObjectName(QStringLiteral("keyViews"));
+
+    m_keyTable = new QTableView(m_keyViews);
+    m_keyTable->setObjectName(QStringLiteral("keyTable"));
+    m_model = new KeyTableModel(this);
+    m_keyTable->setModel(m_model);
+    m_keyTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_keyTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    m_keyTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_keyTable->setAlternatingRowColors(true);
+    m_keyTable->setWordWrap(false);
+    m_keyTable->horizontalHeader()->setMinimumSectionSize(64);
+    m_keyTable->horizontalHeader()->setSectionResizeMode(KeyTableModel::KeyColumn,
+                                                        QHeaderView::Stretch);
+    m_keyTable->horizontalHeader()->setSectionResizeMode(KeyTableModel::TypeColumn,
+                                                        QHeaderView::Fixed);
+    m_keyTable->horizontalHeader()->setSectionResizeMode(KeyTableModel::TtlColumn,
+                                                        QHeaderView::Fixed);
+    m_keyTable->setColumnWidth(KeyTableModel::TypeColumn, 80);
+    m_keyTable->setColumnWidth(KeyTableModel::TtlColumn, 110);
+    m_keyTable->verticalHeader()->setVisible(false);
+
+    m_treeView = new QTreeView(m_keyViews);
+    m_treeView->setObjectName(QStringLiteral("keyTree"));
+    m_treeView->setUniformRowHeights(true);
+    m_treeView->setAlternatingRowColors(true);
+    m_treeView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_treeView->setSelectionMode(QAbstractItemView::SingleSelection);
+    m_treeView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_treeView->setIndentation(16);
+    m_treeModel = new NamespaceTreeModel(this);
+    m_treeView->setModel(m_treeModel);
+    m_treeView->header()->setMinimumSectionSize(64);
+    m_treeView->header()->setStretchLastSection(false);
+    m_treeView->header()->setSectionResizeMode(NamespaceTreeModel::NameColumn,
+                                               QHeaderView::Stretch);
+    m_treeView->header()->setSectionResizeMode(NamespaceTreeModel::TypeColumn,
+                                               QHeaderView::Fixed);
+    m_treeView->header()->setSectionResizeMode(NamespaceTreeModel::TtlColumn,
+                                               QHeaderView::Fixed);
+    m_treeView->setColumnWidth(NamespaceTreeModel::TypeColumn, 100);
+    m_treeView->setColumnWidth(NamespaceTreeModel::TtlColumn, 100);
+
+    m_keyViews->addWidget(m_treeView);
+    m_keyViews->addWidget(m_keyTable);
+    m_keyViews->setCurrentIndex(0);
+    keyLayout->addWidget(m_keyViews);
+    splitter->addWidget(keyPane);
+
+    m_valuePanel = new ValuePanel(&m_connection, splitter);
+    m_valuePanel->setObjectName(QStringLiteral("valuePanel"));
+    m_valuePanel->setMinimumWidth(420);
+    splitter->addWidget(m_valuePanel);
+    splitter->setStretchFactor(0, 2);
+    splitter->setStretchFactor(1, 3);
+    splitter->setSizes({500, 700});
+    browserLayout->addWidget(splitter, 1);
+
+    m_tabs->addTab(browser, tr("Browser"));
+
+    auto *cli = new QWidget(m_tabs);
+    auto *cliLayout = new QVBoxLayout(cli);
+    m_output = new QPlainTextEdit(cli);
+    m_output->setReadOnly(true);
+    m_output->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+    m_output->setMaximumBlockCount(10000);
+    cliLayout->addWidget(m_output, 1);
+
+    auto *commandLayout = new QHBoxLayout;
+    m_commandEdit = new QLineEdit(cli);
+    m_commandEdit->setPlaceholderText(tr("Command, e.g. PING / INFO / GET key"));
+    m_commandEdit->setEnabled(false);
+    commandLayout->addWidget(m_commandEdit, 1);
+    m_sendButton = new QPushButton(tr("Send"), cli);
+    m_sendButton->setEnabled(false);
+    commandLayout->addWidget(m_sendButton);
+    cliLayout->addLayout(commandLayout);
+    m_tabs->addTab(cli, tr("CLI"));
+
+    m_tools = new ServerToolsPage(&m_connection, m_tabs);
+    m_tabs->addTab(m_tools, tr("Tools"));
+
+    layout->addWidget(m_tabs, 1);
+    setCentralWidget(central);
+
+    auto *connectionsDock = new QDockWidget(tr("Connections"), this);
+    connectionsDock->setObjectName(QStringLiteral("connectionsDock"));
+    auto *connectionsPanel = new QWidget(connectionsDock);
+    auto *connectionsLayout = new QVBoxLayout(connectionsPanel);
+    connectionsLayout->setContentsMargins(6, 6, 6, 6);
+    m_profileList = new QListWidget(connectionsPanel);
+    m_profileList->setObjectName(QStringLiteral("profileList"));
+    m_profileList->setAlternatingRowColors(true);
+    connectionsLayout->addWidget(m_profileList, 1);
+    auto *profileButtons = new QHBoxLayout;
+    auto *newProfileButton = new QPushButton(tr("New"), connectionsPanel);
+    auto *editProfileButton = new QPushButton(tr("Edit"), connectionsPanel);
+    auto *deleteProfileButton = new QPushButton(tr("Delete"), connectionsPanel);
+    auto *connectProfileButton = new QPushButton(tr("Connect"), connectionsPanel);
+    profileButtons->addWidget(newProfileButton);
+    profileButtons->addWidget(editProfileButton);
+    profileButtons->addWidget(deleteProfileButton);
+    profileButtons->addWidget(connectProfileButton);
+    connectionsLayout->addLayout(profileButtons);
+    connectionsDock->setWidget(connectionsPanel);
+    addDockWidget(Qt::LeftDockWidgetArea, connectionsDock);
+
+    m_scanner = new KeyScanner(&m_connection, this);
+
+    connect(newProfileButton, &QPushButton::clicked, this, &MainWindow::createProfile);
+    connect(editProfileButton, &QPushButton::clicked, this, &MainWindow::editProfile);
+    connect(deleteProfileButton, &QPushButton::clicked, this, &MainWindow::deleteProfile);
+    connect(connectProfileButton, &QPushButton::clicked, this, &MainWindow::connectProfile);
+    connect(m_profileList, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem *) {
+        connectProfile();
+    });
+    connect(m_profileList, &QListWidget::currentItemChanged, this,
+            [this](QListWidgetItem *current, QListWidgetItem *) {
+                if (!current)
+                    return;
+                const QString id = current->data(Qt::UserRole).toString();
+                if (id.isEmpty())
+                    return;
+                for (const ConnectionProfile &profile : std::as_const(m_profiles)) {
+                    if (profile.id == id) {
+                        applyProfile(profile);
+                        break;
+                    }
+                }
+            });
+    connect(m_connectButton, &QPushButton::clicked, this, &MainWindow::connectOrDisconnect);
+    connect(m_sendButton, &QPushButton::clicked, this, &MainWindow::sendCommand);
+    connect(m_commandEdit, &QLineEdit::returnPressed, this, &MainWindow::sendCommand);
+    connect(m_scanButton, &QPushButton::clicked, this, &MainWindow::startScan);
+    connect(m_loadMoreButton, &QPushButton::clicked, this, &MainWindow::loadMore);
+    connect(m_indexAllButton, &QPushButton::clicked, this, [this] {
+        if (!m_connection.isReady() || m_scanner->isRunning())
+            return;
+        if (QMessageBox::question(
+                this, tr("Index all keys"),
+                tr("This scans the entire database and keeps every key in memory "
+                   "for exact namespace counts. Large databases can use a lot of memory.\n\n"
+                   "Continue?"))
+            != QMessageBox::Yes) {
+            return;
+        }
+        m_indexingAll = true;
+        m_model->clear();
+        m_treeModel->clear();
+        m_valuePanel->clearKey();
+        m_scanStatus->setText(tr("Indexing all keys..."));
+        m_scanButton->setEnabled(false);
+        m_loadMoreButton->setEnabled(false);
+        m_indexAllButton->setEnabled(false);
+        const QByteArray pattern = m_filterEdit->text().trimmed().isEmpty()
+            ? QByteArrayLiteral("*")
+            : m_filterEdit->text().trimmed().toUtf8();
+        m_scanner->startAll(pattern, m_typeCombo->currentData().toString());
+    });
+    connect(m_filterEdit, &QLineEdit::returnPressed, this, &MainWindow::startScan);
+    connect(m_typeCombo, &QComboBox::currentIndexChanged, this, [this] {
+        if (m_connection.isReady())
+            startScan();
+    });
+    connect(m_dbSpin, &QSpinBox::valueChanged, this, [this](int db) {
+        syncDatabaseUi(db);
+        if (m_connection.isReady())
+            selectDatabase(db);
+    });
+    connect(m_dbCombo, &QComboBox::currentIndexChanged, this, [this] {
+        const int db = m_dbCombo->currentData().toInt();
+        if (db == m_dbSpin->value()) {
+            if (m_connection.isReady())
+                selectDatabase(db);
+        } else {
+            m_dbSpin->setValue(db);
+        }
+    });
+    connect(m_viewMode, &QComboBox::currentIndexChanged, this, [this] {
+        m_keyViews->setCurrentIndex(m_viewMode->currentData().toInt());
+    });
+    connect(m_dashboard, &DashboardPage::databaseActivated, this, [this](int db) {
+        if (m_dbSpin->value() == db) {
+            selectDatabase(db);
+            m_tabs->setCurrentIndex(1);
+        } else {
+            m_dbSpin->setValue(db);
+            m_tabs->setCurrentIndex(1);
+        }
+    });
+    connect(m_readOnlyCheck, &QCheckBox::toggled, this, [this](bool readOnly) {
+        m_valuePanel->setReadOnly(readOnly);
+        if (m_connection.isReady()) {
+            m_sendButton->setEnabled(!readOnly);
+            m_commandEdit->setEnabled(!readOnly);
+            m_statusLabel->setText(readOnly ? tr("Read-only mode") : tr("Ready"));
+        }
+    });
+    m_keyTable->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_keyTable, &QTableView::customContextMenuRequested, this,
+            &MainWindow::showKeyContextMenu);
+    m_treeView->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_treeView, &QTreeView::customContextMenuRequested, this,
+            &MainWindow::showTreeContextMenu);
+    connect(m_keyTable->selectionModel(), &QItemSelectionModel::currentRowChanged, this,
+            &MainWindow::selectKey);
+    connect(m_treeView->selectionModel(), &QItemSelectionModel::currentRowChanged, this,
+            &MainWindow::selectTreeKey);
+    connect(m_treeView, &QTreeView::doubleClicked, this, [this](const QModelIndex &index) {
+        if (!index.isValid() || m_treeModel->isKey(index)) {
+            if (index.isValid())
+                selectTreeKey(index, {});
+            return;
+        }
+        const QString path = index.data(NamespaceTreeModel::PathRole).toString();
+        if (path.isEmpty())
+            return;
+        m_filterEdit->setText(path + m_treeModel->separator() + QStringLiteral("*"));
+        m_viewMode->setCurrentIndex(1);
+        startScan();
+    });
+
+    connect(m_scanner, &KeyScanner::batchReady, this, [this](const QVector<KeyInfo> &keys) {
+        m_model->appendKeys(keys);
+        m_treeModel->addKeys(keys);
+        m_treeView->expandToDepth(1);
+        m_scanStatus->setText(tr("Loaded %1 keys (%2 scanned)")
+                                  .arg(m_model->count())
+                                  .arg(m_scanner->scanned()));
+        m_loadMoreButton->setEnabled(!m_scanner->isFinished() && !m_indexingAll);
+        m_scanButton->setEnabled(true);
+        if (m_model->count() > 0 && m_keyViews->currentWidget() == m_keyTable
+            && !m_keyTable->currentIndex().isValid()) {
+            m_keyTable->selectRow(0);
+        } else if (m_model->count() > 0 && m_keyViews->currentWidget() == m_treeView
+                   && !m_treeView->currentIndex().isValid()) {
+            std::function<QModelIndex(const QModelIndex &)> firstKey =
+                [this, &firstKey](const QModelIndex &parent) -> QModelIndex {
+                for (int row = 0; row < m_treeModel->rowCount(parent); ++row) {
+                    const QModelIndex index = m_treeModel->index(row, 0, parent);
+                    if (m_treeModel->isKey(index))
+                        return index;
+                    const QModelIndex child = firstKey(index);
+                    if (child.isValid())
+                        return child;
+                }
+                return {};
+            };
+            const QModelIndex first = firstKey({});
+            if (first.isValid())
+                m_treeView->setCurrentIndex(first);
+        }
+    });
+    connect(m_scanner, &KeyScanner::progress, this, [this](qint64 scanned, bool finished) {
+        m_scanStatus->setText(finished
+                                  ? tr("Scanned %1 keys — complete").arg(scanned)
+                                  : tr("Scanned %1 keys").arg(scanned));
+        m_loadMoreButton->setEnabled(!finished && !m_scanner->isRunning() && !m_indexingAll);
+        m_scanButton->setEnabled(!m_scanner->isRunning() || !m_indexingAll);
+        if (finished) {
+            m_indexingAll = false;
+            m_indexAllButton->setEnabled(true);
+        }
+    });
+    connect(m_scanner, &KeyScanner::errorOccurred, this, [this](const QString &error) {
+        m_indexingAll = false;
+        m_scanStatus->setText(error);
+        m_scanButton->setEnabled(true);
+        m_loadMoreButton->setEnabled(false);
+        m_indexAllButton->setEnabled(true);
+    });
+
+    connect(&m_connection, &RedisConnection::stateChanged, this, [this](const QString &state) {
+        m_statusLabel->setText(state);
+        if (state == QLatin1String("Ready")) {
+            setConnectedUi(true);
+            syncDatabaseUi(m_dbSpin->value());
+            m_dashboard->setConnected(true);
+            m_tools->setConnectionParameters(
+                m_effectiveHost.isEmpty() ? m_hostEdit->text().trimmed() : m_effectiveHost,
+                m_effectivePort == 0 ? static_cast<quint16>(m_portSpin->value())
+                                     : m_effectivePort,
+                m_tlsCheck->isChecked(), m_usernameEdit->text(), m_passwordEdit->text(),
+                m_dbSpin->value());
+            m_tools->setConnected(true);
+            startScan();
+        } else if (state == QLatin1String("Disconnected")) {
+            if (m_sshTunnel)
+                m_sshTunnel->stop();
+            setConnectedUi(false);
+            m_dashboard->setConnected(false);
+            m_tools->setConnected(false);
+            m_connectButton->setText(tr("Connect"));
+            m_connectButton->setEnabled(true);
+        } else {
+            m_connectButton->setText(tr("Connecting..."));
+            m_connectButton->setEnabled(false);
+        }
+    });
+    connect(&m_connection, &RedisConnection::errorOccurred, this, [this](const QString &error) {
+        appendOutput(QStringLiteral("[error] ") + error);
+        m_statusLabel->setText(error);
+        setConnectedUi(false);
+        m_dashboard->setConnected(false);
+        m_tools->setConnected(false);
+        m_connectButton->setText(tr("Connect"));
+        m_connectButton->setEnabled(true);
+    });
+    connect(&m_connection, &RedisConnection::replyReady, this, [this](const RespValue &reply) {
+        if (reply.type == RespType::BulkString || reply.type == RespType::SimpleString) {
+            appendOutput(QString::fromUtf8(reply.scalar));
+        } else {
+            appendOutput(reply.toDisplayString());
+        }
+    });
+    connect(&m_connection, &RedisConnection::pushReceived, this, [this](const RespValue &reply) {
+        appendOutput(QStringLiteral("[push] ") + reply.toDisplayString());
+    });
+
+    connect(m_valuePanel, &ValuePanel::keyDeleted, this, [this](const QByteArray &key) {
+        m_model->removeKey(key);
+        m_treeModel->removeKey(key);
+        m_scanStatus->setText(tr("Key deleted: %1").arg(QString::fromUtf8(key)));
+    });
+    connect(m_valuePanel, &ValuePanel::keyChanged, this, [this](const QByteArray &key) {
+        const int row = m_model->indexOf(key);
+        if (row >= 0)
+            m_treeModel->updateKey(m_model->keyAt(row));
+    });
+}
+
+void MainWindow::loadProfiles()
+{
+    ProfileStore store;
+    QString error;
+    if (!store.load(&m_profiles, &error)) {
+        m_scanStatus->setText(error);
+        return;
+    }
+    if (!m_profiles.isEmpty())
+        m_activeProfileId = m_profiles.constFirst().id;
+    rebuildProfileList();
+    if (const ConnectionProfile *profile = selectedProfile())
+        applyProfile(*profile);
+    else if (!m_profiles.isEmpty())
+        applyProfile(m_profiles.constFirst());
+}
+
+void MainWindow::rebuildProfileList()
+{
+    if (!m_profileList)
+        return;
+    const QSignalBlocker blocker(m_profileList);
+    m_profileList->clear();
+
+    QVector<ConnectionProfile> sorted = m_profiles;
+    std::sort(sorted.begin(), sorted.end(),
+              [](const ConnectionProfile &left, const ConnectionProfile &right) {
+                  const int group = QString::compare(left.group, right.group, Qt::CaseInsensitive);
+                  if (group != 0)
+                      return group < 0;
+                  return QString::compare(left.name, right.name, Qt::CaseInsensitive) < 0;
+              });
+
+    QString currentGroup;
+    QListWidgetItem *activeItem = nullptr;
+    for (const ConnectionProfile &profile : std::as_const(sorted)) {
+        if (profile.group != currentGroup) {
+            currentGroup = profile.group;
+            auto *groupItem = new QListWidgetItem(currentGroup, m_profileList);
+            groupItem->setFlags(Qt::NoItemFlags);
+            QFont font = groupItem->font();
+            font.setBold(true);
+            groupItem->setFont(font);
+        }
+        auto *item = new QListWidgetItem(QIcon::fromTheme(QStringLiteral("network-server")),
+                                         profile.name, m_profileList);
+        item->setData(Qt::UserRole, profile.id);
+        item->setToolTip(QStringLiteral("%1:%2").arg(profile.host).arg(profile.port));
+        if (profile.id == m_activeProfileId)
+            activeItem = item;
+    }
+    if (activeItem)
+        m_profileList->setCurrentItem(activeItem);
+}
+
+void MainWindow::applyProfile(const ConnectionProfile &profile)
+{
+    m_activeProfileId = profile.id;
+    m_hostEdit->setText(profile.host);
+    m_portSpin->setValue(profile.port);
+    m_tlsCheck->setChecked(profile.tls);
+    m_usernameEdit->setText(profile.username);
+    m_passwordEdit->clear();
+    m_dbSpin->setValue(profile.db);
+    m_readOnlyCheck->setChecked(profile.readOnly);
+    syncDatabaseUi(profile.db);
+}
+
+void MainWindow::createProfile()
+{
+    ConnectionProfile profile;
+    profile.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    profile.name = tr("New connection");
+    profile.host = m_hostEdit->text().trimmed().isEmpty() ? QStringLiteral("127.0.0.1")
+                                                          : m_hostEdit->text().trimmed();
+    profile.port = static_cast<quint16>(m_portSpin->value());
+    profile.tls = m_tlsCheck->isChecked();
+    profile.username = m_usernameEdit->text();
+    profile.db = m_dbSpin->value();
+    profile.readOnly = m_readOnlyCheck->isChecked();
+
+    ProfileDialog dialog(profile, this);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+    profile = dialog.profile();
+    m_profiles.append(profile);
+    m_activeProfileId = profile.id;
+    saveProfiles();
+    rebuildProfileList();
+    applyProfile(profile);
+}
+
+void MainWindow::editProfile()
+{
+    ConnectionProfile *selected = selectedProfile();
+    if (!selected)
+        return;
+    ProfileDialog dialog(*selected, this);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+    const ConnectionProfile updated = dialog.profile();
+    for (ConnectionProfile &profile : m_profiles) {
+        if (profile.id == updated.id) {
+            profile = updated;
+            break;
+        }
+    }
+    m_activeProfileId = updated.id;
+    saveProfiles();
+    rebuildProfileList();
+    applyProfile(updated);
+}
+
+void MainWindow::deleteProfile()
+{
+    ConnectionProfile *selected = selectedProfile();
+    if (!selected)
+        return;
+    if (QMessageBox::question(this, tr("Delete connection"),
+                              tr("Delete saved connection \"%1\"?").arg(selected->name))
+        != QMessageBox::Yes) {
+        return;
+    }
+    const QString id = selected->id;
+    for (int index = 0; index < m_profiles.size(); ++index) {
+        if (m_profiles.at(index).id == id) {
+            m_profiles.removeAt(index);
+            break;
+        }
+    }
+    if (m_activeProfileId == id)
+        m_activeProfileId.clear();
+    SecretStore secrets;
+    if (secrets.isAvailable())
+        secrets.deletePassword(id);
+    saveProfiles();
+    rebuildProfileList();
+}
+
+void MainWindow::connectProfile()
+{
+    ConnectionProfile *selected = selectedProfile();
+    if (!selected)
+        return;
+    applyProfile(*selected);
+    if (m_connection.isReady())
+        m_connectButton->setText(tr("Connect"));
+    connectOrDisconnect();
+}
+
+void MainWindow::saveProfiles()
+{
+    ProfileStore store;
+    QString error;
+    if (!store.save(m_profiles, &error))
+        m_scanStatus->setText(error);
+}
+
+ConnectionProfile *MainWindow::selectedProfile()
+{
+    if (!m_profileList)
+        return nullptr;
+    QListWidgetItem *item = m_profileList->currentItem();
+    if (!item)
+        return nullptr;
+    const QString id = item->data(Qt::UserRole).toString();
+    if (id.isEmpty())
+        return nullptr;
+    for (ConnectionProfile &profile : m_profiles) {
+        if (profile.id == id)
+            return &profile;
+    }
+    return nullptr;
+}
+
+void MainWindow::connectOrDisconnect()
+{
+    if (m_connectButton->text() == tr("Disconnect")) {
+        if (m_sshTunnel)
+            m_sshTunnel->stop();
+        m_connection.disconnectFromHost();
+        return;
+    }
+
+    ConnectionProfile *active = selectedProfile();
+    if (!active) {
+        ConnectionProfile profile;
+        profile.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        profile.name = m_hostEdit->text().trimmed().isEmpty() ? tr("Local connection")
+                                                             : m_hostEdit->text().trimmed();
+        profile.group = tr("Default");
+        const QString password = m_passwordEdit->text();
+        m_profiles.append(profile);
+        m_activeProfileId = profile.id;
+        active = &m_profiles.last();
+        rebuildProfileList();
+        m_passwordEdit->setText(password);
+    }
+    active->host = m_hostEdit->text().trimmed();
+    active->port = static_cast<quint16>(m_portSpin->value());
+    active->tls = m_tlsCheck->isChecked();
+    active->username = m_usernameEdit->text();
+    active->db = m_dbSpin->value();
+    active->readOnly = m_readOnlyCheck->isChecked();
+    saveProfiles();
+
+    SecretStore secrets;
+    if (secrets.isAvailable() && !active->id.isEmpty()) {
+        if (m_passwordEdit->text().isEmpty()) {
+            QString secretError;
+            const QString stored = secrets.readPassword(active->id, &secretError);
+            if (!stored.isEmpty())
+                m_passwordEdit->setText(stored);
+        }
+        if (!m_passwordEdit->text().isEmpty()) {
+            QString secretError;
+            if (!secrets.writePassword(active->id, m_passwordEdit->text(), &secretError))
+                appendOutput(QStringLiteral("[warning] ") + secretError);
+        }
+    }
+
+    m_output->clear();
+    m_model->clear();
+    m_valuePanel->clearKey();
+    m_dashboard->setConnected(false);
+    m_tools->setConnected(false);
+    m_scanStatus->setText(tr("Connecting..."));
+    appendOutput(tr("Connecting..."));
+    m_connectButton->setEnabled(false);
+    if (active->sshTunnel) {
+        if (m_sshTunnel)
+            m_sshTunnel->stop();
+        m_scanStatus->setText(tr("Opening SSH tunnel..."));
+        m_sshTunnel = new SshTunnel(this);
+        connect(m_sshTunnel, &SshTunnel::ready, this,
+                [this, active](quint16 localPort) {
+            m_scanStatus->setText(tr("SSH tunnel ready; connecting..."));
+            m_effectiveHost = QStringLiteral("127.0.0.1");
+            m_effectivePort = localPort;
+            m_connection.connectToHost(m_effectiveHost, m_effectivePort, active->tls,
+                                       active->username, m_passwordEdit->text(), active->db);
+        });
+        connect(m_sshTunnel, &SshTunnel::failed, this, [this](const QString &error) {
+            m_scanStatus->setText(tr("SSH tunnel error: %1").arg(error));
+            m_connectButton->setEnabled(true);
+            m_connectButton->setText(tr("Connect"));
+        });
+        m_sshTunnel->start(active->sshHost, active->sshPort, active->sshUser,
+                           active->sshKeyPath, m_hostEdit->text().trimmed(),
+                           static_cast<quint16>(m_portSpin->value()));
+        return;
+    }
+    if (active->sentinel) {
+        m_scanStatus->setText(tr("Resolving Sentinel master..."));
+        auto *resolver = new SentinelResolver(this);
+        connect(resolver, &SentinelResolver::resolved, this,
+                [this, resolver, active](const QString &host, quint16 port) {
+            m_scanStatus->setText(tr("Connecting to master %1:%2...").arg(host).arg(port));
+            m_effectiveHost = host;
+            m_effectivePort = port;
+            m_connection.connectToHost(host, port, active->tls, active->username,
+                                       m_passwordEdit->text(), active->db);
+            resolver->deleteLater();
+        });
+        connect(resolver, &SentinelResolver::failed, this,
+                [this, resolver](const QString &error) {
+            m_scanStatus->setText(tr("Sentinel error: %1").arg(error));
+            m_connectButton->setEnabled(true);
+            m_connectButton->setText(tr("Connect"));
+            resolver->deleteLater();
+        });
+        resolver->resolve(active->sentinelHost, active->sentinelPort, active->sentinelTls,
+                          m_usernameEdit->text(), m_passwordEdit->text(),
+                          active->sentinelMaster);
+        return;
+    }
+    m_effectiveHost = m_hostEdit->text().trimmed();
+    m_effectivePort = static_cast<quint16>(m_portSpin->value());
+    m_connection.connectToHost(m_effectiveHost, m_effectivePort, m_tlsCheck->isChecked(),
+                               m_usernameEdit->text(), m_passwordEdit->text(), m_dbSpin->value());
+}
+
+void MainWindow::startScan()
+{
+    if (!m_connection.isReady())
+        return;
+    m_scanner->stop();
+    m_indexingAll = false;
+    m_model->clear();
+    m_treeModel->clear();
+    m_valuePanel->clearKey();
+    const QByteArray pattern = m_filterEdit->text().trimmed().isEmpty()
+        ? QByteArrayLiteral("*")
+        : m_filterEdit->text().trimmed().toUtf8();
+    const QString type = m_typeCombo->currentData().toString();
+    m_scanStatus->setText(tr("Scanning..."));
+    m_scanButton->setEnabled(false);
+    m_loadMoreButton->setEnabled(false);
+    m_indexAllButton->setEnabled(false);
+    m_scanner->start(pattern, type);
+}
+
+void MainWindow::selectDatabase(int db)
+{
+    if (!m_connection.isReady())
+        return;
+    const int previous = m_dbSpin->value();
+    Q_UNUSED(previous)
+    m_statusLabel->setText(tr("Selecting database %1...").arg(db));
+    m_connection.sendCommand({QByteArrayLiteral("SELECT"), QByteArray::number(db)},
+                             [this, db](const RespValue &reply, const QString &error) {
+        if (!error.isEmpty()) {
+            m_statusLabel->setText(error);
+            return;
+        }
+        if (reply.isError()) {
+            m_statusLabel->setText(QString::fromUtf8(reply.scalar));
+            return;
+        }
+        m_statusLabel->setText(tr("Database %1 selected").arg(db));
+        m_dashboard->setConnected(true);
+        startScan();
+    });
+}
+
+void MainWindow::loadMore()
+{
+    if (!m_connection.isReady())
+        return;
+    m_loadMoreButton->setEnabled(false);
+    m_scanner->loadMore();
+}
+
+void MainWindow::selectKey(const QModelIndex &current, const QModelIndex &previous)
+{
+    Q_UNUSED(previous)
+    if (!current.isValid()) {
+        m_valuePanel->clearKey();
+        return;
+    }
+    m_valuePanel->loadKey(m_model->keyAt(current.row()));
+}
+
+void MainWindow::selectTreeKey(const QModelIndex &current, const QModelIndex &previous)
+{
+    Q_UNUSED(previous)
+    if (!current.isValid()) {
+        m_valuePanel->clearKey();
+        return;
+    }
+    if (m_treeModel->isKey(current)) {
+        m_valuePanel->loadKey(m_treeModel->keyInfo(current));
+    } else {
+        m_valuePanel->clearKey();
+        const QString path = current.data(NamespaceTreeModel::PathRole).toString();
+        const QString count = current.siblingAtColumn(NamespaceTreeModel::TypeColumn)
+                                  .data(Qt::DisplayRole)
+                                  .toString();
+        m_scanStatus->setText(tr("Namespace %1: %2 loaded keys").arg(path, count));
+    }
+}
+
+void MainWindow::syncDatabaseUi(int db)
+{
+    if (!m_dbCombo)
+        return;
+    const int index = m_dbCombo->findData(db);
+    if (index < 0 || index == m_dbCombo->currentIndex())
+        return;
+    const QSignalBlocker blocker(m_dbCombo);
+    m_dbCombo->setCurrentIndex(index);
+}
+
+void MainWindow::showKeyContextMenu(const QPoint &position)
+{
+    const QModelIndex index = m_keyTable->indexAt(position);
+    if (!index.isValid())
+        return;
+    const KeyInfo info = m_model->keyAt(index.row());
+    if (!info.isValid())
+        return;
+
+    QMenu menu(this);
+    QAction *renameAction = menu.addAction(tr("Rename..."));
+    QAction *deleteAction = menu.addAction(tr("Delete..."));
+    renameAction->setEnabled(!m_readOnlyCheck->isChecked());
+    deleteAction->setEnabled(!m_readOnlyCheck->isChecked());
+    menu.addSeparator();
+    QAction *copyKeyAction = menu.addAction(tr("Copy key"));
+    QAction *copyValueAction = menu.addAction(tr("Copy value"));
+    QAction *copyToAction = menu.addAction(tr("Copy to connection..."));
+    copyToAction->setEnabled(!m_readOnlyCheck->isChecked() && !m_profiles.isEmpty());
+    menu.addSeparator();
+    QAction *refreshAction = menu.addAction(tr("Refresh value"));
+
+    const QAction *chosen = menu.exec(m_keyTable->viewport()->mapToGlobal(position));
+    if (chosen == renameAction)
+        renameKey(info);
+    else if (chosen == deleteAction)
+        deleteKey(info);
+    else if (chosen == copyKeyAction)
+        copyKey(info);
+    else if (chosen == copyValueAction)
+        copyValue(info);
+    else if (chosen == copyToAction)
+        copyKeyToProfile(info);
+    else if (chosen == refreshAction)
+        m_valuePanel->loadKey(info);
+}
+
+void MainWindow::showTreeContextMenu(const QPoint &position)
+{
+    const QModelIndex index = m_treeView->indexAt(position);
+    if (!index.isValid())
+        return;
+
+    if (m_treeModel->isKey(index)) {
+        const KeyInfo info = m_treeModel->keyInfo(index);
+        QMenu menu(this);
+        QAction *renameAction = menu.addAction(tr("Rename..."));
+        QAction *deleteAction = menu.addAction(tr("Delete..."));
+        renameAction->setEnabled(!m_readOnlyCheck->isChecked());
+        deleteAction->setEnabled(!m_readOnlyCheck->isChecked());
+        menu.addSeparator();
+        QAction *copyKeyAction = menu.addAction(tr("Copy key"));
+        QAction *copyValueAction = menu.addAction(tr("Copy value"));
+        QAction *copyToAction = menu.addAction(tr("Copy to connection..."));
+        copyToAction->setEnabled(!m_readOnlyCheck->isChecked() && !m_profiles.isEmpty());
+        const QAction *chosen = menu.exec(m_treeView->viewport()->mapToGlobal(position));
+        if (chosen == renameAction)
+            renameKey(info);
+        else if (chosen == deleteAction)
+            deleteKey(info);
+        else if (chosen == copyKeyAction)
+            copyKey(info);
+        else if (chosen == copyValueAction)
+            copyValue(info);
+        else if (chosen == copyToAction)
+            copyKeyToProfile(info);
+        return;
+    }
+
+    const QString path = index.data(NamespaceTreeModel::PathRole).toString();
+    if (path.isEmpty())
+        return;
+    QMenu menu(this);
+    QAction *filterAction = menu.addAction(tr("Filter this namespace"));
+    QAction *copyPrefixAction = menu.addAction(tr("Copy prefix"));
+    const QAction *chosen = menu.exec(m_treeView->viewport()->mapToGlobal(position));
+    if (chosen == filterAction)
+        applyNamespaceFilter(path);
+    else if (chosen == copyPrefixAction)
+        QGuiApplication::clipboard()->setText(path + m_treeModel->separator());
+}
+
+void MainWindow::renameKey(const KeyInfo &info)
+{
+    if (m_readOnlyCheck->isChecked()) {
+        m_scanStatus->setText(tr("Read-only mode: rename is disabled"));
+        return;
+    }
+    bool ok = false;
+    const QString currentName = QString::fromUtf8(info.key);
+    const QString newName = QInputDialog::getText(
+        this, tr("Rename key"), tr("New key name:"), QLineEdit::Normal, currentName, &ok);
+    if (!ok || newName.isEmpty() || newName == currentName)
+        return;
+
+    m_scanStatus->setText(tr("Renaming key..."));
+    m_connection.sendCommand({QByteArrayLiteral("RENAME"), info.key, newName.toUtf8()},
+                             [this, info, newName](const RespValue &reply,
+                                                   const QString &error) {
+        if (!error.isEmpty() || reply.isError()) {
+            m_scanStatus->setText(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
+            return;
+        }
+        removeKeyFromViews(info.key);
+        m_valuePanel->clearKey();
+        m_scanStatus->setText(tr("Renamed to %1").arg(newName));
+        startScan();
+    });
+}
+
+void MainWindow::deleteKey(const KeyInfo &info)
+{
+    if (m_readOnlyCheck->isChecked()) {
+        m_scanStatus->setText(tr("Read-only mode: delete is disabled"));
+        return;
+    }
+    if (QMessageBox::question(this, tr("Delete key"),
+                              tr("Delete key \"%1\"?").arg(QString::fromUtf8(info.key)))
+        != QMessageBox::Yes) {
+        return;
+    }
+
+    const QByteArray key = info.key;
+    m_scanStatus->setText(tr("Deleting key..."));
+    m_connection.sendCommand({QByteArrayLiteral("UNLINK"), key},
+                             [this, key](const RespValue &reply, const QString &error) {
+        if (!error.isEmpty()) {
+            m_scanStatus->setText(error);
+            return;
+        }
+        if (reply.isError()) {
+            m_connection.sendCommand({QByteArrayLiteral("DEL"), key},
+                                     [this, key](const RespValue &fallback,
+                                                 const QString &fallbackError) {
+                if (!fallbackError.isEmpty() || fallback.isError()) {
+                    m_scanStatus->setText(fallbackError.isEmpty()
+                                              ? QString::fromUtf8(fallback.scalar)
+                                              : fallbackError);
+                    return;
+                }
+                removeKeyFromViews(key);
+                m_valuePanel->clearKey();
+                m_scanStatus->setText(tr("Key deleted"));
+            });
+            return;
+        }
+        removeKeyFromViews(key);
+        m_valuePanel->clearKey();
+        m_scanStatus->setText(tr("Key deleted"));
+    });
+}
+
+void MainWindow::copyKey(const KeyInfo &info)
+{
+    QGuiApplication::clipboard()->setText(QString::fromUtf8(info.key));
+    m_scanStatus->setText(tr("Key copied to clipboard"));
+}
+
+void MainWindow::copyValue(const KeyInfo &info)
+{
+    QList<QByteArray> args;
+    if (info.type == QLatin1String("string"))
+        args = {QByteArrayLiteral("GET"), info.key};
+    else if (info.type == QLatin1String("hash"))
+        args = {QByteArrayLiteral("HGETALL"), info.key};
+    else if (info.type == QLatin1String("list"))
+        args = {QByteArrayLiteral("LRANGE"), info.key, QByteArrayLiteral("0"),
+                QByteArrayLiteral("-1")};
+    else if (info.type == QLatin1String("set"))
+        args = {QByteArrayLiteral("SMEMBERS"), info.key};
+    else if (info.type == QLatin1String("zset"))
+        args = {QByteArrayLiteral("ZRANGE"), info.key, QByteArrayLiteral("0"),
+                QByteArrayLiteral("-1"), QByteArrayLiteral("WITHSCORES")};
+    else if (info.type == QLatin1String("stream"))
+        args = {QByteArrayLiteral("XRANGE"), info.key, QByteArrayLiteral("-"),
+                QByteArrayLiteral("+"), QByteArrayLiteral("COUNT"),
+                QByteArrayLiteral("1000")};
+    else {
+        m_scanStatus->setText(tr("Copy value is not supported for type %1").arg(info.type));
+        return;
+    }
+
+    m_connection.sendCommand(args, [this](const RespValue &reply, const QString &error) {
+        if (!error.isEmpty() || reply.isError()) {
+            m_scanStatus->setText(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
+            return;
+        }
+
+        QString text;
+        if (reply.type == RespType::BulkString || reply.type == RespType::SimpleString) {
+            text = QString::fromUtf8(reply.scalar);
+        } else if (reply.type == RespType::Map) {
+            for (const auto &[key, value] : reply.pairs)
+                text += QString::fromUtf8(key.scalar) + QLatin1Char('\t')
+                    + QString::fromUtf8(value.scalar) + QLatin1Char('\n');
+        } else if (reply.type == RespType::Array || reply.type == RespType::Set) {
+            for (const RespValue &element : reply.elements) {
+                if (element.type == RespType::Array && element.elements.size() == 2) {
+                    text += QString::fromUtf8(element.elements[0].scalar) + QLatin1Char('\t')
+                        + QString::fromUtf8(element.elements[1].scalar) + QLatin1Char('\n');
+                } else {
+                    text += QString::fromUtf8(element.scalar) + QLatin1Char('\n');
+                }
+            }
+        } else {
+            text = reply.toDisplayString();
+        }
+        QGuiApplication::clipboard()->setText(text);
+        m_scanStatus->setText(tr("Value copied to clipboard"));
+    });
+}
+
+void MainWindow::removeKeyFromViews(const QByteArray &key)
+{
+    m_model->removeKey(key);
+    m_treeModel->removeKey(key);
+}
+
+void MainWindow::copyKeyToProfile(const KeyInfo &info)
+{
+    if (m_profiles.isEmpty())
+        return;
+    QStringList names;
+    QVector<ConnectionProfile> targets;
+    for (const ConnectionProfile &profile : std::as_const(m_profiles)) {
+        if (profile.id == m_activeProfileId)
+            continue;
+        names.append(QStringLiteral("%1 — %2:%3").arg(profile.name, profile.host).arg(profile.port));
+        targets.append(profile);
+    }
+    if (targets.isEmpty()) {
+        m_scanStatus->setText(tr("No other saved connection"));
+        return;
+    }
+    bool ok = false;
+    const QString choice = QInputDialog::getItem(this, tr("Copy key to connection"),
+                                                 tr("Target connection:"), names, 0, false, &ok);
+    if (!ok)
+        return;
+    const int index = names.indexOf(choice);
+    if (index < 0 || index >= targets.size())
+        return;
+    const ConnectionProfile targetProfile = targets.at(index);
+    if (targetProfile.sshTunnel || targetProfile.sentinel) {
+        m_scanStatus->setText(tr("Copy to SSH/Sentinel connections is not supported yet"));
+        return;
+    }
+    if (QMessageBox::question(
+            this, tr("Copy key"),
+            tr("Copy \"%1\" to %2:%3 (DB %4)? Existing keys are replaced.")
+                .arg(QString::fromUtf8(info.key), targetProfile.host)
+                .arg(targetProfile.port)
+                .arg(targetProfile.db))
+        != QMessageBox::Yes) {
+        return;
+    }
+
+    QString password;
+    SecretStore secrets;
+    if (secrets.isAvailable() && !targetProfile.id.isEmpty())
+        password = secrets.readPassword(targetProfile.id);
+    if (password.isEmpty() && !targetProfile.username.isEmpty()) {
+        password = QInputDialog::getText(this, tr("Target password"), tr("Password:"),
+                                          QLineEdit::Password, {}, &ok);
+        if (!ok)
+            return;
+    }
+
+    auto *target = new RedisConnection(this);
+    QPointer<RedisConnection> targetGuard(target);
+    connect(target, &RedisConnection::errorOccurred, this,
+            [this, targetGuard](const QString &error) {
+        if (!targetGuard)
+            return;
+        m_scanStatus->setText(tr("Copy failed: %1").arg(error));
+        targetGuard->deleteLater();
+    });
+    connect(target, &RedisConnection::stateChanged, this,
+            [this, targetGuard, info, password, targetProfile](const QString &state) {
+        if (!targetGuard || (state != QLatin1String("Ready")
+                             && state != QLatin1String("Ready (RESP2)")))
+            return;
+        QPointer<RedisConnection> guard = targetGuard;
+        guard->sendCommand({QByteArrayLiteral("DUMP"), info.key},
+                            [this, guard, info](const RespValue &dump, const QString &error) {
+            if (!guard)
+                return;
+            if (!error.isEmpty() || dump.isError()) {
+                m_scanStatus->setText(tr("Copy failed: %1")
+                                          .arg(error.isEmpty()
+                                                   ? QString::fromUtf8(dump.scalar)
+                                                   : error));
+                guard->disconnectFromHost();
+                guard->deleteLater();
+                return;
+            }
+            guard->sendCommand({QByteArrayLiteral("PTTL"), info.key},
+                               [this, guard, info, dump](const RespValue &ttl,
+                                                         const QString &ttlError) {
+                if (!guard)
+                    return;
+                const qint64 ttlMs = ttlError.isEmpty() && ttl.type == RespType::Integer
+                    ? ttl.integer
+                    : -1;
+                guard->sendCommand({QByteArrayLiteral("RESTORE"), info.key,
+                                    QByteArray::number(ttlMs > 0 ? ttlMs : 0), dump.scalar,
+                                    QByteArrayLiteral("REPLACE")},
+                                   [this, guard, info](const RespValue &restore,
+                                                       const QString &restoreError) {
+                    if (!guard)
+                        return;
+                    if (!restoreError.isEmpty() || restore.isError()) {
+                        m_scanStatus->setText(
+                            tr("Copy failed: %1")
+                                .arg(restoreError.isEmpty()
+                                         ? QString::fromUtf8(restore.scalar)
+                                         : restoreError));
+                    } else {
+                        m_scanStatus->setText(tr("Copied %1").arg(QString::fromUtf8(info.key)));
+                    }
+                    guard->disconnectFromHost();
+                    guard->deleteLater();
+                });
+            });
+        });
+    });
+    m_scanStatus->setText(tr("Copying key..."));
+    target->connectToHost(targetProfile.host, targetProfile.port, targetProfile.tls,
+                          targetProfile.username, password, targetProfile.db);
+}
+
+void MainWindow::applyNamespaceFilter(const QString &path)
+{
+    if (!m_connection.isReady())
+        return;
+    m_filterEdit->setText(path + m_treeModel->separator() + QStringLiteral("*"));
+    m_viewMode->setCurrentIndex(1);
+    startScan();
+}
+
+void MainWindow::sendCommand()
+{
+    const QString line = m_commandEdit->text().trimmed();
+    if (line.isEmpty())
+        return;
+    if (!m_connection.isReady()) {
+        appendOutput(tr("[error] Not connected"));
+        return;
+    }
+
+    QList<QByteArray> args;
+    QString error;
+    if (!CommandEncoder::parseLine(line, &args, &error)) {
+        appendOutput(QStringLiteral("[error] ") + error);
+        return;
+    }
+
+    appendOutput(QStringLiteral("> ") + line);
+    m_connection.sendCommand(args);
+    m_commandEdit->clear();
+}
+
+void MainWindow::appendOutput(const QString &text)
+{
+    m_output->appendPlainText(text);
+    m_output->verticalScrollBar()->setValue(m_output->verticalScrollBar()->maximum());
+}
+
+void MainWindow::setConnectedUi(bool connected)
+{
+    const bool readOnly = m_readOnlyCheck && m_readOnlyCheck->isChecked();
+    m_sendButton->setEnabled(connected && !readOnly);
+    m_commandEdit->setEnabled(connected && !readOnly);
+    m_scanButton->setEnabled(connected);
+    m_indexAllButton->setEnabled(connected && !m_indexingAll);
+    m_filterEdit->setEnabled(connected);
+    m_typeCombo->setEnabled(connected);
+    m_dbCombo->setEnabled(connected);
+    m_viewMode->setEnabled(connected);
+    if (m_valuePanel)
+        m_valuePanel->setReadOnly(readOnly);
+    if (!connected) {
+        m_scanner->stop();
+        m_loadMoreButton->setEnabled(false);
+    }
+    if (connected) {
+        m_connectButton->setText(tr("Disconnect"));
+        m_connectButton->setEnabled(true);
+    } else {
+        m_connectButton->setText(tr("Connect"));
+        m_connectButton->setEnabled(true);
+    }
+}
+
+} // namespace KeyDis

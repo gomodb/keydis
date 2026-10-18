@@ -1,0 +1,10 @@
+# Build directories
+/build/
+/build-*/
+/.cache/
+/compile_commands.json
+
+# IDE / editor
+*.user
+.vscode/
+.idea/

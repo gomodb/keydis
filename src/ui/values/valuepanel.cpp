@@ -5,8 +5,12 @@
 
 #include "core/net/redisclient.h"
 #include "core/resp/respvalue.h"
+#include "ui/dialogs/batcheditdialog.h"
 
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QFontDatabase>
+#include <QFormLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QInputDialog>
@@ -17,6 +21,7 @@
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QPushButton>
+#include <QSpinBox>
 #include <QStackedWidget>
 #include <QTableWidget>
 #include <QTableWidgetItem>
@@ -65,6 +70,21 @@ QTableWidgetItem *readOnlyItem(const QString &text)
     auto *item = new QTableWidgetItem(text);
     item->setFlags(item->flags() & ~Qt::ItemIsEditable);
     return item;
+}
+
+QVector<QPair<QString, QString>> selectedPairs(QTableWidget *table)
+{
+    QVector<QPair<QString, QString>> result;
+    if (!table || !table->selectionModel())
+        return result;
+    const auto rows = table->selectionModel()->selectedRows();
+    for (const QModelIndex &index : rows) {
+        QTableWidgetItem *first = table->item(index.row(), 0);
+        QTableWidgetItem *second = table->columnCount() > 1 ? table->item(index.row(), 1) : nullptr;
+        if (first)
+            result.append({first->text(), second ? second->text() : QString()});
+    }
+    return result;
 }
 
 QTableWidget *makeTable(const QStringList &headers, QWidget *parent)
@@ -181,11 +201,15 @@ QWidget *ValuePanel::buildStringPage()
     auto *row = new QHBoxLayout;
     auto *saveButton = new QPushButton(tr("Save string"), page);
     saveButton->setObjectName(QStringLiteral("saveStringButton"));
+    auto *rangeButton = new QPushButton(tr("Replace range..."), page);
+    rangeButton->setObjectName(QStringLiteral("replaceRangeButton"));
     row->addWidget(saveButton);
-    m_writeWidgets << saveButton;
+    row->addWidget(rangeButton);
+    m_writeWidgets << saveButton << rangeButton;
     row->addStretch();
     layout->addLayout(row);
     connect(saveButton, &QPushButton::clicked, this, &ValuePanel::saveString);
+    connect(rangeButton, &QPushButton::clicked, this, &ValuePanel::partialStringEdit);
     return page;
 }
 
@@ -195,12 +219,15 @@ QWidget *ValuePanel::buildHashPage()
     m_hashTable->setObjectName(QStringLiteral("hashTable"));
     m_valueTables << m_hashTable;
     auto *addButton = new QPushButton(tr("Add field"), this);
+    auto *editButton = new QPushButton(tr("Edit selected..."), this);
+    editButton->setObjectName(QStringLiteral("hashBatchEditButton"));
     auto *deleteButton = new QPushButton(tr("Delete fields"), this);
     auto *reloadButton = new QPushButton(tr("Reload"), this);
     m_hashMoreButton = new QPushButton(tr("Load more"), this);
     m_hashMoreButton->setObjectName(QStringLiteral("hashMoreButton"));
     m_hashMoreButton->setEnabled(false);
-    m_writeWidgets << addButton << deleteButton;
+    m_writeWidgets << addButton << editButton << deleteButton;
+    connect(editButton, &QPushButton::clicked, this, &ValuePanel::editHashSelected);
     connect(m_hashMoreButton, &QPushButton::clicked, this,
             [this] { loadHashPage(m_hashCursor, true); });
     connect(addButton, &QPushButton::clicked, this, &ValuePanel::addHashField);
@@ -221,7 +248,7 @@ QWidget *ValuePanel::buildHashPage()
                            setStatus(tr("Field updated"));
                    });
     });
-    return tablePage(m_hashTable, {addButton, deleteButton, reloadButton, m_hashMoreButton}, this);
+    return tablePage(m_hashTable, {addButton, editButton, deleteButton, reloadButton, m_hashMoreButton}, this);
 }
 
 QWidget *ValuePanel::buildListPage()
@@ -231,12 +258,15 @@ QWidget *ValuePanel::buildListPage()
     m_valueTables << m_listTable;
     auto *headButton = new QPushButton(tr("Push head"), this);
     auto *tailButton = new QPushButton(tr("Push tail"), this);
+    auto *editButton = new QPushButton(tr("Edit selected..."), this);
+    editButton->setObjectName(QStringLiteral("listBatchEditButton"));
     auto *deleteButton = new QPushButton(tr("Delete rows"), this);
     auto *reloadButton = new QPushButton(tr("Reload"), this);
     m_listMoreButton = new QPushButton(tr("Load more"), this);
     m_listMoreButton->setObjectName(QStringLiteral("listMoreButton"));
     m_listMoreButton->setEnabled(false);
-    m_writeWidgets << headButton << tailButton << deleteButton;
+    m_writeWidgets << headButton << tailButton << editButton << deleteButton;
+    connect(editButton, &QPushButton::clicked, this, &ValuePanel::editListSelected);
     connect(m_listMoreButton, &QPushButton::clicked, this,
             [this] { loadListPage(m_listOffset, true); });
     connect(headButton, &QPushButton::clicked, this, [this] { addListValue(true); });
@@ -258,7 +288,7 @@ QWidget *ValuePanel::buildListPage()
                            setStatus(tr("List element updated"));
                    });
     });
-    return tablePage(m_listTable, {headButton, tailButton, deleteButton, reloadButton, m_listMoreButton}, this);
+    return tablePage(m_listTable, {headButton, tailButton, editButton, deleteButton, reloadButton, m_listMoreButton}, this);
 }
 
 QWidget *ValuePanel::buildSetPage()
@@ -267,18 +297,21 @@ QWidget *ValuePanel::buildSetPage()
     m_setTable->setObjectName(QStringLiteral("setTable"));
     m_valueTables << m_setTable;
     auto *addButton = new QPushButton(tr("Add member"), this);
+    auto *editButton = new QPushButton(tr("Edit selected..."), this);
+    editButton->setObjectName(QStringLiteral("setBatchEditButton"));
     auto *deleteButton = new QPushButton(tr("Delete members"), this);
     auto *reloadButton = new QPushButton(tr("Reload"), this);
     m_setMoreButton = new QPushButton(tr("Load more"), this);
     m_setMoreButton->setObjectName(QStringLiteral("setMoreButton"));
     m_setMoreButton->setEnabled(false);
-    m_writeWidgets << addButton << deleteButton;
+    m_writeWidgets << addButton << editButton << deleteButton;
+    connect(editButton, &QPushButton::clicked, this, &ValuePanel::editSetSelected);
     connect(m_setMoreButton, &QPushButton::clicked, this,
             [this] { loadSetPage(m_setCursor, true); });
     connect(addButton, &QPushButton::clicked, this, &ValuePanel::addSetMember);
     connect(deleteButton, &QPushButton::clicked, this, &ValuePanel::deleteSetMembers);
     connect(reloadButton, &QPushButton::clicked, this, &ValuePanel::loadSet);
-    return tablePage(m_setTable, {addButton, deleteButton, reloadButton, m_setMoreButton}, this);
+    return tablePage(m_setTable, {addButton, editButton, deleteButton, reloadButton, m_setMoreButton}, this);
 }
 
 QWidget *ValuePanel::buildZSetPage()
@@ -287,12 +320,15 @@ QWidget *ValuePanel::buildZSetPage()
     m_zsetTable->setObjectName(QStringLiteral("zsetTable"));
     m_valueTables << m_zsetTable;
     auto *addButton = new QPushButton(tr("Add member"), this);
+    auto *editButton = new QPushButton(tr("Edit selected..."), this);
+    editButton->setObjectName(QStringLiteral("zsetBatchEditButton"));
     auto *deleteButton = new QPushButton(tr("Delete members"), this);
     auto *reloadButton = new QPushButton(tr("Reload"), this);
     m_zsetMoreButton = new QPushButton(tr("Load more"), this);
     m_zsetMoreButton->setObjectName(QStringLiteral("zsetMoreButton"));
     m_zsetMoreButton->setEnabled(false);
-    m_writeWidgets << addButton << deleteButton;
+    m_writeWidgets << addButton << editButton << deleteButton;
+    connect(editButton, &QPushButton::clicked, this, &ValuePanel::editZSetSelected);
     connect(m_zsetMoreButton, &QPushButton::clicked, this,
             [this] { loadZSetPage(m_zsetCursor, true); });
     connect(addButton, &QPushButton::clicked, this, &ValuePanel::addZSetMember);
@@ -319,7 +355,7 @@ QWidget *ValuePanel::buildZSetPage()
                            setStatus(tr("Score updated"));
                    });
     });
-    return tablePage(m_zsetTable, {addButton, deleteButton, reloadButton, m_zsetMoreButton}, this);
+    return tablePage(m_zsetTable, {addButton, editButton, deleteButton, reloadButton, m_zsetMoreButton}, this);
 }
 
 QWidget *ValuePanel::buildStreamPage()
@@ -1215,6 +1251,205 @@ void ValuePanel::deleteKey()
                    emit keyDeleted(key);
                    clearKey();
                });
+}
+
+void ValuePanel::partialStringEdit()
+{
+    if (m_readOnly)
+        return;
+    QDialog dialog(this);
+    dialog.setWindowTitle(tr("Replace string range"));
+    auto *layout = new QVBoxLayout(&dialog);
+    auto *form = new QFormLayout;
+    auto *offsetSpin = new QSpinBox(&dialog);
+    const QString currentText = m_stringEdit->toPlainText();
+    offsetSpin->setRange(0, currentText.toUtf8().size());
+    const QTextCursor cursor = m_stringEdit->textCursor();
+    offsetSpin->setValue(cursor.hasSelection()
+                             ? currentText.left(cursor.selectionStart()).toUtf8().size()
+                             : 0);
+    form->addRow(tr("Byte offset"), offsetSpin);
+    auto *replacement = new QPlainTextEdit(&dialog);
+    replacement->setPlainText(cursor.selectedText());
+    form->addRow(tr("Replacement"), replacement);
+    layout->addLayout(form);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    layout->addWidget(buttons);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+
+    QPointer<ValuePanel> guard(this);
+    runCommand({QByteArrayLiteral("SETRANGE"), m_key,
+                QByteArray::number(offsetSpin->value()),
+                replacement->toPlainText().toUtf8()},
+               [guard, this](const RespValue &reply, const QString &error) {
+        if (!guard)
+            return;
+        if (!error.isEmpty() || reply.isError())
+            showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
+        else
+            loadString();
+    });
+}
+
+void ValuePanel::editHashSelected()
+{
+    if (m_readOnly)
+        return;
+    const auto rows = selectedPairs(m_hashTable);
+    if (rows.isEmpty()) {
+        setStatus(tr("Select at least one field"));
+        return;
+    }
+    BatchEditDialog dialog(tr("Edit hash fields"), {tr("Field"), tr("Value")}, rows, this);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+    const auto values = dialog.values();
+    QList<QByteArray> args{QByteArrayLiteral("HSET"), m_key};
+    for (const auto &[field, value] : values) {
+        args.append(field.toUtf8());
+        args.append(value.toUtf8());
+    }
+    if (args.size() <= 3)
+        return;
+    const QList<QByteArray> hsetArgs = args;
+    QPointer<ValuePanel> guard(this);
+    runCommand(args, [guard, this, hsetArgs](const RespValue &reply, const QString &error) {
+        if (!guard)
+            return;
+        if (!error.isEmpty() || reply.isError()) {
+            // Redis < 4 only supports the multi-field HMSET form.
+            if (hsetArgs.size() > 4) {
+                QList<QByteArray> hmsetArgs = hsetArgs;
+                hmsetArgs[0] = QByteArrayLiteral("HMSET");
+                runCommand(hmsetArgs, [guard, this](const RespValue &fallback,
+                                                     const QString &fallbackError) {
+                    if (!guard)
+                        return;
+                    if (!fallbackError.isEmpty() || fallback.isError())
+                        showError(fallbackError.isEmpty()
+                                      ? QString::fromUtf8(fallback.scalar)
+                                      : fallbackError);
+                    else {
+                        setStatus(tr("Hash fields updated"));
+                        loadHash();
+                    }
+                });
+                return;
+            }
+            showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
+            return;
+        }
+        setStatus(tr("Hash fields updated"));
+        loadHash();
+    });
+}
+
+void ValuePanel::editListSelected()
+{
+    if (m_readOnly)
+        return;
+    const auto rows = selectedPairs(m_listTable);
+    if (rows.isEmpty()) {
+        setStatus(tr("Select at least one element"));
+        return;
+    }
+    BatchEditDialog dialog(tr("Edit list elements"), {tr("Index"), tr("Value")}, rows, this);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+    QList<QList<QByteArray>> commands;
+    for (const auto &[index, value] : dialog.values())
+        commands.append({QByteArrayLiteral("LSET"), m_key, index.toUtf8(), value.toUtf8()});
+    runCommands(commands, [this] {
+        setStatus(tr("List elements updated"));
+        loadList();
+    });
+}
+
+void ValuePanel::editSetSelected()
+{
+    if (m_readOnly)
+        return;
+    const auto rows = selectedPairs(m_setTable);
+    if (rows.isEmpty()) {
+        setStatus(tr("Select at least one member"));
+        return;
+    }
+    BatchEditDialog dialog(tr("Edit set members"), {tr("Old member"), tr("New member")}, rows,
+                           this);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+    QList<QList<QByteArray>> commands;
+    for (const auto &[oldMember, newMember] : dialog.values()) {
+        if (oldMember == newMember)
+            continue;
+        commands.append({QByteArrayLiteral("SREM"), m_key, oldMember.toUtf8()});
+        commands.append({QByteArrayLiteral("SADD"), m_key, newMember.toUtf8()});
+    }
+    if (commands.isEmpty())
+        return;
+    runCommands(commands, [this] {
+        setStatus(tr("Set members updated"));
+        loadSet();
+    });
+}
+
+void ValuePanel::editZSetSelected()
+{
+    if (m_readOnly)
+        return;
+    const auto rows = selectedPairs(m_zsetTable);
+    if (rows.isEmpty()) {
+        setStatus(tr("Select at least one member"));
+        return;
+    }
+    BatchEditDialog dialog(tr("Edit sorted-set scores"), {tr("Member"), tr("Score")}, rows, this);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+    QList<QList<QByteArray>> commands;
+    for (const auto &[member, score] : dialog.values()) {
+        bool ok = false;
+        score.toDouble(&ok);
+        if (!ok) {
+            showError(tr("Score must be a number"));
+            return;
+        }
+        commands.append({QByteArrayLiteral("ZADD"), m_key, score.toUtf8(), member.toUtf8()});
+    }
+    runCommands(commands, [this] {
+        setStatus(tr("Scores updated"));
+        loadZSet();
+    });
+}
+
+void ValuePanel::runCommands(const QList<QList<QByteArray>> &commands,
+                             std::function<void()> done)
+{
+    if (commands.isEmpty()) {
+        done();
+        return;
+    }
+    auto remaining = std::make_shared<int>(commands.size());
+    auto errorText = std::make_shared<QString>();
+    QPointer<ValuePanel> guard(this);
+    for (const QList<QByteArray> &command : commands) {
+        m_connection->sendCommand(command, [guard, remaining, errorText, done, this](
+                                                const RespValue &reply, const QString &error) {
+            if (!guard)
+                return;
+            if (!error.isEmpty() || reply.isError()) {
+                if (errorText->isEmpty())
+                    *errorText = error.isEmpty() ? QString::fromUtf8(reply.scalar) : error;
+            }
+            if (--(*remaining) == 0) {
+                if (!errorText->isEmpty())
+                    showError(*errorText);
+                done();
+            }
+        });
+    }
 }
 
 void ValuePanel::addHashField()

@@ -14,7 +14,9 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPlainTextEdit>
+#include <QApplication>
 #include <QCheckBox>
+#include <QDialog>
 #include <QComboBox>
 #include <QPushButton>
 #include <QSpinBox>
@@ -120,6 +122,7 @@ void TestMainWindow::browsesAndShowsValues()
     auto *stringEdit = window.findChild<QPlainTextEdit *>(QStringLiteral("stringEdit"));
     auto *hashTable = window.findChild<QTableWidget *>(QStringLiteral("hashTable"));
     auto *hashMoreButton = window.findChild<QPushButton *>(QStringLiteral("hashMoreButton"));
+    auto *hashBatchButton = window.findChild<QPushButton *>(QStringLiteral("hashBatchEditButton"));
     auto *keyLabel = window.findChild<QLabel *>(QStringLiteral("keyLabel"));
     auto *saveButton = window.findChild<QPushButton *>(QStringLiteral("saveStringButton"));
     auto *readOnlyCheck = window.findChild<QCheckBox *>(QStringLiteral("readOnlyCheck"));
@@ -136,6 +139,7 @@ void TestMainWindow::browsesAndShowsValues()
     QVERIFY(stringEdit);
     QVERIFY(hashTable);
     QVERIFY(hashMoreButton);
+    QVERIFY(hashBatchButton);
     QVERIFY(keyLabel);
     QVERIFY(saveButton);
     QVERIFY(readOnlyCheck);
@@ -182,6 +186,18 @@ void TestMainWindow::browsesAndShowsValues()
     hashTable->item(0, 1)->setText(QStringLiteral("value2"));
     QTest::qWait(200);
 
+    hashTable->selectRow(0);
+    QTimer::singleShot(50, qApp, [] {
+        auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+        QVERIFY(dialog);
+        auto *table = dialog->findChild<QTableWidget *>(QStringLiteral("batchEditTable"));
+        QVERIFY(table);
+        table->item(0, 1)->setText(QStringLiteral("batch-value"));
+        dialog->accept();
+    });
+    QTest::mouseClick(hashBatchButton, Qt::LeftButton);
+    QTRY_COMPARE_WITH_TIMEOUT(hashTable->item(0, 1)->text(), QStringLiteral("batch-value"), 5000);
+
     table->selectRow(bigHashRow);
     QTRY_VERIFY_WITH_TIMEOUT(hashTable->rowCount() == 500, 5000);
     QVERIFY(hashMoreButton->isEnabled());
@@ -205,7 +221,7 @@ void TestMainWindow::browsesAndShowsValues()
         const RespValue hashValue =
             command(cleanup, {QByteArrayLiteral("HGET"), hashKey, QByteArrayLiteral("field")},
                     &error);
-        QCOMPARE(hashValue.scalar, QByteArray("value2"));
+        QCOMPARE(hashValue.scalar, QByteArray("batch-value"));
         command(cleanup, {QByteArrayLiteral("DEL"), stringKey, hashKey, bigHashKey}, &error);
         command(cleanup, {QByteArrayLiteral("SELECT"), QByteArrayLiteral("1")}, &error);
         command(cleanup, {QByteArrayLiteral("DEL"), QByteArrayLiteral("keydis:ui:db1")}, &error);

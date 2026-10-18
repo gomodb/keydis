@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4）
+# KeyDis 使用说明（0.4.1）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -77,16 +77,25 @@ Dashboard 只执行一次 `INFO`，不会逐 Key 发命令；适合作为连接�
 
 | 类型 | 读取 | 编辑 |
 |---|---|---|
-| String | `GET` | 文本框 + `SET ... KEEPTTL` |
-| Hash | `HSCAN` 分页，500/页 | 修改值 `HSET`；添加/删除字段 |
-| List | `LRANGE` 分页，500/页 | 修改元素 `LSET`；头/尾插入；按值删除 |
-| Set | `SSCAN` 分页，500/页 | 添加 `SADD`；删除 `SREM` |
-| ZSet | `ZSCAN` 分页，500/页 | 修改分数/添加 `ZADD`；删除 `ZREM` |
+| String | `GET` | 文本框 + `SET ... KEEPTTL`；**Replace range** 使用 `SETRANGE` |
+| Hash | `HSCAN` 分页，500/页 | 单元格 `HSET`；**Edit selected** 多字段 `HSET`，旧服务器回退 `HMSET`；添加/删除字段 |
+| List | `LRANGE` 分页，500/页 | 单元格 `LSET`；**Edit selected** 批量 `LSET`；头/尾插入；按值删除 |
+| Set | `SSCAN` 分页，500/页 | 添加 `SADD`；删除 `SREM`；**Edit selected** 重命名成员（`SREM`+`SADD`） |
+| ZSet | `ZSCAN` 分页，500/页 | 单元格/批量 `ZADD` 改分数；删除 `ZREM` |
 | Stream | `XRANGE - + COUNT 200` | 添加 `XADD`；删除 `XDEL`；组/Pending 仍用 CLI |
 | RedisJSON | `JSON.GET key path` | 路径输入 + `JSON.SET key path` raw 编辑 |
 | 其他模块类型 | 只读提示 | 使用 CLI |
 
 Hash/List/Set/ZSet 每次加载最多 500 个元素；点击 **Load more** 继续。所有修改会刷新到第一页。
+
+### 部分编辑
+
+- **Hash**：选中多行 → **Edit selected...**，只提交选中字段；多字段优先 `HSET field value ...`，失败回退 `HMSET`；
+- **List**：选中多行 → 批量 `LSET`，只改选中索引；
+- **Set**：选中多行 → 输入新成员名，按 `SREM old` + `SADD new` 重命名；
+- **ZSet**：选中多行 → 批量改分数；
+- **String**：**Replace range...** 使用 `SETRANGE key <byte-offset> <replacement>`，只改指定字节区间；
+- Stream 条目不可原地修改，使用删除/新增或 CLI。
 
 ### TTL
 

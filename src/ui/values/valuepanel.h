@@ -90,8 +90,13 @@ private:
     void editTtl();
     void deleteKey();
     void saveString();
+    void partialStringEdit();
+    void editHashSelected();
     void addHashField();
     void deleteHashFields();
+    void editListSelected();
+    void editSetSelected();
+    void editZSetSelected();
     void addListValue(bool head);
     void deleteListValues();
     void addSetMember();
@@ -103,6 +108,7 @@ private:
     void showError(const QString &error);
     void runCommand(const QList<QByteArray> &args,
                     std::function<void(const RespValue &, const QString &)> callback);
+    void runCommands(const QList<QList<QByteArray>> &commands, std::function<void()> done);
 
     RedisClient *m_connection = nullptr;
     QByteArray m_key;

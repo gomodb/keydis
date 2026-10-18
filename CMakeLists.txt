@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 3.28)
 
 project(KeyDis
-    VERSION 0.4.0
+    VERSION 0.4.1
     DESCRIPTION "Native Redis/Valkey client for KDE"
     HOMEPAGE_URL "https://github.com/gomodb/keydis"
     LANGUAGES C CXX
@@ -142,6 +142,8 @@ add_library(keydis_ui STATIC
     src/app/mainwindow.h
     src/ui/dashboard/dashboardpage.cpp
     src/ui/dashboard/dashboardpage.h
+    src/ui/dialogs/batcheditdialog.cpp
+    src/ui/dialogs/batcheditdialog.h
     src/ui/dialogs/profiledialog.cpp
     src/ui/dialogs/profiledialog.h
     src/ui/tools/servertools.cpp

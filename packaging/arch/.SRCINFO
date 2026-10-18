@@ -1,6 +1,6 @@
 pkgbase = keydis
 	pkgdesc = Native Redis/Valkey client for KDE
-	pkgver = 0.3.0
+	pkgver = 0.4.0
 	pkgrel = 1
 	url = https://github.com/gomodb/keydis
 	install = keydis.install
@@ -12,6 +12,7 @@ pkgbase = keydis
 	makedepends = pkgconf
 	makedepends = extra-cmake-modules
 	makedepends = qt6-tools
+	makedepends = kf6-krunner
 	depends = qt6-base
 	depends = kf6-kconfig
 	depends = kf6-kconfigwidgets
@@ -24,7 +25,8 @@ pkgbase = keydis
 	depends = hiredis
 	optdepends = kwallet: password storage
 	optdepends = openssh: SSH tunnel support
-	source = keydis-0.3.0.tar.gz::https://github.com/gomodb/keydis/archive/refs/tags/v0.3.0.tar.gz
+	optdepends = kf6-krunner: KRunner integration
+	source = keydis-0.4.0.tar.gz::https://github.com/gomodb/keydis/archive/refs/tags/v0.4.0.tar.gz
 	sha256sums = SKIP
 
 pkgname = keydis

@@ -19,6 +19,7 @@ QJsonObject ConnectionProfile::toJson() const
     object.insert(QStringLiteral("username"), username);
     object.insert(QStringLiteral("db"), db);
     object.insert(QStringLiteral("readOnly"), readOnly);
+    object.insert(QStringLiteral("cluster"), cluster);
     object.insert(QStringLiteral("sentinel"), sentinel);
     object.insert(QStringLiteral("sentinelMaster"), sentinelMaster);
     object.insert(QStringLiteral("sentinelHost"), sentinelHost);
@@ -47,6 +48,7 @@ ConnectionProfile ConnectionProfile::fromJson(const QJsonObject &object)
     profile.username = object.value(QStringLiteral("username")).toString();
     profile.db = qBound(0, object.value(QStringLiteral("db")).toInt(0), 15);
     profile.readOnly = object.value(QStringLiteral("readOnly")).toBool(false);
+    profile.cluster = object.value(QStringLiteral("cluster")).toBool(false);
     profile.sentinel = object.value(QStringLiteral("sentinel")).toBool(false);
     profile.sentinelMaster = object.value(QStringLiteral("sentinelMaster")).toString();
     profile.sentinelHost = object.value(QStringLiteral("sentinelHost")).toString();

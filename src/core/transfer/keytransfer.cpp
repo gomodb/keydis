@@ -3,7 +3,7 @@
 
 #include "core/transfer/keytransfer.h"
 
-#include "core/net/redisconnection.h"
+#include "core/net/redisclient.h"
 
 #include <QFile>
 #include <QJsonDocument>
@@ -22,7 +22,7 @@ struct KeyTransfer::ExportPage {
     int remaining = 0;
 };
 
-KeyTransfer::KeyTransfer(RedisConnection *connection, QObject *parent)
+KeyTransfer::KeyTransfer(RedisClient *connection, QObject *parent)
     : QObject(parent)
     , m_connection(connection)
 {

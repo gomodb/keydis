@@ -3,7 +3,7 @@
 
 #include "core/keyspace/keyscanner.h"
 
-#include "core/net/redisconnection.h"
+#include "core/net/redisclient.h"
 
 #include <QTimer>
 
@@ -11,7 +11,7 @@
 
 namespace KeyDis {
 
-KeyScanner::KeyScanner(RedisConnection *connection, QObject *parent)
+KeyScanner::KeyScanner(RedisClient *connection, QObject *parent)
     : QObject(parent)
     , m_connection(connection)
 {

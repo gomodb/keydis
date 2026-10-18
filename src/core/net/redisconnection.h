@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "core/resp/respvalue.h"
+#include "core/net/redisclient.h"
 
 #include <QAbstractSocket>
 #include <QList>
@@ -18,7 +18,7 @@ namespace KeyDis {
 
 class HiredisReader;
 
-class RedisConnection : public QObject
+class RedisConnection : public RedisClient
 {
     Q_OBJECT
 
@@ -27,20 +27,12 @@ public:
     ~RedisConnection() override;
 
     void connectToHost(const QString &host, quint16 port, bool tls, const QString &username,
-                       const QString &password, int db);
-    void disconnectFromHost();
+                       const QString &password, int db) override;
+    void disconnectFromHost() override;
 
-    [[nodiscard]] bool isReady() const;
+    [[nodiscard]] bool isReady() const override;
 
-    using ReplyCallback = std::function<void(const RespValue &reply, const QString &error)>;
-
-    void sendCommand(const QList<QByteArray> &args, ReplyCallback callback = {});
-
-signals:
-    void stateChanged(const QString &state);
-    void errorOccurred(const QString &error);
-    void replyReady(const RespValue &reply);
-    void pushReceived(const RespValue &reply);
+    void sendCommand(const QList<QByteArray> &args, ReplyCallback callback = {}) override;
 
 private:
     enum class Stage {

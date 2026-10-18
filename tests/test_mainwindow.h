@@ -12,7 +12,9 @@ class TestMainWindow : public QObject
     Q_OBJECT
 
 private slots:
+    void initTestCase();
     void browsesAndShowsValues();
+    void browsesCluster();
 };
 
 } // namespace KeyDis::Test

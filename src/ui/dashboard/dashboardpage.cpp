@@ -5,7 +5,7 @@
 
 #include "core/insights/redisinfo.h"
 #include "core/keyspace/keyinfo.h"
-#include "core/net/redisconnection.h"
+#include "core/net/redisclient.h"
 
 #include <KColorScheme>
 
@@ -49,7 +49,7 @@ QTableWidgetItem *readOnlyItem(const QString &text)
 
 } // namespace
 
-DashboardPage::DashboardPage(RedisConnection *connection, QWidget *parent)
+DashboardPage::DashboardPage(RedisClient *connection, QWidget *parent)
     : QWidget(parent)
     , m_connection(connection)
 {

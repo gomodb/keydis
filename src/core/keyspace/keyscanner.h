@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "core/net/redisclient.h"
+
 #include "core/keyspace/keyinfo.h"
 #include "core/resp/respvalue.h"
 
@@ -15,14 +17,13 @@
 
 namespace KeyDis {
 
-class RedisConnection;
 
 class KeyScanner : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit KeyScanner(RedisConnection *connection, QObject *parent = nullptr);
+    explicit KeyScanner(RedisClient *connection, QObject *parent = nullptr);
 
     void start(const QByteArray &pattern = QByteArrayLiteral("*"),
                const QString &type = QString());
@@ -48,7 +49,7 @@ private:
     void finishBatch();
     void fail(const QString &error);
 
-    QPointer<RedisConnection> m_connection;
+    QPointer<RedisClient> m_connection;
     QByteArray m_pattern = QByteArrayLiteral("*");
     QString m_type;
     QByteArray m_cursor = QByteArrayLiteral("0");

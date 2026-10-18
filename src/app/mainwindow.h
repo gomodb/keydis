@@ -5,7 +5,7 @@
 
 #include "core/conn/connectionprofile.h"
 #include "core/keyspace/keyinfo.h"
-#include "core/net/redisconnection.h"
+#include "core/net/redisrouter.h"
 
 #include <KXmlGuiWindow>
 
@@ -49,6 +49,7 @@ public:
                                  const QString &username, const QString &password, int db);
     void connectNow();
     void showTab(const QString &name);
+    void setClusterMode(bool cluster);
 
 private:
     void buildUi();
@@ -81,7 +82,7 @@ private:
     void appendOutput(const QString &text);
     void setConnectedUi(bool connected);
 
-    RedisConnection m_connection;
+    RedisRouter m_router;
     KeyScanner *m_scanner = nullptr;
     KeyTableModel *m_model = nullptr;
     ValuePanel *m_valuePanel = nullptr;
@@ -100,6 +101,7 @@ private:
     QSpinBox *m_portSpin = nullptr;
     QCheckBox *m_tlsCheck = nullptr;
     QCheckBox *m_readOnlyCheck = nullptr;
+    QCheckBox *m_clusterCheck = nullptr;
     QLineEdit *m_usernameEdit = nullptr;
     QLineEdit *m_passwordEdit = nullptr;
     QSpinBox *m_dbSpin = nullptr;

@@ -15,7 +15,7 @@
 namespace KeyDis {
 
 RedisConnection::RedisConnection(QObject *parent)
-    : QObject(parent)
+    : RedisClient(parent)
 {
 }
 

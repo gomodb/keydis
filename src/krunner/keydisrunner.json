@@ -1,0 +1,16 @@
+{
+  "KPlugin": {
+    "Name": "KeyDis",
+    "Description": "Open saved Redis/Valkey connections",
+    "Icon": "keydis",
+    "Authors": [
+      { "Name": "KeyDis contributors" }
+    ],
+    "License": "MIT",
+    "Category": "Applications",
+    "EnabledByDefault": true
+  },
+  "X-KRunner": {
+    "ServiceType": "Plasma/Runner"
+  }
+}

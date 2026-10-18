@@ -85,6 +85,7 @@
 | `ui/editors` | 各类型编辑器、委托、撤销集成 | 协议解析 |
 | `ui/dashboard` | Server/Memory/Stats、Key Statistics | Key 浏览 |
 | `ui/tools` | Slowlog、Clients、Pub/Sub、Monitor、Transfer、Analysis | 编辑器 |
+| `krunner` | KRunner runner，打开保存的连接 | ProfileStore |
 | `ui/dialogs` | 连接配置/Profile 编辑 | 连接状态 |
 | `core/platform` | 语言、日志、诊断、XDG 路径 | 业务语义 |
 | `core/security` | KWallet 密码存储 | 连接状态 |
@@ -495,6 +496,7 @@ keydis/
 ├─ CMakePresets.json
 ├─ src/
 │  ├─ app/
+│  ├─ krunner/
 │  ├─ core/{resp,net,conn,topology,keyspace,value,safety,insights,platform,security,transfer}/
 │  ├─ ui/{mainwindow,dashboard,docks,models,editors,dialogs,tools,values}/
 │  └─ krunner/

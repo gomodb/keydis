@@ -3,7 +3,7 @@
 
 #include "ui/values/valuepanel.h"
 
-#include "core/net/redisconnection.h"
+#include "core/net/redisclient.h"
 #include "core/resp/respvalue.h"
 
 #include <QFontDatabase>
@@ -97,7 +97,7 @@ QWidget *tablePage(QTableWidget *table, const QList<QPushButton *> &buttons, QWi
 
 } // namespace
 
-ValuePanel::ValuePanel(RedisConnection *connection, QWidget *parent)
+ValuePanel::ValuePanel(RedisClient *connection, QWidget *parent)
     : QWidget(parent)
     , m_connection(connection)
 {
@@ -360,9 +360,13 @@ QWidget *ValuePanel::buildStreamPage()
     auto *createGroupButton = new QPushButton(tr("Create group"), groupsPage);
     auto *deleteGroupButton = new QPushButton(tr("Delete group"), groupsPage);
     auto *pendingButton = new QPushButton(tr("Pending..."), groupsPage);
+    auto *claimButton = new QPushButton(tr("Claim..."), groupsPage);
+    auto *ackButton = new QPushButton(tr("Ack"), groupsPage);
     groupsBar->addWidget(createGroupButton);
     groupsBar->addWidget(deleteGroupButton);
     groupsBar->addWidget(pendingButton);
+    groupsBar->addWidget(claimButton);
+    groupsBar->addWidget(ackButton);
     groupsBar->addStretch();
     groupsLayout->addLayout(groupsBar);
     auto *pendingLabel = new QLabel(tr("Pending entries"), groupsPage);
@@ -374,13 +378,16 @@ QWidget *ValuePanel::buildStreamPage()
     groupsLayout->addWidget(m_streamPendingTable, 1);
     tabs->addTab(groupsPage, tr("Groups"));
 
-    m_writeWidgets << addButton << deleteButton << createGroupButton << deleteGroupButton;
+    m_writeWidgets << addButton << deleteButton << createGroupButton << deleteGroupButton
+                   << claimButton << ackButton;
     connect(addButton, &QPushButton::clicked, this, &ValuePanel::addStreamEntry);
     connect(deleteButton, &QPushButton::clicked, this, &ValuePanel::deleteStreamEntries);
     connect(reloadButton, &QPushButton::clicked, this, &ValuePanel::loadStream);
     connect(createGroupButton, &QPushButton::clicked, this, &ValuePanel::createStreamGroup);
     connect(deleteGroupButton, &QPushButton::clicked, this, &ValuePanel::deleteStreamGroup);
     connect(pendingButton, &QPushButton::clicked, this, &ValuePanel::loadPending);
+    connect(claimButton, &QPushButton::clicked, this, &ValuePanel::claimStreamEntries);
+    connect(ackButton, &QPushButton::clicked, this, &ValuePanel::ackStreamEntries);
     connect(m_streamGroupsTable, &QTableWidget::itemSelectionChanged, this,
             &ValuePanel::loadPending);
 
@@ -936,6 +943,67 @@ void ValuePanel::loadPending()
                    }
                    m_streamPendingTable->resizeColumnsToContents();
                });
+}
+
+void ValuePanel::claimStreamEntries()
+{
+    if (m_readOnly)
+        return;
+    const auto rows = m_streamPendingTable->selectionModel()->selectedRows();
+    const auto groupRows = m_streamGroupsTable->selectionModel()->selectedRows();
+    if (rows.isEmpty() || groupRows.isEmpty())
+        return;
+    const QString group = m_streamGroupsTable->item(groupRows.first().row(), 0)->text();
+    bool ok = false;
+    const QString consumer = QInputDialog::getText(this, tr("Claim pending entries"),
+                                                   tr("Consumer name:"), QLineEdit::Normal,
+                                                   QStringLiteral("worker"), &ok);
+    if (!ok || consumer.trimmed().isEmpty())
+        return;
+    QList<QByteArray> args{QByteArrayLiteral("XCLAIM"), m_key, group.toUtf8(),
+                           consumer.trimmed().toUtf8(), QByteArrayLiteral("0")};
+    for (const QModelIndex &index : rows) {
+        if (auto *item = m_streamPendingTable->item(index.row(), 0))
+            args.append(item->text().toUtf8());
+    }
+    if (args.size() <= 5)
+        return;
+    QPointer<ValuePanel> guard(this);
+    runCommand(args, [guard, this](const RespValue &reply, const QString &error) {
+        if (!guard)
+            return;
+        if (!error.isEmpty() || reply.isError())
+            showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
+        else
+            loadPending();
+    });
+}
+
+void ValuePanel::ackStreamEntries()
+{
+    if (m_readOnly)
+        return;
+    const auto rows = m_streamPendingTable->selectionModel()->selectedRows();
+    const auto groupRows = m_streamGroupsTable->selectionModel()->selectedRows();
+    if (rows.isEmpty() || groupRows.isEmpty())
+        return;
+    const QString group = m_streamGroupsTable->item(groupRows.first().row(), 0)->text();
+    QList<QByteArray> args{QByteArrayLiteral("XACK"), m_key, group.toUtf8()};
+    for (const QModelIndex &index : rows) {
+        if (auto *item = m_streamPendingTable->item(index.row(), 0))
+            args.append(item->text().toUtf8());
+    }
+    if (args.size() <= 3)
+        return;
+    QPointer<ValuePanel> guard(this);
+    runCommand(args, [guard, this](const RespValue &reply, const QString &error) {
+        if (!guard)
+            return;
+        if (!error.isEmpty() || reply.isError())
+            showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
+        else
+            loadPending();
+    });
 }
 
 void ValuePanel::addStreamEntry()

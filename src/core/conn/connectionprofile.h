@@ -18,6 +18,7 @@ struct ConnectionProfile {
     QString username;
     int db = 0;
     bool readOnly = false;
+    bool cluster = false;
     bool sentinel = false;
     QString sentinelMaster;
     QString sentinelHost;

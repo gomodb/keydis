@@ -5,6 +5,8 @@
 
 #include "core/conn/profilestore.h"
 #include "core/conn/sentinelresolver.h"
+#include "core/net/clusterclient.h"
+#include "core/net/redisconnection.h"
 #include "core/net/sshtunnel.h"
 #include "core/security/secretstore.h"
 #include "ui/dialogs/profiledialog.h"
@@ -59,6 +61,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     setWindowTitle(QStringLiteral("KeyDis"));
     resize(1200, 800);
+    m_router.setBackend(std::make_unique<RedisConnection>());
     buildUi();
 
     loadProfiles();
@@ -106,8 +109,15 @@ void MainWindow::setConnectionParameters(const QString &host, quint16 port, bool
 
 void MainWindow::connectNow()
 {
-    if (!m_connection.isReady())
+    if (!m_router.isReady())
         connectOrDisconnect();
+}
+
+void MainWindow::setClusterMode(bool cluster)
+{
+    m_clusterCheck->setChecked(cluster);
+    m_dbSpin->setEnabled(!cluster);
+    m_dbCombo->setEnabled(!cluster);
 }
 
 void MainWindow::showTab(const QString &name)
@@ -149,6 +159,10 @@ void MainWindow::buildUi()
     m_readOnlyCheck->setObjectName(QStringLiteral("readOnlyCheck"));
     m_readOnlyCheck->setToolTip(tr("Disable editing and CLI write access for this session"));
     connectionLayout->addWidget(m_readOnlyCheck);
+    m_clusterCheck = new QCheckBox(tr("Cluster"), connectionBox);
+    m_clusterCheck->setObjectName(QStringLiteral("clusterCheck"));
+    m_clusterCheck->setToolTip(tr("Connect through Redis Cluster slot routing"));
+    connectionLayout->addWidget(m_clusterCheck);
 
     m_usernameEdit = new QLineEdit(connectionBox);
     m_usernameEdit->setObjectName(QStringLiteral("usernameEdit"));
@@ -180,7 +194,7 @@ void MainWindow::buildUi()
     m_tabs = new QTabWidget(central);
     m_tabs->setObjectName(QStringLiteral("tabs"));
 
-    m_dashboard = new DashboardPage(&m_connection, m_tabs);
+    m_dashboard = new DashboardPage(&m_router, m_tabs);
     m_tabs->addTab(m_dashboard, tr("Dashboard"));
 
     auto *browser = new QWidget(m_tabs);
@@ -293,7 +307,7 @@ void MainWindow::buildUi()
     keyLayout->addWidget(m_keyViews);
     splitter->addWidget(keyPane);
 
-    m_valuePanel = new ValuePanel(&m_connection, splitter);
+    m_valuePanel = new ValuePanel(&m_router, splitter);
     m_valuePanel->setObjectName(QStringLiteral("valuePanel"));
     m_valuePanel->setMinimumWidth(420);
     splitter->addWidget(m_valuePanel);
@@ -323,7 +337,7 @@ void MainWindow::buildUi()
     cliLayout->addLayout(commandLayout);
     m_tabs->addTab(cli, tr("CLI"));
 
-    m_tools = new ServerToolsPage(&m_connection, m_tabs);
+    m_tools = new ServerToolsPage(&m_router, m_tabs);
     m_tabs->addTab(m_tools, tr("Tools"));
 
     layout->addWidget(m_tabs, 1);
@@ -351,7 +365,7 @@ void MainWindow::buildUi()
     connectionsDock->setWidget(connectionsPanel);
     addDockWidget(Qt::LeftDockWidgetArea, connectionsDock);
 
-    m_scanner = new KeyScanner(&m_connection, this);
+    m_scanner = new KeyScanner(&m_router, this);
 
     connect(newProfileButton, &QPushButton::clicked, this, &MainWindow::createProfile);
     connect(editProfileButton, &QPushButton::clicked, this, &MainWindow::editProfile);
@@ -380,7 +394,7 @@ void MainWindow::buildUi()
     connect(m_scanButton, &QPushButton::clicked, this, &MainWindow::startScan);
     connect(m_loadMoreButton, &QPushButton::clicked, this, &MainWindow::loadMore);
     connect(m_indexAllButton, &QPushButton::clicked, this, [this] {
-        if (!m_connection.isReady() || m_scanner->isRunning())
+        if (!m_router.isReady() || m_scanner->isRunning())
             return;
         if (QMessageBox::question(
                 this, tr("Index all keys"),
@@ -405,18 +419,18 @@ void MainWindow::buildUi()
     });
     connect(m_filterEdit, &QLineEdit::returnPressed, this, &MainWindow::startScan);
     connect(m_typeCombo, &QComboBox::currentIndexChanged, this, [this] {
-        if (m_connection.isReady())
+        if (m_router.isReady())
             startScan();
     });
     connect(m_dbSpin, &QSpinBox::valueChanged, this, [this](int db) {
         syncDatabaseUi(db);
-        if (m_connection.isReady())
+        if (m_router.isReady())
             selectDatabase(db);
     });
     connect(m_dbCombo, &QComboBox::currentIndexChanged, this, [this] {
         const int db = m_dbCombo->currentData().toInt();
         if (db == m_dbSpin->value()) {
-            if (m_connection.isReady())
+            if (m_router.isReady())
                 selectDatabase(db);
         } else {
             m_dbSpin->setValue(db);
@@ -434,9 +448,15 @@ void MainWindow::buildUi()
             m_tabs->setCurrentIndex(1);
         }
     });
+    connect(m_clusterCheck, &QCheckBox::toggled, this, [this](bool cluster) {
+        if (!m_router.isReady()) {
+            m_dbSpin->setEnabled(!cluster);
+            m_dbCombo->setEnabled(!cluster);
+        }
+    });
     connect(m_readOnlyCheck, &QCheckBox::toggled, this, [this](bool readOnly) {
         m_valuePanel->setReadOnly(readOnly);
-        if (m_connection.isReady()) {
+        if (m_router.isReady()) {
             m_sendButton->setEnabled(!readOnly);
             m_commandEdit->setEnabled(!readOnly);
             m_statusLabel->setText(readOnly ? tr("Read-only mode") : tr("Ready"));
@@ -516,7 +536,7 @@ void MainWindow::buildUi()
         m_indexAllButton->setEnabled(true);
     });
 
-    connect(&m_connection, &RedisConnection::stateChanged, this, [this](const QString &state) {
+    connect(&m_router, &RedisClient::stateChanged, this, [this](const QString &state) {
         m_statusLabel->setText(state);
         if (state == QLatin1String("Ready")) {
             setConnectedUi(true);
@@ -529,6 +549,9 @@ void MainWindow::buildUi()
                 m_tlsCheck->isChecked(), m_usernameEdit->text(), m_passwordEdit->text(),
                 m_dbSpin->value());
             m_tools->setConnected(true);
+            if (m_clusterCheck->isChecked())
+                appendOutput(tr("[cluster] Browser scans all masters; Dashboard/INFO and "
+                                "server tools show one node."));
             startScan();
         } else if (state == QLatin1String("Disconnected")) {
             if (m_sshTunnel)
@@ -543,7 +566,7 @@ void MainWindow::buildUi()
             m_connectButton->setEnabled(false);
         }
     });
-    connect(&m_connection, &RedisConnection::errorOccurred, this, [this](const QString &error) {
+    connect(&m_router, &RedisClient::errorOccurred, this, [this](const QString &error) {
         appendOutput(QStringLiteral("[error] ") + error);
         m_statusLabel->setText(error);
         setConnectedUi(false);
@@ -552,14 +575,14 @@ void MainWindow::buildUi()
         m_connectButton->setText(tr("Connect"));
         m_connectButton->setEnabled(true);
     });
-    connect(&m_connection, &RedisConnection::replyReady, this, [this](const RespValue &reply) {
+    connect(&m_router, &RedisClient::replyReady, this, [this](const RespValue &reply) {
         if (reply.type == RespType::BulkString || reply.type == RespType::SimpleString) {
             appendOutput(QString::fromUtf8(reply.scalar));
         } else {
             appendOutput(reply.toDisplayString());
         }
     });
-    connect(&m_connection, &RedisConnection::pushReceived, this, [this](const RespValue &reply) {
+    connect(&m_router, &RedisClient::pushReceived, this, [this](const RespValue &reply) {
         appendOutput(QStringLiteral("[push] ") + reply.toDisplayString());
     });
 
@@ -640,6 +663,7 @@ void MainWindow::applyProfile(const ConnectionProfile &profile)
     m_passwordEdit->clear();
     m_dbSpin->setValue(profile.db);
     m_readOnlyCheck->setChecked(profile.readOnly);
+    m_clusterCheck->setChecked(profile.cluster);
     syncDatabaseUi(profile.db);
 }
 
@@ -720,7 +744,7 @@ void MainWindow::connectProfile()
     if (!selected)
         return;
     applyProfile(*selected);
-    if (m_connection.isReady())
+    if (m_router.isReady())
         m_connectButton->setText(tr("Connect"));
     connectOrDisconnect();
 }
@@ -755,7 +779,7 @@ void MainWindow::connectOrDisconnect()
     if (m_connectButton->text() == tr("Disconnect")) {
         if (m_sshTunnel)
             m_sshTunnel->stop();
-        m_connection.disconnectFromHost();
+        m_router.disconnectFromHost();
         return;
     }
 
@@ -779,6 +803,7 @@ void MainWindow::connectOrDisconnect()
     active->username = m_usernameEdit->text();
     active->db = m_dbSpin->value();
     active->readOnly = m_readOnlyCheck->isChecked();
+    active->cluster = m_clusterCheck->isChecked();
     saveProfiles();
 
     SecretStore secrets;
@@ -794,6 +819,12 @@ void MainWindow::connectOrDisconnect()
             if (!secrets.writePassword(active->id, m_passwordEdit->text(), &secretError))
                 appendOutput(QStringLiteral("[warning] ") + secretError);
         }
+    }
+
+    if (active->cluster) {
+        m_router.setBackend(std::make_unique<ClusterClient>());
+    } else {
+        m_router.setBackend(std::make_unique<RedisConnection>());
     }
 
     m_output->clear();
@@ -814,7 +845,7 @@ void MainWindow::connectOrDisconnect()
             m_scanStatus->setText(tr("SSH tunnel ready; connecting..."));
             m_effectiveHost = QStringLiteral("127.0.0.1");
             m_effectivePort = localPort;
-            m_connection.connectToHost(m_effectiveHost, m_effectivePort, active->tls,
+            m_router.connectToHost(m_effectiveHost, m_effectivePort, active->tls,
                                        active->username, m_passwordEdit->text(), active->db);
         });
         connect(m_sshTunnel, &SshTunnel::failed, this, [this](const QString &error) {
@@ -835,7 +866,7 @@ void MainWindow::connectOrDisconnect()
             m_scanStatus->setText(tr("Connecting to master %1:%2...").arg(host).arg(port));
             m_effectiveHost = host;
             m_effectivePort = port;
-            m_connection.connectToHost(host, port, active->tls, active->username,
+            m_router.connectToHost(host, port, active->tls, active->username,
                                        m_passwordEdit->text(), active->db);
             resolver->deleteLater();
         });
@@ -853,13 +884,13 @@ void MainWindow::connectOrDisconnect()
     }
     m_effectiveHost = m_hostEdit->text().trimmed();
     m_effectivePort = static_cast<quint16>(m_portSpin->value());
-    m_connection.connectToHost(m_effectiveHost, m_effectivePort, m_tlsCheck->isChecked(),
+    m_router.connectToHost(m_effectiveHost, m_effectivePort, m_tlsCheck->isChecked(),
                                m_usernameEdit->text(), m_passwordEdit->text(), m_dbSpin->value());
 }
 
 void MainWindow::startScan()
 {
-    if (!m_connection.isReady())
+    if (!m_router.isReady())
         return;
     m_scanner->stop();
     m_indexingAll = false;
@@ -879,12 +910,12 @@ void MainWindow::startScan()
 
 void MainWindow::selectDatabase(int db)
 {
-    if (!m_connection.isReady())
+    if (!m_router.isReady())
         return;
     const int previous = m_dbSpin->value();
     Q_UNUSED(previous)
     m_statusLabel->setText(tr("Selecting database %1...").arg(db));
-    m_connection.sendCommand({QByteArrayLiteral("SELECT"), QByteArray::number(db)},
+    m_router.sendCommand({QByteArrayLiteral("SELECT"), QByteArray::number(db)},
                              [this, db](const RespValue &reply, const QString &error) {
         if (!error.isEmpty()) {
             m_statusLabel->setText(error);
@@ -902,7 +933,7 @@ void MainWindow::selectDatabase(int db)
 
 void MainWindow::loadMore()
 {
-    if (!m_connection.isReady())
+    if (!m_router.isReady())
         return;
     m_loadMoreButton->setEnabled(false);
     m_scanner->loadMore();
@@ -1044,7 +1075,7 @@ void MainWindow::renameKey(const KeyInfo &info)
         return;
 
     m_scanStatus->setText(tr("Renaming key..."));
-    m_connection.sendCommand({QByteArrayLiteral("RENAME"), info.key, newName.toUtf8()},
+    m_router.sendCommand({QByteArrayLiteral("RENAME"), info.key, newName.toUtf8()},
                              [this, info, newName](const RespValue &reply,
                                                    const QString &error) {
         if (!error.isEmpty() || reply.isError()) {
@@ -1072,14 +1103,14 @@ void MainWindow::deleteKey(const KeyInfo &info)
 
     const QByteArray key = info.key;
     m_scanStatus->setText(tr("Deleting key..."));
-    m_connection.sendCommand({QByteArrayLiteral("UNLINK"), key},
+    m_router.sendCommand({QByteArrayLiteral("UNLINK"), key},
                              [this, key](const RespValue &reply, const QString &error) {
         if (!error.isEmpty()) {
             m_scanStatus->setText(error);
             return;
         }
         if (reply.isError()) {
-            m_connection.sendCommand({QByteArrayLiteral("DEL"), key},
+            m_router.sendCommand({QByteArrayLiteral("DEL"), key},
                                      [this, key](const RespValue &fallback,
                                                  const QString &fallbackError) {
                 if (!fallbackError.isEmpty() || fallback.isError()) {
@@ -1130,7 +1161,7 @@ void MainWindow::copyValue(const KeyInfo &info)
         return;
     }
 
-    m_connection.sendCommand(args, [this](const RespValue &reply, const QString &error) {
+    m_router.sendCommand(args, [this](const RespValue &reply, const QString &error) {
         if (!error.isEmpty() || reply.isError()) {
             m_scanStatus->setText(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
             return;
@@ -1191,8 +1222,9 @@ void MainWindow::copyKeyToProfile(const KeyInfo &info)
     if (index < 0 || index >= targets.size())
         return;
     const ConnectionProfile targetProfile = targets.at(index);
-    if (targetProfile.sshTunnel || targetProfile.sentinel) {
-        m_scanStatus->setText(tr("Copy to SSH/Sentinel connections is not supported yet"));
+    if (targetProfile.sshTunnel || targetProfile.sentinel || targetProfile.cluster) {
+        m_scanStatus->setText(
+            tr("Copy to SSH/Sentinel/Cluster connections is not supported yet"));
         return;
     }
     if (QMessageBox::question(
@@ -1218,14 +1250,14 @@ void MainWindow::copyKeyToProfile(const KeyInfo &info)
 
     auto *target = new RedisConnection(this);
     QPointer<RedisConnection> targetGuard(target);
-    connect(target, &RedisConnection::errorOccurred, this,
+    connect(target, &RedisClient::errorOccurred, this,
             [this, targetGuard](const QString &error) {
         if (!targetGuard)
             return;
         m_scanStatus->setText(tr("Copy failed: %1").arg(error));
         targetGuard->deleteLater();
     });
-    connect(target, &RedisConnection::stateChanged, this,
+    connect(target, &RedisClient::stateChanged, this,
             [this, targetGuard, info, password, targetProfile](const QString &state) {
         if (!targetGuard || (state != QLatin1String("Ready")
                              && state != QLatin1String("Ready (RESP2)")))
@@ -1281,7 +1313,7 @@ void MainWindow::copyKeyToProfile(const KeyInfo &info)
 
 void MainWindow::applyNamespaceFilter(const QString &path)
 {
-    if (!m_connection.isReady())
+    if (!m_router.isReady())
         return;
     m_filterEdit->setText(path + m_treeModel->separator() + QStringLiteral("*"));
     m_viewMode->setCurrentIndex(1);
@@ -1293,7 +1325,7 @@ void MainWindow::sendCommand()
     const QString line = m_commandEdit->text().trimmed();
     if (line.isEmpty())
         return;
-    if (!m_connection.isReady()) {
+    if (!m_router.isReady()) {
         appendOutput(tr("[error] Not connected"));
         return;
     }
@@ -1306,7 +1338,7 @@ void MainWindow::sendCommand()
     }
 
     appendOutput(QStringLiteral("> ") + line);
-    m_connection.sendCommand(args);
+    m_router.sendCommand(args);
     m_commandEdit->clear();
 }
 
@@ -1325,7 +1357,10 @@ void MainWindow::setConnectedUi(bool connected)
     m_indexAllButton->setEnabled(connected && !m_indexingAll);
     m_filterEdit->setEnabled(connected);
     m_typeCombo->setEnabled(connected);
-    m_dbCombo->setEnabled(connected);
+    const bool cluster = m_clusterCheck && m_clusterCheck->isChecked();
+    m_dbSpin->setEnabled(connected && !cluster);
+    m_dbCombo->setEnabled(connected && !cluster);
+    m_clusterCheck->setEnabled(!connected);
     m_viewMode->setEnabled(connected);
     if (m_valuePanel)
         m_valuePanel->setReadOnly(readOnly);

@@ -46,6 +46,9 @@ ProfileDialog::ProfileDialog(const ConnectionProfile &profile, QWidget *parent)
     m_readOnlyCheck = new QCheckBox(tr("Read-only"), this);
     m_readOnlyCheck->setChecked(profile.readOnly);
     form->addRow(QString(), m_readOnlyCheck);
+    m_clusterCheck = new QCheckBox(tr("Cluster mode"), this);
+    m_clusterCheck->setChecked(profile.cluster);
+    form->addRow(QString(), m_clusterCheck);
     m_sentinelCheck = new QCheckBox(tr("Use Sentinel"), this);
     m_sentinelCheck->setChecked(profile.sentinel);
     form->addRow(QString(), m_sentinelCheck);
@@ -106,6 +109,7 @@ void ProfileDialog::accept()
     m_profile.username = m_usernameEdit->text();
     m_profile.db = m_dbSpin->value();
     m_profile.readOnly = m_readOnlyCheck->isChecked();
+    m_profile.cluster = m_clusterCheck->isChecked();
     m_profile.sentinel = m_sentinelCheck->isChecked();
     m_profile.sentinelMaster = m_sentinelMasterEdit->text().trimmed();
     m_profile.sentinelHost = m_sentinelHostEdit->text().trimmed();
@@ -124,6 +128,11 @@ void ProfileDialog::accept()
     if (m_profile.sshTunnel && m_profile.sentinel) {
         QMessageBox::warning(this, tr("Invalid connection"),
                              tr("SSH and Sentinel cannot be combined yet."));
+        return;
+    }
+    if (m_profile.cluster && (m_profile.sentinel || m_profile.sshTunnel)) {
+        QMessageBox::warning(this, tr("Invalid connection"),
+                             tr("Cluster cannot be combined with Sentinel or SSH yet."));
         return;
     }
     if (m_profile.sentinel

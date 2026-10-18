@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "core/net/redisclient.h"
+
 #include <QByteArray>
 #include <QObject>
 #include <QPointer>
@@ -15,14 +17,13 @@ class QSaveFile;
 
 namespace KeyDis {
 
-class RedisConnection;
 
 class KeyTransfer : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit KeyTransfer(RedisConnection *connection, QObject *parent = nullptr);
+    explicit KeyTransfer(RedisClient *connection, QObject *parent = nullptr);
     ~KeyTransfer() override;
 
     void exportToFile(const QString &filePath, const QByteArray &pattern = QByteArrayLiteral("*"));
@@ -43,7 +44,7 @@ private:
     void finish(bool success, const QString &message);
     void restoreNext();
 
-    QPointer<RedisConnection> m_connection;
+    QPointer<RedisClient> m_connection;
     std::unique_ptr<QSaveFile> m_output;
     QByteArray m_pattern;
     QByteArray m_cursor;

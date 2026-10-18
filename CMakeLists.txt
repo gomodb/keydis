@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 3.28)
 
 project(KeyDis
-    VERSION 0.3.0
+    VERSION 0.4.0
     DESCRIPTION "Native Redis/Valkey client for KDE"
     HOMEPAGE_URL "https://github.com/gomodb/keydis"
     LANGUAGES C CXX
@@ -40,6 +40,7 @@ find_package(KF6DBusAddons REQUIRED)
 find_package(KF6I18n REQUIRED)
 find_package(KF6Wallet REQUIRED)
 find_package(KF6XmlGui REQUIRED)
+find_package(KF6Runner QUIET)
 
 # hiredis is used only through its public reader API. Pin the upstream stable
 # release so parser behaviour does not drift between developer machines.
@@ -92,6 +93,11 @@ add_library(keydis_core STATIC
     src/core/language.h
     src/core/logger.cpp
     src/core/logger.h
+    src/core/net/clusterclient.cpp
+    src/core/net/clusterclient.h
+    src/core/net/redisclient.h
+    src/core/net/redisrouter.cpp
+    src/core/net/redisrouter.h
     src/core/net/redisconnection.cpp
     src/core/net/redisconnection.h
     src/core/net/sshtunnel.cpp
@@ -200,10 +206,27 @@ install(FILES ${KEYDIS_QM_FILES}
 install(FILES LICENSE NOTICE LICENSES/MIT.txt LICENSES/BSD-3-Clause.txt
     DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/keydis)
 
+if(KF6Runner_FOUND)
+    add_library(keydisrunner MODULE
+        src/krunner/keydisrunner.cpp
+        src/krunner/keydisrunner.h
+    )
+    target_include_directories(keydisrunner PRIVATE src)
+    target_link_libraries(keydisrunner PRIVATE
+        keydis_core
+        KF6::CoreAddons
+        KF6::Runner
+    )
+    install(TARGETS keydisrunner
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/qt6/plugins/kf6/krunner)
+endif()
+
 if(BUILD_TESTING)
     add_executable(keydis_tests
         tests/fakeserver.cpp
         tests/fakeserver.h
+        tests/test_clusterclient.cpp
+        tests/test_clusterclient.h
         tests/test_commandencoder.cpp
         tests/test_commandencoder.h
         tests/test_keyscanner.cpp
@@ -237,7 +260,7 @@ if(BUILD_TESTING)
     add_dependencies(keydis_tests keydis_lrelease)
     add_test(NAME keydis_tests COMMAND keydis_tests)
     set_tests_properties(keydis_tests PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;XDG_CONFIG_HOME=${CMAKE_CURRENT_BINARY_DIR}/test-config;XDG_STATE_HOME=${CMAKE_CURRENT_BINARY_DIR}/test-state;XDG_CACHE_HOME=${CMAKE_CURRENT_BINARY_DIR}/test-cache"
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;XDG_CONFIG_HOME=${CMAKE_CURRENT_BINARY_DIR}/test-config;XDG_STATE_HOME=${CMAKE_CURRENT_BINARY_DIR}/test-state;XDG_CACHE_HOME=${CMAKE_CURRENT_BINARY_DIR}/test-cache;KEYDIS_TEST_CONFIG_RESET=1"
         TIMEOUT 120
     )
 
@@ -259,12 +282,12 @@ if(BUILD_TESTING)
     add_dependencies(keydis_ui_tests keydis_lrelease)
     add_test(NAME keydis_ui_tests COMMAND keydis_ui_tests)
     set_tests_properties(keydis_ui_tests PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;XDG_CONFIG_HOME=${CMAKE_CURRENT_BINARY_DIR}/test-config;XDG_STATE_HOME=${CMAKE_CURRENT_BINARY_DIR}/test-state;XDG_CACHE_HOME=${CMAKE_CURRENT_BINARY_DIR}/test-cache"
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;XDG_CONFIG_HOME=${CMAKE_CURRENT_BINARY_DIR}/test-config;XDG_STATE_HOME=${CMAKE_CURRENT_BINARY_DIR}/test-state;XDG_CACHE_HOME=${CMAKE_CURRENT_BINARY_DIR}/test-cache;KEYDIS_TEST_CONFIG_RESET=1"
         TIMEOUT 120
     )
 endif()
 
-foreach(keydis_target keydis_core keydis_ui_models keydis_ui keydis keydis_tests keydis_ui_tests)
+foreach(keydis_target keydis_core keydis_ui_models keydis_ui keydis keydisrunner keydis_tests keydis_ui_tests)
     if(TARGET ${keydis_target})
         keydis_enable_warnings(${keydis_target})
     endif()

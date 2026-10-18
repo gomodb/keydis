@@ -75,6 +75,8 @@ int main(int argc, char *argv[])
     const QCommandLineOption tabOption(QStringLiteral("tab"),
                                        QStringLiteral("Initial tab: dashboard, browser, cli"),
                                        QStringLiteral("name"));
+    const QCommandLineOption clusterOption(QStringLiteral("cluster"),
+                                           QStringLiteral("Connect using Redis Cluster mode"));
     parser.addOption(hostOption);
     parser.addOption(portOption);
     parser.addOption(tlsOption);
@@ -85,6 +87,7 @@ int main(int argc, char *argv[])
     parser.addOption(quitAfterOption);
     parser.addOption(closeAfterOption);
     parser.addOption(tabOption);
+    parser.addOption(clusterOption);
     parser.process(application);
     about.processCommandLine(&parser);
 
@@ -127,6 +130,8 @@ int main(int argc, char *argv[])
                                         parser.value(dbOption).toInt());
     }
     window->show();
+    if (parser.isSet(clusterOption))
+        window->setClusterMode(true);
     if (parser.isSet(tabOption))
         window->showTab(parser.value(tabOption));
     if (parser.isSet(connectOption))

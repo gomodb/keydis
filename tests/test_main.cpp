@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 KeyDis contributors
 
+#include "test_clusterclient.h"
 #include "test_commandencoder.h"
 #include "test_keyscanner.h"
 #include "test_language.h"
@@ -26,6 +27,9 @@ int main(int argc, char *argv[])
 
     KeyDis::Test::TestCommandEncoder encoder;
     status |= QTest::qExec(&encoder, argc, argv);
+
+    KeyDis::Test::TestClusterClient cluster;
+    status |= QTest::qExec(&cluster, argc, argv);
 
     KeyDis::Test::TestLanguage language;
     status |= QTest::qExec(&language, argc, argv);

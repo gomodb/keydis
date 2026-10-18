@@ -3,7 +3,7 @@
 
 #include "core/analysis/memoryanalyzer.h"
 
-#include "core/net/redisconnection.h"
+#include "core/net/redisclient.h"
 
 #include <algorithm>
 #include <utility>
@@ -19,7 +19,7 @@ struct MemoryAnalyzer::Page {
     int remaining = 0;
 };
 
-MemoryAnalyzer::MemoryAnalyzer(RedisConnection *connection, QObject *parent)
+MemoryAnalyzer::MemoryAnalyzer(RedisClient *connection, QObject *parent)
     : QObject(parent)
     , m_connection(connection)
 {

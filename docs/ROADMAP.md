@@ -129,11 +129,11 @@ P6                                              ██████
 
 ---
 
-### P3 — 生产连接 Beta（0.8，4 周，部分完成）
+### P3 — 生产连接 Beta（0.8，4 周，基本完成）
 
 **目标**：覆盖生产环境常见连接方式，发布 Beta。
 
-> 当前 0.3 完成 standalone + TLS + ACL + RESP2 回退 + Sentinel 解析 + SSH key/agent 隧道；Cluster 仍是下一阶段的主要工作。
+> 当前 0.4 完成 standalone + TLS + ACL + RESP2 回退 + Sentinel 解析 + SSH key/agent 隧道 + Cluster slot 路由/跨 master SCAN。剩余：Cluster 运维视图、持续 failover 监控、SSH 密码。
 
 **交付物**：
 
@@ -160,7 +160,7 @@ P6                                              ██████
 
 **目标**：覆盖迁移、清理、分析、流数据等高频进阶场景。
 
-> 已完成：DUMP/RESTORE JSON Lines 导入导出、Stream 条目/组/Pending 查看、RedisJSON 路径编辑、Key 右键/跨连接复制、内存/大 Key 分析。未完成：Stream consumer claim/ack、RedisJSON 树编辑。
+> 已完成：DUMP/RESTORE JSON Lines 导入导出、Stream 条目/组/Pending 查看与 claim/ack、RedisJSON 路径编辑、Key 右键/跨连接复制、内存/大 Key 分析。未完成：RedisJSON 树编辑。
 
 **交付物**：
 
@@ -184,7 +184,7 @@ P6                                              ██████
 
 ---
 
-### P5 — KDE 打磨与 RC（1.0-rc，3 周）
+### P5 — KDE 打磨与 RC（1.0-rc，3 周，部分完成）
 
 **目标**：达到发布候选质量，完成 KDE 桌面体验与分发。
 
@@ -192,7 +192,7 @@ P6                                              ██████
 
 - KDE HIG 审计：布局、间距、图标、快捷键、菜单、状态栏、错误提示。
 - 无障碍：键盘全流程、焦点顺序、可访问名称/描述、高对比度。
-- KRunner 插件：搜索连接并打开。
+- KRunner 插件：搜索连接并打开。**已完成**（`libkeydisrunner`）。
 - 用户文档：快速开始、连接配置、Cluster/SSH/Sentinel、只读/安全、故障排查。
 - AppStream 元数据、`.desktop`、图标、截图；`desktop-file-validate`/`appstreamcli` 通过。
 - Arch PKGBUILD、Flatpak manifest；安装/卸载/升级测试。

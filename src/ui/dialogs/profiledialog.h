@@ -34,6 +34,7 @@ private:
     QLineEdit *m_usernameEdit = nullptr;
     QSpinBox *m_dbSpin = nullptr;
     QCheckBox *m_readOnlyCheck = nullptr;
+    QCheckBox *m_clusterCheck = nullptr;
     QCheckBox *m_sentinelCheck = nullptr;
     QLineEdit *m_sentinelMasterEdit = nullptr;
     QLineEdit *m_sentinelHostEdit = nullptr;

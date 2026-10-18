@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "core/net/redisclient.h"
+
 #include <QByteArray>
 #include <QHash>
 #include <QObject>
@@ -14,7 +16,6 @@
 
 namespace KeyDis {
 
-class RedisConnection;
 
 struct KeyMemory {
     QByteArray key;
@@ -36,7 +37,7 @@ class MemoryAnalyzer : public QObject
     Q_OBJECT
 
 public:
-    explicit MemoryAnalyzer(RedisConnection *connection, QObject *parent = nullptr);
+    explicit MemoryAnalyzer(RedisClient *connection, QObject *parent = nullptr);
     ~MemoryAnalyzer() override;
 
     void start(const QByteArray &pattern = QByteArrayLiteral("*"),
@@ -55,7 +56,7 @@ private:
     void analyzePage(const QVector<QByteArray> &keys, const QByteArray &nextCursor);
     void processPage(std::shared_ptr<Page> page);
 
-    QPointer<RedisConnection> m_connection;
+    QPointer<RedisClient> m_connection;
     QByteArray m_pattern;
     QString m_typeFilter;
     QByteArray m_cursor;

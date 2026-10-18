@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.3）
+# KeyDis 使用说明（0.4）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -26,8 +26,18 @@ cmake --build build -j2
 | Connect | 连接后自动执行 `HELLO 3`、可选 `SELECT` |
 | Sentinel | Profile 中启用；通过 `SENTINEL get-master-addr-by-name` 解析主节点 |
 | SSH | Profile 中启用；本地 `ssh -L` 隧道，仅支持密钥/agent（BatchMode） |
+| Cluster | 连接栏/Profile 勾选 Cluster；Host:Port 作为 seed，DB 固定 0 |
 
 连接成功后，KeyDis 自动执行一次 `SCAN`（默认 `*`）。
+
+### Cluster 模式
+
+- Host/Port 只需一个可达 seed；KeyDis 用 `CLUSTER SLOTS` 发现所有 master；
+- Browser 的 `SCAN` 会并发扫描所有 master 并合并结果；
+- GET/SET 等单 Key 命令按 CRC16 slot 路由，处理 `MOVED`/`ASK` 重定向；
+- 跨 slot 的多 Key 命令（如不同 slot 的 `MGET`）返回 `CROSSSLOT`；
+- 当前 Dashboard/INFO、Slowlog、Clients 只显示一个节点；DB 选择固定 0；
+- 不提供 resharding、节点拓扑编辑或持续 failover 监控。
 
 ## 2. Dashboard
 
@@ -155,7 +165,19 @@ INFO memory
 
 CLI 与浏览器共用主连接；阻塞命令会占用该连接。Pub/Sub/Monitor 请使用 **Tools** 页签的独立连接。
 
-## 8. 配置与日志
+## 8. KRunner
+
+安装 KRunner 插件后，在 KRunner 中输入：
+
+```text
+redis
+redis local
+redis 127.0.0.1
+```
+
+会列出保存的连接；选中后启动 `keydis --host ... --port ... --connect`。插件库为 `libkeydisrunner`，也可用 `krunner --list` 检查是否加载。
+
+## 9. 配置与日志
 
 | 数据 | 路径 |
 |---|---|
@@ -170,20 +192,20 @@ CLI 与浏览器共用主连接；阻塞命令会占用该连接。Pub/Sub/Monit
 
 日志默认 info，按 2 MB × 3 份轮转；`AUTH`、`password=` 等敏感片段会被替换为 `***`。
 
-## 9. 当前限制
+## 10. 当前限制
 
-- 没有 Cluster 专用 UI；Sentinel 通过 Profile 解析主节点，但不做持续 failover 监控；
+- Cluster 已支持 slot 路由和全 master SCAN，但没有 resharding/节点拓扑编辑，Dashboard/工具只显示单节点；
+- Sentinel 通过 Profile 解析主节点，但不做持续 failover 监控；
 - SSH 隧道使用系统 `ssh` 的 BatchMode，仅支持密钥/agent，不支持 SSH 密码；
 - Sentinel 认证复用主连接用户名/密码，暂不支持独立 Sentinel ACL；
 - 只读模式是 UI 层保护，不是服务端 ACL；生产环境仍建议使用只读 ACL 用户；
 - 精确命名空间计数需要 `Index all`，大库会占用较多内存；
-- Stream 组/Pending 可查看，但 consumer claim/ack 工作流、RedisJSON 树形控件、模块类型专用编辑器未实现；
+- Stream 组/Pending 支持查看与 claim/ack，但更完整的 consumer 管理/自动 claim 未实现；RedisJSON 为 raw 路径编辑，不是树形控件；
 - CLI 的阻塞命令会占用主连接；Pub/Sub/Monitor 请用 Tools；
 - 中文翻译已内置（`zh_CN`），其他语言尚未提供；
-- KRunner 插件尚未提供；
 - Arch 包位于 `packaging/arch/`；Flatpak 明确不在 v1.0 范围。
 
-## 10. 测试
+## 11. 测试
 
 ```bash
 ctest --test-dir build --output-on-failure
@@ -198,7 +220,7 @@ KEYDIS_REDIS_PORT=6399 ./build/keydis_ui_tests
 
 UI 测试使用 `QT_QPA_PLATFORM=offscreen`，验证连接、SCAN、Tree、DB 切换、String/Hash 查看与编辑、分页、只读。
 
-## 11. 故障排查
+## 12. 故障排查
 
 - **连接失败**：检查 Host/Port/TLS/ACL；TLS 默认校验证书，自签名证书暂不支持忽略选项。
 - **SCAN 很慢**：pattern 过宽或 Key 很多；使用更具体的前缀，或减少 `COUNT`（代码内固定 500）。

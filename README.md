@@ -10,7 +10,7 @@ KeyDis 是一个使用 **C++20、Qt 6 Widgets 和 KDE Frameworks 6** 构建的�
 
 ## 当前状态
 
-**可用版本 0.3。** 已具备一个可构建、可安装的 Qt 6 + KF6 客户端：连接 Redis/Valkey、SCAN 浏览 Key、Dashboard、命名空间树、核心类型编辑、Stream/JSON、服务器工具、DUMP/RESTORE 导入导出、多连接配置与 KWallet。Sentinel 与 SSH key/agent 隧道已支持；Cluster 是下一阶段（0.8+）的连接层工作。
+**可用版本 0.4。** 已具备一个可构建、可安装的 Qt 6 + KF6 客户端：连接 Redis/Valkey、SCAN 浏览 Key、Dashboard、命名空间树、核心类型编辑、Stream/JSON、服务器工具、DUMP/RESTORE 导入导出、多连接配置与 KWallet。Sentinel、SSH key/agent 隧道与 **Cluster 基础支持** 已接入；更完整的 Cluster 运维视图仍在后续。
 
 当前已落地：
 
@@ -18,17 +18,18 @@ KeyDis 是一个使用 **C++20、Qt 6 Widgets 和 KDE Frameworks 6** 构建的�
 - `KXmlGuiWindow` 主窗口、连接栏、Dashboard、Key 浏览器、值编辑面板、CLI；
 - 命名空间树 / 平铺列表切换、DB 选择、双击命名空间按前缀过滤；
 - SCAN 分页 + 类型过滤 + TTL 展示；Key 与 Hash/List/Set/ZSet 均支持 `Load more`；
-- String / Hash / List / Set / ZSet 查看与基础编辑；Stream 条目/组/Pending 查看；RedisJSON 路径编辑；
+- String / Hash / List / Set / ZSet 查看与基础编辑；Stream 条目/组/Pending 查看与 claim/ack；RedisJSON 路径编辑；
 - Key 右键菜单：重命名、删除、复制 Key/Value、跨连接复制；
 - TTL 修改、PERSIST、UNLINK/DEL 删除；
 - 只读模式禁用编辑/添加/删除与 CLI 写入；
 - Dashboard：Server/Memory/Stats 卡片、Key Statistics 表、Auto refresh、双击 DB 切换；
 - Tools：Slowlog、Clients、Pub/Sub、Monitor、内存分析；
+- KRunner：`redis <name>` 打开已保存连接（`libkeydisrunner`）；
 - Transfer：DUMP/RESTORE JSON Lines 导出/导入，支持取消；
 - 中文界面 catalog（`translations/keydis_zh_CN.ts`）；
 - Arch PKGBUILD（`packaging/arch/`）；
 - `Index all`：完整扫描当前 DB，使命名空间计数精确（内存换精度）；
-- 多连接配置/分组、KWallet 密码、Sentinel、SSH key/agent 隧道、只读模式；
+- 多连接配置/分组、KWallet 密码、Sentinel、SSH key/agent 隧道、Cluster slot 路由、KRunner 插件、只读模式；
 - 从 NutSync 复用并适配的 `AppPaths`、`Language`、`Logger`、`Diagnostics`；
 - RESP2/RESP3、命令编码、语言、日志、SCAN、连接、值读写、UI 集成测试；
 - 真实 Redis 7.4 集成测试与 offscreen UI 测试；
@@ -92,12 +93,12 @@ KEYDIS_REDIS_PORT=6399 ./build/keydis_ui_tests
 
 ## 当前范围
 
-已完成 **v0.3 工作台**（standalone + Sentinel + SSH key/agent）。尚未实现：
+已完成 **v0.4 工作台**（standalone + Sentinel + SSH key/agent + Cluster 基础）。尚未实现：
 
-- Cluster（需要连接路由重构，计划 0.8+）；
+- 完整 Cluster 运维视图（resharding、节点详情、跨节点 Dashboard 聚合）；
 - 精确全库命名空间统计默认关闭（可用 `Index all` 显式触发）；
-- Flatpak（明确不做）、KRunner 插件；
-- RedisJSON 树形路径编辑、Stream consumer claim/ack 完整工作流。
+- Flatpak（明确不做）；
+- RedisJSON 树形控件、Cluster 运维视图。
 
 ## 目标能力
 

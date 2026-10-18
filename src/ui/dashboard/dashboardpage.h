@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "core/net/redisclient.h"
+
 #include <QHash>
 #include <QPointer>
 #include <QWidget>
@@ -14,7 +16,6 @@ class QTimer;
 
 namespace KeyDis {
 
-class RedisConnection;
 struct RedisInfo;
 
 class DashboardPage : public QWidget
@@ -22,7 +23,7 @@ class DashboardPage : public QWidget
     Q_OBJECT
 
 public:
-    explicit DashboardPage(RedisConnection *connection, QWidget *parent = nullptr);
+    explicit DashboardPage(RedisClient *connection, QWidget *parent = nullptr);
 
     void setConnected(bool connected);
     void refresh();
@@ -34,7 +35,7 @@ private:
     void updateUi(const RedisInfo &info);
     void setStatus(const QString &status);
 
-    QPointer<RedisConnection> m_connection;
+    QPointer<RedisClient> m_connection;
     QHash<QString, QLabel *> m_values;
     QLabel *m_updatedLabel = nullptr;
     QLabel *m_statusLabel = nullptr;

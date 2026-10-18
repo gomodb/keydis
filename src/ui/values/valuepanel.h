@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "core/net/redisclient.h"
+
 #include "core/keyspace/keyinfo.h"
 
 #include <QByteArray>
@@ -22,14 +24,13 @@ class QTableWidget;
 namespace KeyDis {
 
 struct RespValue;
-class RedisConnection;
 
 class ValuePanel : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit ValuePanel(RedisConnection *connection, QWidget *parent = nullptr);
+    explicit ValuePanel(RedisClient *connection, QWidget *parent = nullptr);
 
     void loadKey(const KeyInfo &info);
     void clearKey();
@@ -77,6 +78,8 @@ private:
     void createStreamGroup();
     void deleteStreamGroup();
     void loadPending();
+    void claimStreamEntries();
+    void ackStreamEntries();
     void addStreamEntry();
     void deleteStreamEntries();
     void loadJson();
@@ -101,7 +104,7 @@ private:
     void runCommand(const QList<QByteArray> &args,
                     std::function<void(const RespValue &, const QString &)> callback);
 
-    RedisConnection *m_connection = nullptr;
+    RedisClient *m_connection = nullptr;
     QByteArray m_key;
     QString m_type;
     qint64 m_ttlMs = -2;

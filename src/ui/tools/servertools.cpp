@@ -4,6 +4,7 @@
 #include "ui/tools/servertools.h"
 
 #include "core/analysis/memoryanalyzer.h"
+#include "core/net/redisclient.h"
 #include "core/net/redisconnection.h"
 #include "core/transfer/keytransfer.h"
 
@@ -76,7 +77,7 @@ QTableWidget *makeTable(const QStringList &headers, QWidget *parent)
 
 } // namespace
 
-ServerToolsPage::ServerToolsPage(RedisConnection *connection, QWidget *parent)
+ServerToolsPage::ServerToolsPage(RedisClient *connection, QWidget *parent)
     : QWidget(parent)
     , m_connection(connection)
 {

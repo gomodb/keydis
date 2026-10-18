@@ -4,10 +4,13 @@
 #include "test_mainwindow.h"
 
 #include "app/mainwindow.h"
+#include "core/app_paths.h"
+#include "core/net/clusterclient.h"
 #include "core/net/redisconnection.h"
 #include "ui/models/keytablemodel.h"
 
 #include <QEventLoop>
+#include <QFile>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPlainTextEdit>
@@ -59,6 +62,12 @@ int rowForKey(QAbstractItemModel *model, const QByteArray &key)
 }
 
 } // namespace
+
+void TestMainWindow::initTestCase()
+{
+    if (qEnvironmentVariableIsSet("KEYDIS_TEST_CONFIG_RESET"))
+        QFile::remove(KeyDis::AppPaths::configFile());
+}
 
 void TestMainWindow::browsesAndShowsValues()
 {
@@ -202,6 +211,97 @@ void TestMainWindow::browsesAndShowsValues()
         command(cleanup, {QByteArrayLiteral("DEL"), QByteArrayLiteral("keydis:ui:db1")}, &error);
         command(cleanup, {QByteArrayLiteral("SELECT"), QByteArrayLiteral("0")}, &error);
         QVERIFY2(error.isEmpty(), qPrintable(error));
+    }
+}
+
+void TestMainWindow::browsesCluster()
+{
+    bool ok = false;
+    const int port = qEnvironmentVariableIntValue("KEYDIS_CLUSTER_PORT", &ok);
+    if (!ok || port <= 0)
+        QSKIP("KEYDIS_CLUSTER_PORT is not set");
+
+    const QByteArray keyA("keydis:cluster:ui:a");
+    const QByteArray keyB("keydis:cluster:ui:b");
+    const QByteArray keyC("keydis:cluster:ui:c");
+
+    {
+        ClusterClient seed;
+        bool ready = false;
+        QObject::connect(&seed, &RedisClient::stateChanged, &seed,
+                         [&](const QString &state) {
+            if (state == QLatin1String("Ready"))
+                ready = true;
+        });
+        seed.connectToHost(QStringLiteral("127.0.0.1"), static_cast<quint16>(port), false, {},
+                           {}, 0);
+        QTRY_VERIFY_WITH_TIMEOUT(ready, 15000);
+        bool done = false;
+        auto run = [&](const QList<QByteArray> &args) {
+            done = false;
+            seed.sendCommand(args, [&](const RespValue &, const QString &) { done = true; });
+            QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+        };
+        run({QByteArrayLiteral("DEL"), keyA, keyB, keyC});
+        run({QByteArrayLiteral("SET"), keyA, QByteArrayLiteral("a")});
+        run({QByteArrayLiteral("SET"), keyB, QByteArrayLiteral("b")});
+        run({QByteArrayLiteral("SET"), keyC, QByteArrayLiteral("c")});
+    }
+
+    MainWindow window;
+    window.setAttribute(Qt::WA_DeleteOnClose, false);
+    window.show();
+
+    auto *host = window.findChild<QLineEdit *>(QStringLiteral("hostEdit"));
+    auto *portSpin = window.findChild<QSpinBox *>(QStringLiteral("portSpin"));
+    auto *filter = window.findChild<QLineEdit *>(QStringLiteral("filterEdit"));
+    auto *connectButton = window.findChild<QPushButton *>(QStringLiteral("connectButton"));
+    auto *table = window.findChild<QTableView *>(QStringLiteral("keyTable"));
+    auto *tree = window.findChild<QTreeView *>(QStringLiteral("keyTree"));
+    auto *dbCombo = window.findChild<QComboBox *>(QStringLiteral("dbCombo"));
+    auto *clusterCheck = window.findChild<QCheckBox *>(QStringLiteral("clusterCheck"));
+    QVERIFY(host);
+    QVERIFY(portSpin);
+    QVERIFY(filter);
+    QVERIFY(connectButton);
+    QVERIFY(table);
+    QVERIFY(tree);
+    QVERIFY(dbCombo);
+    QVERIFY(clusterCheck);
+
+    host->setText(QStringLiteral("127.0.0.1"));
+    portSpin->setValue(port);
+    filter->setText(QStringLiteral("keydis:cluster:ui:*"));
+    clusterCheck->setChecked(true);
+    QTest::mouseClick(connectButton, Qt::LeftButton);
+
+    QTRY_VERIFY_WITH_TIMEOUT(table->model()->rowCount() >= 3, 15000);
+    QTRY_VERIFY_WITH_TIMEOUT(tree->model()->rowCount() > 0, 5000);
+    QVERIFY(!dbCombo->isEnabled());
+    QVERIFY(rowForKey(table->model(), keyA) >= 0);
+    QVERIFY(rowForKey(table->model(), keyB) >= 0);
+    QVERIFY(rowForKey(table->model(), keyC) >= 0);
+
+    table->selectRow(rowForKey(table->model(), keyA));
+    auto *stringEdit = window.findChild<QPlainTextEdit *>(QStringLiteral("stringEdit"));
+    QVERIFY(stringEdit);
+    QTRY_VERIFY_WITH_TIMEOUT(stringEdit->toPlainText() == QStringLiteral("a"), 5000);
+
+    {
+        ClusterClient cleanup;
+        bool ready = false;
+        QObject::connect(&cleanup, &RedisClient::stateChanged, &cleanup,
+                         [&](const QString &state) {
+            if (state == QLatin1String("Ready"))
+                ready = true;
+        });
+        cleanup.connectToHost(QStringLiteral("127.0.0.1"), static_cast<quint16>(port), false, {},
+                              {}, 0);
+        QTRY_VERIFY_WITH_TIMEOUT(ready, 15000);
+        bool done = false;
+        cleanup.sendCommand({QByteArrayLiteral("DEL"), keyA, keyB, keyC},
+                            [&](const RespValue &, const QString &) { done = true; });
+        QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
     }
 }
 

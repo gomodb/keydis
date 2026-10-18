@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "core/net/redisclient.h"
+
 #include <QPointer>
 #include <QStringList>
 #include <QWidget>
@@ -26,7 +28,7 @@ class ServerToolsPage : public QWidget
     Q_OBJECT
 
 public:
-    explicit ServerToolsPage(RedisConnection *connection, QWidget *parent = nullptr);
+    explicit ServerToolsPage(RedisClient *connection, QWidget *parent = nullptr);
 
     void setConnected(bool connected);
     void setConnectionParameters(const QString &host, quint16 port, bool tls,
@@ -47,7 +49,7 @@ public slots:
     void cancelAnalysis();
 
 private:
-    QPointer<RedisConnection> m_connection;
+    QPointer<RedisClient> m_connection;
     QTabWidget *m_tabs = nullptr;
     QTableWidget *m_slowlogTable = nullptr;
     QTableWidget *m_clientsTable = nullptr;

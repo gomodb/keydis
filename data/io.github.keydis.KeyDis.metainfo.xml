@@ -18,9 +18,9 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
-    <release version="0.3.0" date="2026-10-18">
+    <release version="0.4.0" date="2026-10-18">
       <description>
-        <p>Standalone workbench: Dashboard, namespace tree, DB switching, core type editing, profiles with KWallet, server tools, memory analysis, DUMP/RESTORE transfer, Stream groups, RedisJSON paths, Sentinel/SSH connectivity, Chinese translation.</p>
+        <p>Cluster-aware workbench: slot routing, cluster-wide SCAN, KRunner integration, Dashboard, namespace tree, core type editing, profiles with KWallet, server tools, memory analysis, transfer, Stream/JSON, Sentinel/SSH, Chinese translation.</p>
       </description>
     </release>
   </releases>

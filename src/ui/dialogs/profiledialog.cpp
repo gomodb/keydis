@@ -39,6 +39,10 @@ ProfileDialog::ProfileDialog(const ConnectionProfile &profile, QWidget *parent)
     form->addRow(QString(), m_tlsCheck);
     m_usernameEdit = new QLineEdit(profile.username, this);
     form->addRow(tr("ACL user"), m_usernameEdit);
+    m_passwordEdit = new QLineEdit(profile.password, this);
+    m_passwordEdit->setEchoMode(QLineEdit::Password);
+    m_passwordEdit->setPlaceholderText(tr("Leave blank to use KWallet"));
+    form->addRow(tr("Password"), m_passwordEdit);
     m_dbSpin = new QSpinBox(this);
     m_dbSpin->setRange(0, 15);
     m_dbSpin->setValue(profile.db);
@@ -107,6 +111,7 @@ void ProfileDialog::accept()
     m_profile.port = static_cast<quint16>(m_portSpin->value());
     m_profile.tls = m_tlsCheck->isChecked();
     m_profile.username = m_usernameEdit->text();
+    m_profile.password = m_passwordEdit->text();
     m_profile.db = m_dbSpin->value();
     m_profile.readOnly = m_readOnlyCheck->isChecked();
     m_profile.cluster = m_clusterCheck->isChecked();

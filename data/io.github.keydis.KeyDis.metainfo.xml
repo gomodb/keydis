@@ -18,6 +18,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.4" date="2026-10-19">
+      <description>
+        <p>Connection UX cleanup: the top connection bar is removed; all connection actions live in the Connections dock, with password and read-only controls moved there.</p>
+      </description>
+    </release>
     <release version="0.4.3" date="2026-10-19">
       <description>
         <p>Connection UX: the top Connect action only makes an ephemeral connection; saved profiles are created exclusively from the Connections dock.</p>

@@ -16,6 +16,9 @@ struct ConnectionProfile {
     quint16 port = 6379;
     bool tls = false;
     QString username;
+    // Transient only: never serialized to connections.json. The dialog may
+    // populate it for the current session; KWallet is the durable store.
+    QString password;
     int db = 0;
     bool readOnly = false;
     bool cluster = false;

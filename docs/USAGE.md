@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.3）
+# KeyDis 使用说明（0.4.4）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -10,11 +10,9 @@ cmake --build build -j2
 ./build/keydis
 ```
 
-左侧 **Connections** 面板保存多套连接，支持分组（Group）；双击连接或点 **Connect** 打开。连接配置只保存非敏感字段，密码在首次连接后写入 **KWallet**。
+所有连接操作集中在左侧 **Connections** 面板：**New/Edit/Delete/Connect**（连接后同一按钮变为 **Disconnect**），以及 **Read-only** 开关。双击Profile 或点 **Connect** 打开。连接配置只保存非敏感字段，密码写入 **KWallet**。
 
-顶部连接栏的 **Connect** 只建立**临时连接**，不会自动把当前字段加入左侧列表；新增/编辑保存连接请使用左侧 **New/Edit**。
-
-连接栏填写：
+Profile 字段：
 
 | 字段 | 说明 |
 |---|---|
@@ -22,13 +20,12 @@ cmake --build build -j2
 | Port | 默认 `6379` |
 | TLS | 使用 `QSslSocket`，默认校验证书与主机名 |
 | ACL user | Redis 6+ 用户名；为空时使用 `default` |
-| Password | 写入 KWallet；KWallet 不可用时仅本次进程使用 |
+| Password | Profile 对话框中输入；写入 KWallet，留空则读取 KWallet |
 | DB | standalone 数据库编号；Cluster 固定 0 |
-| Read-only | 禁用编辑、添加/删除、TTL 与 CLI 写入，仅允许浏览/查看 |
-| Connect | 连接后自动执行 `HELLO 3`、可选 `SELECT` |
+| Read-only | 左侧 Connections 面板或 Profile 中设置；禁用编辑、添加/删除、TTL 与 CLI 写入 |
 | Sentinel | Profile 中启用；通过 `SENTINEL get-master-addr-by-name` 解析主节点 |
 | SSH | Profile 中启用；本地 `ssh -L` 隧道，仅支持密钥/agent（BatchMode） |
-| Cluster | 连接栏/Profile 勾选 Cluster；Host:Port 作为 seed，DB 固定 0 |
+| Cluster | Profile 中勾选 Cluster；Host:Port 作为 seed，DB 固定 0 |
 
 连接成功后，KeyDis 自动执行一次 `SCAN`（默认 `*`）。
 

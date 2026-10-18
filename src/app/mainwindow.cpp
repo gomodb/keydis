@@ -190,6 +190,7 @@ void MainWindow::buildUi()
     connectionLayout->addWidget(m_connectButton);
 
     layout->addWidget(connectionBox);
+    connectionBox->hide();
 
     m_statusLabel = new QLabel(tr("Disconnected"), central);
     m_statusLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
@@ -360,12 +361,17 @@ void MainWindow::buildUi()
     auto *newProfileButton = new QPushButton(tr("New"), connectionsPanel);
     auto *editProfileButton = new QPushButton(tr("Edit"), connectionsPanel);
     auto *deleteProfileButton = new QPushButton(tr("Delete"), connectionsPanel);
-    auto *connectProfileButton = new QPushButton(tr("Connect"), connectionsPanel);
+    m_profileConnectButton = new QPushButton(tr("Connect"), connectionsPanel);
+    m_profileConnectButton->setObjectName(QStringLiteral("profileConnectButton"));
     profileButtons->addWidget(newProfileButton);
     profileButtons->addWidget(editProfileButton);
     profileButtons->addWidget(deleteProfileButton);
-    profileButtons->addWidget(connectProfileButton);
+    profileButtons->addWidget(m_profileConnectButton);
     connectionsLayout->addLayout(profileButtons);
+    m_readOnlyDock = new QCheckBox(tr("Read-only"), connectionsPanel);
+    m_readOnlyDock->setObjectName(QStringLiteral("readOnlyDock"));
+    m_readOnlyDock->setToolTip(tr("Disable editing and CLI write access for this session"));
+    connectionsLayout->addWidget(m_readOnlyDock);
     connectionsDock->setWidget(connectionsPanel);
     addDockWidget(Qt::LeftDockWidgetArea, connectionsDock);
 
@@ -398,7 +404,21 @@ void MainWindow::buildUi()
     connect(newProfileButton, &QPushButton::clicked, this, &MainWindow::createProfile);
     connect(editProfileButton, &QPushButton::clicked, this, &MainWindow::editProfile);
     connect(deleteProfileButton, &QPushButton::clicked, this, &MainWindow::deleteProfile);
-    connect(connectProfileButton, &QPushButton::clicked, this, &MainWindow::connectProfile);
+    connect(m_profileConnectButton, &QPushButton::clicked, this, &MainWindow::connectProfile);
+    connect(m_readOnlyDock, &QCheckBox::toggled, this, [this](bool readOnly) {
+        const QSignalBlocker blocker(m_readOnlyCheck);
+        m_readOnlyCheck->setChecked(readOnly);
+        m_valuePanel->setReadOnly(readOnly);
+        if (ConnectionProfile *selected = selectedProfile()) {
+            selected->readOnly = readOnly;
+            saveProfiles();
+        }
+        if (m_router.isReady()) {
+            m_sendButton->setEnabled(!readOnly);
+            m_commandEdit->setEnabled(!readOnly);
+            m_statusLabel->setText(readOnly ? tr("Read-only mode") : tr("Ready"));
+        }
+    });
     connect(m_profileList, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem *) {
         connectProfile();
     });
@@ -484,6 +504,10 @@ void MainWindow::buildUi()
     });
     connect(m_readOnlyCheck, &QCheckBox::toggled, this, [this](bool readOnly) {
         m_valuePanel->setReadOnly(readOnly);
+        if (ConnectionProfile *selected = selectedProfile()) {
+            selected->readOnly = readOnly;
+            saveProfiles();
+        }
         if (m_router.isReady()) {
             m_sendButton->setEnabled(!readOnly);
             m_commandEdit->setEnabled(!readOnly);
@@ -691,7 +715,12 @@ void MainWindow::applyProfile(const ConnectionProfile &profile)
     m_passwordEdit->clear();
     m_dbSpin->setValue(profile.db);
     m_readOnlyCheck->setChecked(profile.readOnly);
+    if (m_readOnlyDock) {
+        const QSignalBlocker blocker(m_readOnlyDock);
+        m_readOnlyDock->setChecked(profile.readOnly);
+    }
     m_clusterCheck->setChecked(profile.cluster);
+    m_passwordEdit->setText(profile.password);
     syncDatabaseUi(profile.db);
 }
 
@@ -768,12 +797,18 @@ void MainWindow::deleteProfile()
 
 void MainWindow::connectProfile()
 {
+    if (m_router.isReady()) {
+        if (m_sshTunnel)
+            m_sshTunnel->stop();
+        if (m_sentinelWatcher)
+            m_sentinelWatcher->stop();
+        m_router.disconnectFromHost();
+        return;
+    }
     ConnectionProfile *selected = selectedProfile();
     if (!selected)
         return;
     applyProfile(*selected);
-    if (m_router.isReady())
-        m_connectButton->setText(tr("Connect"));
     connectOrDisconnect();
 }
 
@@ -1427,9 +1462,11 @@ void MainWindow::setConnectedUi(bool connected)
     if (connected) {
         m_connectButton->setText(tr("Disconnect"));
         m_connectButton->setEnabled(true);
+        m_profileConnectButton->setText(tr("Disconnect"));
     } else {
         m_connectButton->setText(tr("Connect"));
         m_connectButton->setEnabled(true);
+        m_profileConnectButton->setText(tr("Connect"));
     }
 }
 

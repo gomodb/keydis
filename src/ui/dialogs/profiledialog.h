@@ -32,6 +32,7 @@ private:
     QSpinBox *m_portSpin = nullptr;
     QCheckBox *m_tlsCheck = nullptr;
     QLineEdit *m_usernameEdit = nullptr;
+    QLineEdit *m_passwordEdit = nullptr;
     QSpinBox *m_dbSpin = nullptr;
     QCheckBox *m_readOnlyCheck = nullptr;
     QCheckBox *m_clusterCheck = nullptr;

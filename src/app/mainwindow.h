@@ -104,6 +104,8 @@ private:
     QCheckBox *m_tlsCheck = nullptr;
     QCheckBox *m_readOnlyCheck = nullptr;
     QCheckBox *m_clusterCheck = nullptr;
+    QCheckBox *m_readOnlyDock = nullptr;
+    QPushButton *m_profileConnectButton = nullptr;
     QLineEdit *m_usernameEdit = nullptr;
     QLineEdit *m_passwordEdit = nullptr;
     QSpinBox *m_dbSpin = nullptr;

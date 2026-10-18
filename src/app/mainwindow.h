@@ -34,6 +34,7 @@ class KeyScanner;
 class KeyTableModel;
 class NamespaceTreeModel;
 class ServerToolsPage;
+class SentinelWatcher;
 class SshTunnel;
 class ValuePanel;
 
@@ -89,6 +90,7 @@ private:
     DashboardPage *m_dashboard = nullptr;
     ServerToolsPage *m_tools = nullptr;
     SshTunnel *m_sshTunnel = nullptr;
+    SentinelWatcher *m_sentinelWatcher = nullptr;
     QString m_effectiveHost;
     quint16 m_effectivePort = 0;
     QTabWidget *m_tabs = nullptr;

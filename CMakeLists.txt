@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 3.28)
 
 project(KeyDis
-    VERSION 0.4.1
+    VERSION 0.4.2
     DESCRIPTION "Native Redis/Valkey client for KDE"
     HOMEPAGE_URL "https://github.com/gomodb/keydis"
     LANGUAGES C CXX
@@ -81,6 +81,8 @@ add_library(keydis_core STATIC
     src/core/conn/profilestore.h
     src/core/conn/sentinelresolver.cpp
     src/core/conn/sentinelresolver.h
+    src/core/conn/sentinelwatcher.cpp
+    src/core/conn/sentinelwatcher.h
     src/core/diagnostics.cpp
     src/core/diagnostics.h
     src/core/insights/redisinfo.cpp
@@ -270,6 +272,8 @@ if(BUILD_TESTING)
         tests/test_mainwindow.cpp
         tests/test_mainwindow.h
         tests/test_ui_main.cpp
+        tests/test_valuepanel.cpp
+        tests/test_valuepanel.h
     )
     target_link_libraries(keydis_ui_tests PRIVATE keydis_ui Qt6::Test)
     qt_add_resources(keydis_ui_tests "keydis_ui_test_resources"

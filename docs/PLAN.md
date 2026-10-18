@@ -160,7 +160,7 @@ UI (Qt Widgets / KF6)
 
 ## 8. 当前进度与下一步
 
-当前版本为 **0.4 工作台**：
+当前版本为 **0.4.2 工作台**：
 
 - CMake/Ninja + Qt 6 + KF6 + hiredis v1.5.0；支持系统 hiredis 发行版构建；
 - Dashboard、命名空间树/List、DB 切换、SCAN 分页、Index all 精确计数；
@@ -168,7 +168,8 @@ UI (Qt Widgets / KF6)
 - Key 右键菜单：重命名、删除、复制 Key/Value、跨连接复制；
 - 多连接配置/分组、KWallet、只读模式、RESP2 回退；
 - Sentinel 主节点解析、SSH key/agent 本地隧道；
-- Cluster slot 路由、跨 master SCAN、`MOVED`/`ASK` 处理；
+- Cluster slot 路由、跨 master SCAN、`MOVED`/`ASK` 处理、`CLUSTER NODES` 节点快照；
+- RedisJSON 树形标量编辑与 JSON 格式化；
 - KRunner 插件（`redis <name>`）；
 - Stream consumer claim/ack；
 - Tools：Slowlog、Clients、Pub/Sub、Monitor、内存/大 Key 分析；
@@ -182,7 +183,7 @@ UI (Qt Widgets / KF6)
 2. Sentinel 持续 failover 监控、独立 Sentinel ACL；
 3. SSH 密码认证、主机密钥管理 UI；
 4. 跨连接批量迁移 UI；
-5. RedisJSON 树形控件；
+5. RedisJSON 复杂路径/数组结构编辑；
 6. Flatpak（明确排除）、更多发行版包。
 
 ## 9. 已确认与待确认

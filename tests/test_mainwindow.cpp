@@ -276,6 +276,7 @@ void TestMainWindow::browsesCluster()
     auto *tree = window.findChild<QTreeView *>(QStringLiteral("keyTree"));
     auto *dbCombo = window.findChild<QComboBox *>(QStringLiteral("dbCombo"));
     auto *clusterCheck = window.findChild<QCheckBox *>(QStringLiteral("clusterCheck"));
+    auto *clusterTable = window.findChild<QTableWidget *>(QStringLiteral("clusterTable"));
     QVERIFY(host);
     QVERIFY(portSpin);
     QVERIFY(filter);
@@ -284,6 +285,7 @@ void TestMainWindow::browsesCluster()
     QVERIFY(tree);
     QVERIFY(dbCombo);
     QVERIFY(clusterCheck);
+    QVERIFY(clusterTable);
 
     host->setText(QStringLiteral("127.0.0.1"));
     portSpin->setValue(port);
@@ -297,6 +299,7 @@ void TestMainWindow::browsesCluster()
     QVERIFY(rowForKey(table->model(), keyA) >= 0);
     QVERIFY(rowForKey(table->model(), keyB) >= 0);
     QVERIFY(rowForKey(table->model(), keyC) >= 0);
+    QTRY_VERIFY_WITH_TIMEOUT(clusterTable->rowCount() >= 3, 5000);
 
     table->selectRow(rowForKey(table->model(), keyA));
     auto *stringEdit = window.findChild<QPlainTextEdit *>(QStringLiteral("stringEdit"));

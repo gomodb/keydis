@@ -18,6 +18,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.2" date="2026-10-19">
+      <description>
+        <p>RedisJSON tree editor with path display and scalar editing; Cluster node overview; JSON formatting.</p>
+      </description>
+    </release>
     <release version="0.4.1" date="2026-10-19">
       <description>
         <p>Partial collection editing: batch hash/list/zset edits, HMSET fallback, set member rename, and SETRANGE string replacement.</p>

@@ -5,6 +5,7 @@
 
 #include "core/conn/profilestore.h"
 #include "core/conn/sentinelresolver.h"
+#include "core/conn/sentinelwatcher.h"
 #include "core/net/clusterclient.h"
 #include "core/net/redisconnection.h"
 #include "core/net/sshtunnel.h"
@@ -42,6 +43,7 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollBar>
+#include <QShortcut>
 #include <QSignalBlocker>
 #include <QStackedWidget>
 #include <QTreeView>
@@ -94,6 +96,8 @@ MainWindow::~MainWindow()
 {
     if (m_sshTunnel)
         m_sshTunnel->stop();
+    if (m_sentinelWatcher)
+        m_sentinelWatcher->stop();
 }
 
 void MainWindow::setConnectionParameters(const QString &host, quint16 port, bool tls,
@@ -364,6 +368,30 @@ void MainWindow::buildUi()
     connectionsLayout->addLayout(profileButtons);
     connectionsDock->setWidget(connectionsPanel);
     addDockWidget(Qt::LeftDockWidgetArea, connectionsDock);
+
+    m_hostEdit->setAccessibleName(tr("Host"));
+    m_portSpin->setAccessibleName(tr("Port"));
+    m_usernameEdit->setAccessibleName(tr("ACL user"));
+    m_passwordEdit->setAccessibleName(tr("Password"));
+    m_dbSpin->setAccessibleName(tr("Database"));
+    m_filterEdit->setAccessibleName(tr("SCAN pattern"));
+    m_typeCombo->setAccessibleName(tr("Key type filter"));
+    m_keyTable->setAccessibleName(tr("Keys"));
+    m_treeView->setAccessibleName(tr("Namespace tree"));
+    m_viewMode->setAccessibleName(tr("View mode"));
+    m_dbCombo->setAccessibleName(tr("Database"));
+
+    auto *focusFilter = new QShortcut(QKeySequence::Find, this);
+    connect(focusFilter, &QShortcut::activated, this, [this] {
+        m_tabs->setCurrentIndex(1);
+        m_filterEdit->setFocus();
+        m_filterEdit->selectAll();
+    });
+    auto *refreshView = new QShortcut(QKeySequence::Refresh, this);
+    connect(refreshView, &QShortcut::activated, this, [this] {
+        if (m_router.isReady())
+            startScan();
+    });
 
     m_scanner = new KeyScanner(&m_router, this);
 
@@ -782,6 +810,8 @@ void MainWindow::connectOrDisconnect()
         m_router.disconnectFromHost();
         return;
     }
+    if (m_sentinelWatcher)
+        m_sentinelWatcher->stop();
 
     ConnectionProfile *active = selectedProfile();
     if (!active) {
@@ -866,8 +896,35 @@ void MainWindow::connectOrDisconnect()
             m_scanStatus->setText(tr("Connecting to master %1:%2...").arg(host).arg(port));
             m_effectiveHost = host;
             m_effectivePort = port;
-            m_router.connectToHost(host, port, active->tls, active->username,
-                                       m_passwordEdit->text(), active->db);
+            const ConnectionProfile sentinelProfile = *active;
+            m_router.connectToHost(host, port, sentinelProfile.tls, sentinelProfile.username,
+                                   m_passwordEdit->text(), sentinelProfile.db);
+            if (!m_sentinelWatcher) {
+                m_sentinelWatcher = new SentinelWatcher(this);
+                connect(m_sentinelWatcher, &SentinelWatcher::masterChanged, this,
+                        [this, sentinelProfile](const QString &newHost, quint16 newPort) {
+                    if (!sentinelProfile.sentinel)
+                        return;
+                    m_effectiveHost = newHost;
+                    m_effectivePort = newPort;
+                    m_scanStatus->setText(
+                        tr("Sentinel failover: connecting to %1:%2...")
+                            .arg(newHost)
+                            .arg(newPort));
+                    m_router.connectToHost(newHost, newPort, sentinelProfile.tls,
+                                           sentinelProfile.username, m_passwordEdit->text(),
+                                           sentinelProfile.db);
+                });
+                connect(m_sentinelWatcher, &SentinelWatcher::errorOccurred, this,
+                        [this](const QString &error) {
+                    appendOutput(tr("[sentinel] ") + error);
+                });
+            }
+            m_sentinelWatcher->start(sentinelProfile.sentinelHost,
+                                     sentinelProfile.sentinelPort,
+                                     sentinelProfile.sentinelTls,
+                                     sentinelProfile.username, m_passwordEdit->text(),
+                                     sentinelProfile.sentinelMaster);
             resolver->deleteLater();
         });
         connect(resolver, &SentinelResolver::failed, this,

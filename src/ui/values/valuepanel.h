@@ -19,6 +19,8 @@ class QLineEdit;
 class QPlainTextEdit;
 class QPushButton;
 class QStackedWidget;
+class QTreeWidget;
+class QTreeWidgetItem;
 class QTableWidget;
 
 namespace KeyDis {
@@ -84,6 +86,9 @@ private:
     void deleteStreamEntries();
     void loadJson();
     void saveJson();
+    void rebuildJsonTree();
+    void handleJsonTreeEdited(QTreeWidgetItem *item, int column);
+    void formatJson();
     void loadRaw(const QString &type);
 
     void updateHeader();
@@ -126,6 +131,8 @@ private:
     QPlainTextEdit *m_stringEdit = nullptr;
     QPlainTextEdit *m_jsonEdit = nullptr;
     QLineEdit *m_jsonPathEdit = nullptr;
+    QTreeWidget *m_jsonTree = nullptr;
+    bool m_jsonTreeUpdating = false;
     QPlainTextEdit *m_rawView = nullptr;
     QTableWidget *m_hashTable = nullptr;
     QTableWidget *m_listTable = nullptr;

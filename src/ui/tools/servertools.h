@@ -37,6 +37,7 @@ public:
 public slots:
     void refreshSlowlog();
     void refreshClients();
+    void refreshCluster();
     void subscribeChannel();
     void unsubscribeChannel();
     void publishMessage();
@@ -53,6 +54,7 @@ private:
     QTabWidget *m_tabs = nullptr;
     QTableWidget *m_slowlogTable = nullptr;
     QTableWidget *m_clientsTable = nullptr;
+    QTableWidget *m_clusterTable = nullptr;
     QLineEdit *m_channelEdit = nullptr;
     QPlainTextEdit *m_pubsubOutput = nullptr;
     QPlainTextEdit *m_monitorOutput = nullptr;

@@ -17,6 +17,7 @@ private slots:
     void exportImportRoundTrip();
     void memoryAnalysisRoundTrip();
     void sentinelResolvesMaster();
+    void sentinelWatcherReceivesFailover();
 };
 
 } // namespace KeyDis::Test

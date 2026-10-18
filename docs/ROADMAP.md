@@ -133,7 +133,7 @@ P6                                              ██████
 
 **目标**：覆盖生产环境常见连接方式，发布 Beta。
 
-> 当前 0.4 完成 standalone + TLS + ACL + RESP2 回退 + Sentinel 解析 + SSH key/agent 隧道 + Cluster slot 路由/跨 master SCAN。剩余：Cluster 运维视图、持续 failover 监控、SSH 密码。
+> 当前 0.4.2 完成 standalone + TLS + ACL + RESP2 回退 + Sentinel 解析 + SSH key/agent 隧道 + Cluster slot 路由/跨 master SCAN + Cluster 节点快照。剩余：Cluster resharding/聚合指标、持续 failover 监控、SSH 密码。
 
 **交付物**：
 
@@ -160,7 +160,7 @@ P6                                              ██████
 
 **目标**：覆盖迁移、清理、分析、流数据等高频进阶场景。
 
-> 已完成：DUMP/RESTORE JSON Lines 导入导出、Stream 条目/组/Pending 查看与 claim/ack、RedisJSON 路径编辑、Key 右键/跨连接复制、内存/大 Key 分析。未完成：RedisJSON 树编辑。
+> 已完成：DUMP/RESTORE JSON Lines 导入导出、Stream 条目/组/Pending 查看与 claim/ack、RedisJSON 树形标量编辑、Key 右键/跨连接复制、内存/大 Key 分析。未完成：RedisJSON 复杂结构与数组编辑。
 
 **交付物**：
 

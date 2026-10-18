@@ -14,15 +14,21 @@
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QInputDialog>
+#include <QJsonArray>
 #include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonValue>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPointer>
+#include <QRegularExpression>
 #include <QPushButton>
 #include <QSpinBox>
+#include <QSplitter>
 #include <QStackedWidget>
+#include <QTreeWidget>
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QVBoxLayout>
@@ -85,6 +91,32 @@ QVector<QPair<QString, QString>> selectedPairs(QTableWidget *table)
             result.append({first->text(), second ? second->text() : QString()});
     }
     return result;
+}
+
+QString jsonScalarText(const QJsonValue &value)
+{
+    QJsonArray array;
+    array.append(value);
+    const QByteArray encoded = QJsonDocument(array).toJson(QJsonDocument::Compact);
+    return QString::fromUtf8(encoded.mid(1, encoded.size() - 2));
+}
+
+QString escapedJsonKey(const QString &key)
+{
+    QString escaped = key;
+    escaped.replace(QLatin1Char('\\'), QStringLiteral("\\\\"));
+    escaped.replace(QLatin1Char('"'), QStringLiteral("\\\""));
+    return escaped;
+}
+
+QString jsonChildPath(const QString &base, const QString &key, bool array, int index)
+{
+    if (array)
+        return base + QLatin1Char('[') + QString::number(index) + QLatin1Char(']');
+    static const QRegularExpression simple(QStringLiteral("^[A-Za-z0-9_:-]+$"));
+    if (simple.match(key).hasMatch())
+        return base + QLatin1Char('.') + key;
+    return base + QStringLiteral("[\"") + escapedJsonKey(key) + QStringLiteral("\"]");
 }
 
 QTableWidget *makeTable(const QStringList &headers, QWidget *parent)
@@ -445,16 +477,40 @@ QWidget *ValuePanel::buildJsonPage()
     auto *loadPathButton = new QPushButton(tr("Load path"), page);
     pathRow->addWidget(loadPathButton);
     layout->addLayout(pathRow);
-    m_jsonEdit = new QPlainTextEdit(page);
+
+    auto *splitter = new QSplitter(Qt::Vertical, page);
+    m_jsonTree = new QTreeWidget(splitter);
+    m_jsonTree->setObjectName(QStringLiteral("jsonTree"));
+    m_jsonTree->setColumnCount(2);
+    m_jsonTree->setHeaderLabels({tr("Path"), tr("Value")});
+    m_jsonTree->header()->setStretchLastSection(true);
+    m_jsonTree->setAlternatingRowColors(true);
+    m_jsonTree->setEditTriggers(QAbstractItemView::DoubleClicked
+                                | QAbstractItemView::SelectedClicked
+                                | QAbstractItemView::EditKeyPressed);
+    splitter->addWidget(m_jsonTree);
+
+    m_jsonEdit = new QPlainTextEdit(splitter);
+    m_jsonEdit->setObjectName(QStringLiteral("jsonEdit"));
     m_jsonEdit->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
-    layout->addWidget(m_jsonEdit, 1);
+    splitter->addWidget(m_jsonEdit);
+    splitter->setSizes({260, 220});
+    layout->addWidget(splitter, 1);
+
     auto *row = new QHBoxLayout;
+    auto *refreshTreeButton = new QPushButton(tr("Refresh tree"), page);
+    auto *formatButton = new QPushButton(tr("Format JSON"), page);
     auto *saveButton = new QPushButton(tr("Save JSON"), page);
     saveButton->setObjectName(QStringLiteral("saveJsonButton"));
+    row->addWidget(refreshTreeButton);
+    row->addWidget(formatButton);
     row->addWidget(saveButton);
     row->addStretch();
     layout->addLayout(row);
     connect(loadPathButton, &QPushButton::clicked, this, &ValuePanel::loadJson);
+    connect(refreshTreeButton, &QPushButton::clicked, this, &ValuePanel::rebuildJsonTree);
+    connect(formatButton, &QPushButton::clicked, this, &ValuePanel::formatJson);
+    connect(m_jsonTree, &QTreeWidget::itemChanged, this, &ValuePanel::handleJsonTreeEdited);
     m_writeWidgets << saveButton;
     connect(saveButton, &QPushButton::clicked, this, &ValuePanel::saveJson);
     return page;
@@ -564,6 +620,12 @@ void ValuePanel::setReadOnly(bool readOnly)
         m_stringEdit->setReadOnly(readOnly);
     if (m_jsonEdit)
         m_jsonEdit->setReadOnly(readOnly);
+    if (m_jsonTree) {
+        m_jsonTree->setEditTriggers(readOnly ? QAbstractItemView::NoEditTriggers
+                                             : QAbstractItemView::DoubleClicked
+                                                   | QAbstractItemView::SelectedClicked
+                                                   | QAbstractItemView::EditKeyPressed);
+    }
 }
 
 bool ValuePanel::isReadOnly() const
@@ -1108,14 +1170,134 @@ void ValuePanel::deleteStreamEntries()
     });
 }
 
+void ValuePanel::rebuildJsonTree()
+{
+    if (!m_jsonTree)
+        return;
+    m_jsonTreeUpdating = true;
+    m_jsonTree->clear();
+    QJsonParseError parseError{};
+    const QJsonDocument document = QJsonDocument::fromJson(m_jsonEdit->toPlainText().toUtf8(),
+                                                           &parseError);
+    if (parseError.error != QJsonParseError::NoError || document.isNull()) {
+        m_jsonTreeUpdating = false;
+        return;
+    }
+
+    const QString basePath = m_jsonPathEdit->text().trimmed().isEmpty()
+        ? QStringLiteral("$")
+        : m_jsonPathEdit->text().trimmed();
+    const QJsonValue rootValue = document.isObject() ? QJsonValue(document.object())
+                                                     : QJsonValue(document.array());
+    auto addNode = [&](auto &&self, QTreeWidgetItem *parent, const QJsonValue &value,
+                       const QString &path, const QString &label) -> void {
+        auto *item = new QTreeWidgetItem(parent);
+        item->setText(0, label);
+        item->setData(0, Qt::UserRole, path);
+        item->setFlags(item->flags() & ~Qt::ItemIsEditable);
+        if (value.isObject()) {
+            item->setText(1, tr("{…}"));
+            const QJsonObject object = value.toObject();
+            for (auto it = object.constBegin(); it != object.constEnd(); ++it) {
+                const QString childPath = jsonChildPath(path, it.key(), false, 0);
+                self(self, item, it.value(), childPath, childPath);
+            }
+        } else if (value.isArray()) {
+            item->setText(1, tr("[…]"));
+            const QJsonArray array = value.toArray();
+            for (int index = 0; index < array.size(); ++index) {
+                const QString childPath = jsonChildPath(path, {}, true, index);
+                self(self, item, array.at(index), childPath, childPath);
+            }
+        } else {
+            item->setText(1, jsonScalarText(value));
+            item->setFlags(item->flags() | Qt::ItemIsEditable);
+        }
+        item->setExpanded(true);
+    };
+
+    auto *root = new QTreeWidgetItem(m_jsonTree);
+    root->setText(0, basePath);
+    root->setData(0, Qt::UserRole, basePath);
+    root->setFlags(root->flags() & ~Qt::ItemIsEditable);
+    if (rootValue.isObject()) {
+        root->setText(1, tr("{…}"));
+        const QJsonObject object = rootValue.toObject();
+        for (auto it = object.constBegin(); it != object.constEnd(); ++it) {
+            const QString path = jsonChildPath(basePath, it.key(), false, 0);
+            addNode(addNode, root, it.value(), path, path);
+        }
+    } else {
+        root->setText(1, tr("[…]"));
+        const QJsonArray array = rootValue.toArray();
+        for (int index = 0; index < array.size(); ++index) {
+            const QString path = jsonChildPath(basePath, {}, true, index);
+            addNode(addNode, root, array.at(index), path, path);
+        }
+    }
+    root->setExpanded(true);
+    m_jsonTree->expandAll();
+    m_jsonTreeUpdating = false;
+}
+
+void ValuePanel::handleJsonTreeEdited(QTreeWidgetItem *item, int column)
+{
+    if (m_jsonTreeUpdating || m_readOnly || !item || column != 1)
+        return;
+    const QString path = item->data(0, Qt::UserRole).toString();
+    if (path.isEmpty())
+        return;
+    QJsonParseError parseError{};
+    const QJsonDocument document =
+        QJsonDocument::fromJson("[" + item->text(1).toUtf8() + "]", &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isArray()
+        || document.array().size() != 1) {
+        showError(tr("Invalid JSON value"));
+        rebuildJsonTree();
+        return;
+    }
+    const QByteArray encoded = QJsonDocument(document.array()).toJson(QJsonDocument::Compact);
+    const QByteArray value = encoded.mid(1, encoded.size() - 2);
+    QPointer<ValuePanel> guard(this);
+    runCommand({QByteArrayLiteral("JSON.SET"), m_key, path.toUtf8(), value},
+               [guard, this](const RespValue &reply, const QString &error) {
+                   if (!guard)
+                       return;
+                   if (!error.isEmpty() || reply.isError()) {
+                       showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
+                       rebuildJsonTree();
+                       return;
+                   }
+                   setStatus(tr("JSON path updated"));
+                   loadJson();
+               });
+}
+
+void ValuePanel::formatJson()
+{
+    QJsonParseError parseError{};
+    const QJsonDocument document = QJsonDocument::fromJson(m_jsonEdit->toPlainText().toUtf8(),
+                                                           &parseError);
+    if (parseError.error != QJsonParseError::NoError) {
+        showError(tr("Invalid JSON document"));
+        return;
+    }
+    m_jsonEdit->setPlainText(QString::fromUtf8(document.toJson(QJsonDocument::Indented)));
+    rebuildJsonTree();
+    setStatus(tr("JSON formatted"));
+}
+
 void ValuePanel::loadJson()
 {
     const quint64 generation = m_generation;
     const QByteArray path = m_jsonPathEdit->text().trimmed().isEmpty()
         ? QByteArrayLiteral("$")
         : m_jsonPathEdit->text().trimmed().toUtf8();
+    QList<QByteArray> command{QByteArrayLiteral("JSON.GET"), m_key};
+    if (path != QByteArrayLiteral("$"))
+        command.append(path);
     QPointer<ValuePanel> guard(this);
-    runCommand({QByteArrayLiteral("JSON.GET"), m_key, path},
+    runCommand(command,
                [guard, generation, this](const RespValue &reply, const QString &error) {
                    if (!guard || generation != m_generation)
                        return;
@@ -1124,6 +1306,7 @@ void ValuePanel::loadJson()
                        return;
                    }
                    m_jsonEdit->setPlainText(QString::fromUtf8(reply.scalar));
+                   rebuildJsonTree();
                    setStatus(tr("JSON loaded"));
                });
 }
@@ -1151,6 +1334,7 @@ void ValuePanel::saveJson()
                        return;
                    }
                    setStatus(tr("JSON saved"));
+                   rebuildJsonTree();
                    emit keyChanged(m_key);
                });
 }

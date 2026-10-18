@@ -84,7 +84,7 @@
 | `ui/models` | QAbstractItemModel、过滤、排序、角色 | 网络请求 |
 | `ui/editors` | 各类型编辑器、委托、撤销集成 | 协议解析 |
 | `ui/dashboard` | Server/Memory/Stats、Key Statistics | Key 浏览 |
-| `ui/tools` | Slowlog、Clients、Pub/Sub、Monitor、Transfer、Analysis | 编辑器 |
+| `ui/tools` | Slowlog、Clients、Cluster 节点、Pub/Sub、Monitor、Transfer、Analysis | 编辑器 |
 | `krunner` | KRunner runner，打开保存的连接 | ProfileStore |
 | `ui/dialogs` | 连接配置/Profile 编辑 | 连接状态 |
 | `core/platform` | 语言、日志、诊断、XDG 路径 | 业务语义 |

@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.1）
+# KeyDis 使用说明（0.4.2）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -83,10 +83,18 @@ Dashboard 只执行一次 `INFO`，不会逐 Key 发命令；适合作为连接�
 | Set | `SSCAN` 分页，500/页 | 添加 `SADD`；删除 `SREM`；**Edit selected** 重命名成员（`SREM`+`SADD`） |
 | ZSet | `ZSCAN` 分页，500/页 | 单元格/批量 `ZADD` 改分数；删除 `ZREM` |
 | Stream | `XRANGE - + COUNT 200` | 添加 `XADD`；删除 `XDEL`；组/Pending 仍用 CLI |
-| RedisJSON | `JSON.GET key path` | 路径输入 + `JSON.SET key path` raw 编辑 |
+| RedisJSON | `JSON.GET key path` | JSON 树 + raw 路径编辑；`JSON.SET key path` |
 | 其他模块类型 | 只读提示 | 使用 CLI |
 
 Hash/List/Set/ZSet 每次加载最多 500 个元素；点击 **Load more** 继续。所有修改会刷新到第一页。
+
+### RedisJSON
+
+- 上方 JSON 树按对象/数组展开，列显示路径和值；
+- 双击标量值（字符串、数字、布尔、null）可编辑，提交 `JSON.SET key <path> <value>`；
+- **Format JSON** 格式化 raw 文本，**Refresh tree** 重新解析；
+- JSON path 输入框可用于加载子树（例如 `$.user`），raw 编辑仍支持完整文档；
+- 复杂数组插入/删除目前建议使用 raw 编辑或 CLI。
 
 ### 部分编辑
 
@@ -134,6 +142,7 @@ Key 列表或命名空间树中的 Key 支持：
 - **Pub/Sub**：独立连接，支持 `SUBSCRIBE`/`UNSUBSCRIBE` 与 `PUBLISH`；
 - **Monitor**：独立连接，Start/Stop `MONITOR`；
 - **Analysis**：按 pattern/type 扫描，使用 `MEMORY USAGE`/`PTTL`，按大小排序输出 Top 500；
+- **Cluster**：`CLUSTER NODES` 节点表（ID、地址、角色、槽位、链路）；仅显示单次拓扑快照，不做 resharding。
 - **Transfer**：见下一节。
 
 Pub/Sub 与 Monitor 不占用主浏览器连接。
@@ -209,7 +218,7 @@ redis 127.0.0.1
 - Sentinel 认证复用主连接用户名/密码，暂不支持独立 Sentinel ACL；
 - 只读模式是 UI 层保护，不是服务端 ACL；生产环境仍建议使用只读 ACL 用户；
 - 精确命名空间计数需要 `Index all`，大库会占用较多内存；
-- Stream 组/Pending 支持查看与 claim/ack，但更完整的 consumer 管理/自动 claim 未实现；RedisJSON 为 raw 路径编辑，不是树形控件；
+- Stream 组/Pending 支持查看与 claim/ack，但更完整的 consumer 管理/自动 claim 未实现；RedisJSON 树支持标量编辑，复杂路径/数组插入仍建议 raw 编辑；
 - CLI 的阻塞命令会占用主连接；Pub/Sub/Monitor 请用 Tools；
 - 中文翻译已内置（`zh_CN`），其他语言尚未提供；
 - Arch 包位于 `packaging/arch/`；Flatpak 明确不在 v1.0 范围。

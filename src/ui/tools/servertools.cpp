@@ -113,6 +113,21 @@ ServerToolsPage::ServerToolsPage(RedisClient *connection, QWidget *parent)
     connect(clientsRefresh, &QPushButton::clicked, this, &ServerToolsPage::refreshClients);
     m_tabs->addTab(clients, tr("Clients"));
 
+    auto *cluster = new QWidget(m_tabs);
+    auto *clusterLayout = new QVBoxLayout(cluster);
+    auto *clusterBar = new QHBoxLayout;
+    clusterBar->addWidget(new QLabel(tr("Cluster nodes (CLUSTER NODES)"), cluster));
+    clusterBar->addStretch();
+    auto *clusterRefresh = new QPushButton(tr("Refresh"), cluster);
+    clusterBar->addWidget(clusterRefresh);
+    clusterLayout->addLayout(clusterBar);
+    m_clusterTable = makeTable({tr("ID"), tr("Address"), tr("Flags"), tr("Master"),
+                                tr("Slots"), tr("Link")}, cluster);
+    m_clusterTable->setObjectName(QStringLiteral("clusterTable"));
+    clusterLayout->addWidget(m_clusterTable, 1);
+    connect(clusterRefresh, &QPushButton::clicked, this, &ServerToolsPage::refreshCluster);
+    m_tabs->addTab(cluster, tr("Cluster"));
+
     auto *pubsub = new QWidget(m_tabs);
     auto *pubsubLayout = new QVBoxLayout(pubsub);
     auto *channelRow = new QHBoxLayout;
@@ -285,6 +300,7 @@ void ServerToolsPage::setConnected(bool connected)
     m_analyzeButton->setEnabled(true);
     refreshSlowlog();
     refreshClients();
+    refreshCluster();
 }
 
 void ServerToolsPage::setConnectionParameters(const QString &host, quint16 port, bool tls,
@@ -341,6 +357,42 @@ void ServerToolsPage::refreshSlowlog()
             guard->m_slowlogTable->setItem(row, 3, item(argsText(args)));
         }
         guard->m_slowlogTable->resizeColumnsToContents();
+    });
+}
+
+void ServerToolsPage::refreshCluster()
+{
+    if (!m_connected || !m_connection)
+        return;
+    const quint64 generation = m_generation;
+    QPointer<ServerToolsPage> guard(this);
+    m_connection->sendCommand({QByteArrayLiteral("CLUSTER"), QByteArrayLiteral("NODES")},
+                              [guard, generation](const RespValue &reply, const QString &error) {
+        if (!guard || guard->m_generation != generation)
+            return;
+        if (!error.isEmpty() || reply.isError()) {
+            guard->m_clusterTable->setRowCount(0);
+            return;
+        }
+        const QStringList lines = QString::fromUtf8(reply.scalar)
+                                      .split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+        guard->m_clusterTable->setRowCount(0);
+        for (const QString &line : lines) {
+            const QStringList fields = line.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+            if (fields.size() < 8)
+                continue;
+            const int row = guard->m_clusterTable->rowCount();
+            guard->m_clusterTable->insertRow(row);
+            guard->m_clusterTable->setItem(row, 0, item(fields.at(0).left(12)));
+            guard->m_clusterTable->setItem(row, 1, item(fields.at(1)));
+            guard->m_clusterTable->setItem(row, 2, item(fields.at(2)));
+            guard->m_clusterTable->setItem(row, 3, item(fields.at(3).left(12)));
+            guard->m_clusterTable->setItem(
+                row, 4, item(QStringList(fields.mid(8)).join(QLatin1Char(' '))));
+            guard->m_clusterTable->setItem(row, 5, item(fields.at(7)));
+        }
+        guard->m_clusterTable->resizeColumnsToContents();
+        guard->m_clusterTable->horizontalHeader()->setStretchLastSection(true);
     });
 }
 

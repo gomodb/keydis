@@ -5,6 +5,7 @@
 
 #include "core/analysis/memoryanalyzer.h"
 #include "core/conn/sentinelresolver.h"
+#include "core/conn/sentinelwatcher.h"
 #include "core/keyspace/keyscanner.h"
 #include "core/transfer/keytransfer.h"
 #include "core/net/redisconnection.h"
@@ -321,6 +322,34 @@ void TestRedisIntegration::sentinelResolvesMaster()
     QVERIFY2(success, qPrintable(error));
     QCOMPARE(resolvedHost, QStringLiteral("127.0.0.1"));
     QCOMPARE(resolvedPort, quint16(6399));
+}
+
+void TestRedisIntegration::sentinelWatcherReceivesFailover()
+{
+    bool ok = false;
+    const int sentinelPort = qEnvironmentVariableIntValue("KEYDIS_SENTINEL_PORT", &ok);
+    if (!ok || sentinelPort <= 0)
+        QSKIP("KEYDIS_SENTINEL_PORT is not set");
+
+    RespValue message;
+    message.type = RespType::Array;
+    RespValue kind;
+    kind.type = RespType::BulkString;
+    kind.scalar = QByteArrayLiteral("message");
+    RespValue channel;
+    channel.type = RespType::BulkString;
+    channel.scalar = QByteArrayLiteral("+switch-master");
+    RespValue payload;
+    payload.type = RespType::BulkString;
+    payload.scalar = QByteArrayLiteral("mymaster 127.0.0.1 7000");
+    message.elements = {kind, channel, payload};
+
+    QString host;
+    quint16 port = 0;
+    QVERIFY(SentinelWatcher::parseSwitchMaster(message, QStringLiteral("mymaster"), &host, &port));
+    QCOMPARE(host, QStringLiteral("127.0.0.1"));
+    QCOMPARE(port, quint16(7000));
+    QVERIFY(!SentinelWatcher::parseSwitchMaster(message, QStringLiteral("other"), &host, &port));
 }
 
 } // namespace KeyDis::Test

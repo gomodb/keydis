@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.2）
+# KeyDis 使用说明（0.4.3）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -10,7 +10,9 @@ cmake --build build -j2
 ./build/keydis
 ```
 
-左侧 **Connections** 面板保存多套连接，支持分组（Group）；双击连接或点 **Connect** 打开。连接配置只保存非敏感字段，密码在首次连接后写入 **KWallet**。也可以直接使用连接栏临时连接。
+左侧 **Connections** 面板保存多套连接，支持分组（Group）；双击连接或点 **Connect** 打开。连接配置只保存非敏感字段，密码在首次连接后写入 **KWallet**。
+
+顶部连接栏的 **Connect** 只建立**临时连接**，不会自动把当前字段加入左侧列表；新增/编辑保存连接请使用左侧 **New/Edit**。
 
 连接栏填写：
 

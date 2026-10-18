@@ -813,45 +813,45 @@ void MainWindow::connectOrDisconnect()
     if (m_sentinelWatcher)
         m_sentinelWatcher->stop();
 
-    ConnectionProfile *active = selectedProfile();
-    if (!active) {
-        ConnectionProfile profile;
-        profile.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
-        profile.name = m_hostEdit->text().trimmed().isEmpty() ? tr("Local connection")
-                                                             : m_hostEdit->text().trimmed();
-        profile.group = tr("Default");
-        const QString password = m_passwordEdit->text();
-        m_profiles.append(profile);
-        m_activeProfileId = profile.id;
-        active = &m_profiles.last();
-        rebuildProfileList();
-        m_passwordEdit->setText(password);
+    ConnectionProfile profile;
+    if (ConnectionProfile *selected = selectedProfile()) {
+        selected->host = m_hostEdit->text().trimmed();
+        selected->port = static_cast<quint16>(m_portSpin->value());
+        selected->tls = m_tlsCheck->isChecked();
+        selected->username = m_usernameEdit->text();
+        selected->db = m_dbSpin->value();
+        selected->readOnly = m_readOnlyCheck->isChecked();
+        selected->cluster = m_clusterCheck->isChecked();
+        profile = *selected;
+        saveProfiles();
+    } else {
+        // The top bar can make an ephemeral connection; saved connections are
+        // created explicitly from the left-hand Connections dock.
+        profile.host = m_hostEdit->text().trimmed();
+        profile.port = static_cast<quint16>(m_portSpin->value());
+        profile.tls = m_tlsCheck->isChecked();
+        profile.username = m_usernameEdit->text();
+        profile.db = m_dbSpin->value();
+        profile.readOnly = m_readOnlyCheck->isChecked();
+        profile.cluster = m_clusterCheck->isChecked();
     }
-    active->host = m_hostEdit->text().trimmed();
-    active->port = static_cast<quint16>(m_portSpin->value());
-    active->tls = m_tlsCheck->isChecked();
-    active->username = m_usernameEdit->text();
-    active->db = m_dbSpin->value();
-    active->readOnly = m_readOnlyCheck->isChecked();
-    active->cluster = m_clusterCheck->isChecked();
-    saveProfiles();
 
     SecretStore secrets;
-    if (secrets.isAvailable() && !active->id.isEmpty()) {
+    if (secrets.isAvailable() && !profile.id.isEmpty()) {
         if (m_passwordEdit->text().isEmpty()) {
             QString secretError;
-            const QString stored = secrets.readPassword(active->id, &secretError);
+            const QString stored = secrets.readPassword(profile.id, &secretError);
             if (!stored.isEmpty())
                 m_passwordEdit->setText(stored);
         }
         if (!m_passwordEdit->text().isEmpty()) {
             QString secretError;
-            if (!secrets.writePassword(active->id, m_passwordEdit->text(), &secretError))
+            if (!secrets.writePassword(profile.id, m_passwordEdit->text(), &secretError))
                 appendOutput(QStringLiteral("[warning] ") + secretError);
         }
     }
 
-    if (active->cluster) {
+    if (profile.cluster) {
         m_router.setBackend(std::make_unique<ClusterClient>());
     } else {
         m_router.setBackend(std::make_unique<RedisConnection>());
@@ -865,38 +865,37 @@ void MainWindow::connectOrDisconnect()
     m_scanStatus->setText(tr("Connecting..."));
     appendOutput(tr("Connecting..."));
     m_connectButton->setEnabled(false);
-    if (active->sshTunnel) {
+    if (profile.sshTunnel) {
         if (m_sshTunnel)
             m_sshTunnel->stop();
         m_scanStatus->setText(tr("Opening SSH tunnel..."));
         m_sshTunnel = new SshTunnel(this);
         connect(m_sshTunnel, &SshTunnel::ready, this,
-                [this, active](quint16 localPort) {
+                [this, profile](quint16 localPort) {
             m_scanStatus->setText(tr("SSH tunnel ready; connecting..."));
             m_effectiveHost = QStringLiteral("127.0.0.1");
             m_effectivePort = localPort;
-            m_router.connectToHost(m_effectiveHost, m_effectivePort, active->tls,
-                                       active->username, m_passwordEdit->text(), active->db);
+            m_router.connectToHost(m_effectiveHost, m_effectivePort, profile.tls,
+                                   profile.username, m_passwordEdit->text(), profile.db);
         });
         connect(m_sshTunnel, &SshTunnel::failed, this, [this](const QString &error) {
             m_scanStatus->setText(tr("SSH tunnel error: %1").arg(error));
             m_connectButton->setEnabled(true);
             m_connectButton->setText(tr("Connect"));
         });
-        m_sshTunnel->start(active->sshHost, active->sshPort, active->sshUser,
-                           active->sshKeyPath, m_hostEdit->text().trimmed(),
-                           static_cast<quint16>(m_portSpin->value()));
+        m_sshTunnel->start(profile.sshHost, profile.sshPort, profile.sshUser,
+                           profile.sshKeyPath, profile.host, profile.port);
         return;
     }
-    if (active->sentinel) {
+    if (profile.sentinel) {
         m_scanStatus->setText(tr("Resolving Sentinel master..."));
         auto *resolver = new SentinelResolver(this);
         connect(resolver, &SentinelResolver::resolved, this,
-                [this, resolver, active](const QString &host, quint16 port) {
+                [this, resolver, profile](const QString &host, quint16 port) {
             m_scanStatus->setText(tr("Connecting to master %1:%2...").arg(host).arg(port));
             m_effectiveHost = host;
             m_effectivePort = port;
-            const ConnectionProfile sentinelProfile = *active;
+            const ConnectionProfile sentinelProfile = profile;
             m_router.connectToHost(host, port, sentinelProfile.tls, sentinelProfile.username,
                                    m_passwordEdit->text(), sentinelProfile.db);
             if (!m_sentinelWatcher) {
@@ -934,15 +933,15 @@ void MainWindow::connectOrDisconnect()
             m_connectButton->setText(tr("Connect"));
             resolver->deleteLater();
         });
-        resolver->resolve(active->sentinelHost, active->sentinelPort, active->sentinelTls,
+        resolver->resolve(profile.sentinelHost, profile.sentinelPort, profile.sentinelTls,
                           m_usernameEdit->text(), m_passwordEdit->text(),
-                          active->sentinelMaster);
+                          profile.sentinelMaster);
         return;
     }
-    m_effectiveHost = m_hostEdit->text().trimmed();
-    m_effectivePort = static_cast<quint16>(m_portSpin->value());
-    m_router.connectToHost(m_effectiveHost, m_effectivePort, m_tlsCheck->isChecked(),
-                               m_usernameEdit->text(), m_passwordEdit->text(), m_dbSpin->value());
+    m_effectiveHost = profile.host;
+    m_effectivePort = profile.port;
+    m_router.connectToHost(m_effectiveHost, m_effectivePort, profile.tls, profile.username,
+                           m_passwordEdit->text(), profile.db);
 }
 
 void MainWindow::startScan()

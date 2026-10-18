@@ -13,6 +13,7 @@
 #include <QFile>
 #include <QLabel>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QPlainTextEdit>
 #include <QApplication>
 #include <QCheckBox>
@@ -126,6 +127,7 @@ void TestMainWindow::browsesAndShowsValues()
     auto *keyLabel = window.findChild<QLabel *>(QStringLiteral("keyLabel"));
     auto *saveButton = window.findChild<QPushButton *>(QStringLiteral("saveStringButton"));
     auto *readOnlyCheck = window.findChild<QCheckBox *>(QStringLiteral("readOnlyCheck"));
+    auto *profileList = window.findChild<QListWidget *>(QStringLiteral("profileList"));
 
     QVERIFY(host);
     QVERIFY(portSpin);
@@ -143,6 +145,7 @@ void TestMainWindow::browsesAndShowsValues()
     QVERIFY(keyLabel);
     QVERIFY(saveButton);
     QVERIFY(readOnlyCheck);
+    QVERIFY(profileList);
 
     host->setText(QStringLiteral("127.0.0.1"));
     portSpin->setValue(port);
@@ -150,6 +153,7 @@ void TestMainWindow::browsesAndShowsValues()
     QTest::mouseClick(connectButton, Qt::LeftButton);
 
     QTRY_VERIFY_WITH_TIMEOUT(table->model()->rowCount() >= 3, 10000);
+    QCOMPARE(profileList->count(), 0);
     QTRY_VERIFY_WITH_TIMEOUT(tree->model()->rowCount() > 0, 5000);
     QCOMPARE(dbCombo->currentData().toInt(), 0);
     viewMode->setCurrentIndex(1);

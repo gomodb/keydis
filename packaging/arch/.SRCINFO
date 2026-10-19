@@ -30,6 +30,6 @@ pkgbase = keydis
 	optdepends = openssh: SSH tunnel support
 	options = !debug
 	source = keydis-0.4.39.tar.gz::https://github.com/gomodb/keydis/archive/refs/tags/v0.4.39.tar.gz
-	sha256sums = fc8c287db048a25b3ed6670519655bc42d0fec74d154dc3796624a21f2c4a73d
+	sha256sums = 2b5826cf96afc3efbaa987cc41c0340cdbea43d52b9077cbf35e82f32620fd2c
 
 pkgname = keydis

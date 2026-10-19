@@ -1,0 +1,200 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-arch:
+    name: Arch Linux / build and test
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            cmake ninja git pkgconf \
+            qt6-base qt6-tools \
+            kconfig kconfigwidgets kcolorscheme kcoreaddons kdbusaddons \
+            ki18n kwallet kxmlgui krunner \
+            hiredis zlib zstd brotli msgpack-c \
+            redis appstream desktop-file-utils
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DBUILD_TESTING=ON
+
+      - name: Build
+        run: |
+          set -o pipefail
+          cmake --build build --parallel 2>&1 | tee build.log
+
+      - name: Build failure summary
+        if: failure()
+        run: |
+          {
+            echo '### Build log'
+            echo '```'
+            tail -n 120 build.log 2>/dev/null || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Test
+        env:
+          KEYDIS_REDIS_PORT: 6379
+        run: |
+          redis-server --daemonize yes
+          ctest --test-dir build --output-on-failure
+
+      - name: Install smoke test
+        run: |
+          DESTDIR="$RUNNER_TEMP/install" cmake --install build --prefix /usr
+          QT_QPA_PLATFORM=offscreen "$RUNNER_TEMP/install/usr/bin/keydis" --version
+          desktop-file-validate "$RUNNER_TEMP/install/usr/share/applications/"*.desktop
+          appstreamcli validate --no-net "$RUNNER_TEMP/install/usr/share/metainfo/"*.xml
+          test -f "$RUNNER_TEMP/install/usr/share/licenses/keydis/LICENSE"
+
+      - name: Upload test log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arch-test-log
+          path: build/Testing/Temporary/LastTest.log
+          if-no-files-found: ignore
+
+  sanitizers:
+    name: Arch Linux / ASan + UBSan
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            cmake ninja git pkgconf \
+            qt6-base qt6-tools \
+            kconfig kconfigwidgets kcolorscheme kcoreaddons kdbusaddons \
+            ki18n kwallet kxmlgui krunner \
+            hiredis zlib zstd brotli msgpack-c redis
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined" \
+            -DBUILD_TESTING=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        env:
+          ASAN_OPTIONS: detect_leaks=0:abort_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+          KEYDIS_REDIS_PORT: 6379
+        run: |
+          redis-server --daemonize yes
+          ctest --test-dir build --output-on-failure
+
+  package:
+    name: Arch Linux package
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install packaging dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            base-devel git cmake ninja pkgconf sudo util-linux \
+            qt6-base qt6-tools \
+            kconfig kconfigwidgets kcolorscheme kcoreaddons kdbusaddons \
+            ki18n kwallet kxmlgui krunner \
+            hiredis zlib zstd brotli msgpack-c \
+            appstream desktop-file-utils
+
+      - name: Verify tag matches PKGBUILD version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkgver="$(sed -n 's/^pkgver=//p' packaging/arch/PKGBUILD)"
+          echo "tag=[$tag] pkgver=[$pkgver]"
+          test "$tag" = "$pkgver"
+
+      - name: Prepare builder
+        run: |
+          useradd -m builder
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+
+      - name: Build package
+        run: |
+          cd "$GITHUB_WORKSPACE/packaging/arch"
+          set -o pipefail
+          sudo -u builder makepkg -f --noconfirm 2>&1 | tee arch-build.log
+
+      - name: Install and smoke test
+        run: |
+          package="$(find packaging/arch -maxdepth 1 -name 'keydis-[0-9]*.pkg.tar.zst' | head -n1)"
+          test -n "$package"
+          pacman -U --noconfirm "$package"
+          QT_QPA_PLATFORM=offscreen keydis --version
+          desktop-file-validate /usr/share/applications/io.github.keydis.KeyDis.desktop
+          appstreamcli validate --no-net /usr/share/metainfo/io.github.keydis.KeyDis.metainfo.xml
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: keydis-arch-package
+          path: packaging/arch/keydis-[0-9]*.pkg.tar.zst
+          if-no-files-found: error
+
+  release:
+    name: GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [package]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download package
+        uses: actions/download-artifact@v4
+        with:
+          name: keydis-arch-package
+          path: dist
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd dist
+          sha256sum *.pkg.tar.zst > SHA256SUMS
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" ./*.pkg.tar.zst SHA256SUMS --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" ./*.pkg.tar.zst SHA256SUMS \
+              --title "KeyDis $GITHUB_REF_NAME" \
+              --generate-notes
+          fi

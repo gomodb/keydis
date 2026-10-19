@@ -20,12 +20,13 @@ depends=(
     'kxmlgui'
     'krunner'
     'hicolor-icon-theme'
+    'hiredis'
   'zlib'
   'zstd'
   'brotli'
   'msgpack-c'
 )
-makedepends=('cmake' 'ninja' 'pkgconf' 'qt6-tools' 'hiredis')
+makedepends=('cmake' 'ninja' 'pkgconf' 'qt6-tools')
 optdepends=(
     'kwalletmanager: KWallet management UI'
     'openssh: SSH tunnel support'

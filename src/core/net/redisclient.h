@@ -32,6 +32,8 @@ public:
     virtual void disconnectFromHost() = 0;
     [[nodiscard]] virtual bool isReady() const = 0;
     virtual void sendCommand(const QList<QByteArray> &args, ReplyCallback callback = {}) = 0;
+    virtual void sendTransaction(const QList<QList<QByteArray>> &commands,
+                                 ReplyCallback callback) = 0;
 
 signals:
     void stateChanged(const QString &state);

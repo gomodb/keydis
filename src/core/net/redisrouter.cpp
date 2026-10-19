@@ -53,6 +53,17 @@ bool RedisRouter::isReady() const
     return m_backend && m_backend->isReady();
 }
 
+void RedisRouter::sendTransaction(const QList<QList<QByteArray>> &commands,
+                                  ReplyCallback callback)
+{
+    if (!m_backend) {
+        if (callback)
+            callback(RespValue{}, tr("Not connected"));
+        return;
+    }
+    m_backend->sendTransaction(commands, std::move(callback));
+}
+
 void RedisRouter::sendCommand(const QList<QByteArray> &args, ReplyCallback callback)
 {
     if (!m_backend) {

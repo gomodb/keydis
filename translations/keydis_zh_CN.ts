@@ -40,7 +40,7 @@
     <message>
       <location filename="../src/core/net/clusterclient.cpp" line="299" />
       <location filename="../src/core/net/clusterclient.cpp" line="305" />
-      <location filename="../src/core/net/clusterclient.cpp" line="867" />
+      <location filename="../src/core/net/clusterclient.cpp" line="918" />
       <source>Disconnected</source>
       <translation>已断开</translation>
     </message>
@@ -51,14 +51,16 @@
     </message>
     <message>
       <location filename="../src/core/net/clusterclient.cpp" line="324" />
+      <location filename="../src/core/net/clusterclient.cpp" line="394" />
       <source>Cluster is not connected</source>
       <translation>Cluster 未连接</translation>
     </message>
     <message>
       <location filename="../src/core/net/clusterclient.cpp" line="343" />
       <location filename="../src/core/net/clusterclient.cpp" line="369" />
-      <location filename="../src/core/net/clusterclient.cpp" line="568" />
-      <location filename="../src/core/net/clusterclient.cpp" line="733" />
+      <location filename="../src/core/net/clusterclient.cpp" line="422" />
+      <location filename="../src/core/net/clusterclient.cpp" line="619" />
+      <location filename="../src/core/net/clusterclient.cpp" line="784" />
       <source>No cluster node available</source>
       <translation>没有可用的 Cluster 节点</translation>
     </message>
@@ -68,22 +70,23 @@
       <translation>没有节点拥有 slot %1</translation>
     </message>
     <message>
-      <location filename="../src/core/net/clusterclient.cpp" line="502" />
+      <location filename="../src/core/net/clusterclient.cpp" line="427" />
+      <location filename="../src/core/net/clusterclient.cpp" line="553" />
       <source>Cluster node is unavailable</source>
       <translation>Cluster 节点不可用</translation>
     </message>
     <message>
-      <location filename="../src/core/net/clusterclient.cpp" line="511" />
+      <location filename="../src/core/net/clusterclient.cpp" line="562" />
       <source>Too many cluster redirections</source>
       <translation>Cluster 重定向次数过多</translation>
     </message>
     <message>
-      <location filename="../src/core/net/clusterclient.cpp" line="718" />
+      <location filename="../src/core/net/clusterclient.cpp" line="769" />
       <source>Invalid cluster SCAN</source>
       <translation>无效的 Cluster SCAN</translation>
     </message>
     <message>
-      <location filename="../src/core/net/clusterclient.cpp" line="766" />
+      <location filename="../src/core/net/clusterclient.cpp" line="817" />
       <source>Invalid cluster SCAN cursor</source>
       <translation>无效的 Cluster SCAN 游标</translation>
     </message>
@@ -1181,6 +1184,19 @@ Execute?</source>
     </message>
   </context>
   <context>
+    <name>KeyDis::RedisConnection</name>
+    <message>
+      <location filename="../src/core/net/redisconnection.cpp" line="304" />
+      <source>A transaction is already in progress</source>
+      <translation>已有事务正在进行</translation>
+    </message>
+    <message>
+      <location filename="../src/core/net/redisconnection.cpp" line="340" />
+      <source>Transaction aborted</source>
+      <translation>事务已中止</translation>
+    </message>
+  </context>
+  <context>
     <name>KeyDis::RedisRouter</name>
     <message>
       <location filename="../src/core/net/redisrouter.cpp" line="42" />
@@ -1188,7 +1204,8 @@ Execute?</source>
       <translation>没有连接后端</translation>
     </message>
     <message>
-      <location filename="../src/core/net/redisrouter.cpp" line="60" />
+      <location filename="../src/core/net/redisrouter.cpp" line="61" />
+      <location filename="../src/core/net/redisrouter.cpp" line="71" />
       <source>Not connected</source>
       <translation>未连接</translation>
     </message>
@@ -1724,7 +1741,7 @@ Execute?</source>
     <message>
       <location filename="../src/ui/values/valuepanel.cpp" line="431" />
       <location filename="../src/ui/values/valuepanel.cpp" line="1717" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="1954" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1951" />
       <source>Score must be a number</source>
       <translation>分数必须是数字</translation>
     </message>
@@ -2203,97 +2220,102 @@ Execute?</source>
       <translation>分数</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1769" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="1773" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1749" />
+      <source>Transaction aborted</source>
+      <translation>事务已中止</translation>
+    </message>
+    <message>
+      <location filename="../src/ui/values/valuepanel.cpp" line="1766" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1770" />
       <source>Add hash field</source>
       <translation>添加哈希字段</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1769" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1766" />
       <source>Field:</source>
       <translation>字段：</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1773" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="1828" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1770" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1825" />
       <source>Value:</source>
       <translation>值：</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1804" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1801" />
       <source>Delete hash fields</source>
       <translation>删除哈希字段</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1805" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1802" />
       <source>Delete %1 selected field(s)?</source>
       <translation>删除选中的 %1 个字段？</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1828" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1825" />
       <source>Add list value</source>
       <translation>添加列表值</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1860" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1857" />
       <source>Delete list values</source>
       <translation>删除列表值</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1861" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1858" />
       <source>Delete %1 selected value(s)?</source>
       <translation>删除选中的 %1 个值？</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1888" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1885" />
       <source>Add set member</source>
       <translation>添加集合成员</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1888" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="1944" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1885" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1941" />
       <source>Member:</source>
       <translation>成员：</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1918" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1915" />
       <source>Delete set members</source>
       <translation>删除集合成员</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1919" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="1985" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1916" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1982" />
       <source>Delete %1 selected member(s)?</source>
       <translation>删除选中的 %1 个成员？</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1943" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="1947" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1940" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1944" />
       <source>Add sorted-set member</source>
       <translation>添加有序集合成员</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1947" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1944" />
       <source>Score:</source>
       <translation>分数：</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1984" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1981" />
       <source>Delete sorted-set members</source>
       <translation>删除有序集合成员</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2032" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2023" />
       <source>Undone: %1</source>
       <translation>已撤销：%1</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2065" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2062" />
       <source>The server rejected this write (ACL or server read-only mode).</source>
       <translation>服务器拒绝了此写入（ACL 或服务端只读模式）。</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2076" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2073" />
       <source>Not connected</source>
       <translation>未连接</translation>
     </message>

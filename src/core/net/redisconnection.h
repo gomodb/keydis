@@ -33,6 +33,8 @@ public:
     [[nodiscard]] bool isReady() const override;
 
     void sendCommand(const QList<QByteArray> &args, ReplyCallback callback = {}) override;
+    void sendTransaction(const QList<QList<QByteArray>> &commands,
+                         ReplyCallback callback) override;
 
 private:
     enum class Stage {
@@ -54,6 +56,10 @@ private:
     void completeHandshake();
     void handleReply(const RespValue &reply);
     void pumpPending();
+    struct TransactionState;
+    void sendTransactionStep(const std::shared_ptr<TransactionState> &state);
+    void finishTransaction(const std::shared_ptr<TransactionState> &state, const RespValue &reply,
+                           const QString &error);
     bool sendRaw(const QList<QByteArray> &args);
     void setStage(Stage stage, const QString &description);
     void fail(const QString &error);
@@ -77,6 +83,7 @@ private:
     bool m_userDisconnect = false;
     bool m_authWithUsername = true;
     bool m_resp2 = false;
+    bool m_inTransaction = false;
     QQueue<Request> m_pending;
 };
 

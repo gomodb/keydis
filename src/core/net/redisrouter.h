@@ -25,6 +25,8 @@ public:
     void disconnectFromHost() override;
     [[nodiscard]] bool isReady() const override;
     void sendCommand(const QList<QByteArray> &args, ReplyCallback callback = {}) override;
+    void sendTransaction(const QList<QList<QByteArray>> &commands,
+                         ReplyCallback callback) override;
 
 private:
     std::unique_ptr<RedisClient> m_backend;

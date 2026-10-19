@@ -41,6 +41,21 @@ public:
         if (callback)
             callback(reply, {});
     }
+
+    void sendTransaction(const QList<QList<QByteArray>> &commands, ReplyCallback callback) override
+    {
+        RespValue replies;
+        replies.type = RespType::Array;
+        for (const QList<QByteArray> &command : commands) {
+            this->commands.append(command);
+            RespValue reply;
+            reply.type = RespType::SimpleString;
+            reply.scalar = QByteArrayLiteral("OK");
+            replies.elements.push_back(reply);
+        }
+        if (callback)
+            callback(replies, {});
+    }
 };
 
 QTreeWidgetItem *findItem(QTreeWidgetItem *parent, const QString &path)

@@ -379,6 +379,57 @@ void ClusterClient::sendCommand(const QList<QByteArray> &args, ReplyCallback cal
     sendToNode(node, args, std::move(callback), 0, false);
 }
 
+void ClusterClient::sendTransaction(const QList<QList<QByteArray>> &commands,
+                                    ReplyCallback callback)
+{
+    if (commands.isEmpty()) {
+        RespValue empty;
+        empty.type = RespType::Array;
+        if (callback)
+            callback(empty, {});
+        return;
+    }
+    if (!m_ready) {
+        if (callback)
+            callback(RespValue{}, tr("Cluster is not connected"));
+        return;
+    }
+
+    int slot = -1;
+    for (const QList<QByteArray> &args : commands) {
+        if (args.isEmpty())
+            continue;
+        const QVector<int> indexes = keyIndexes(args.first().toUpper(), args);
+        for (const int index : indexes) {
+            if (index <= 0 || index >= args.size())
+                continue;
+            const int candidate = slotForKey(args.at(index));
+            if (slot < 0)
+                slot = candidate;
+            else if (slot != candidate) {
+                if (callback)
+                    callback(RespValue{}, QStringLiteral(
+                        "CROSSSLOT Keys in request don't hash to the same slot"));
+                return;
+            }
+        }
+    }
+
+    Node *node = slot >= 0 ? nodeForSlot(slot)
+                          : (m_nodes.empty() ? nullptr : m_nodes.front().get());
+    if (!node || !node->connection) {
+        if (callback)
+            callback(RespValue{}, tr("No cluster node available"));
+        return;
+    }
+    if (!node->ready) {
+        if (callback)
+            callback(RespValue{}, tr("Cluster node is unavailable"));
+        return;
+    }
+    node->connection->sendTransaction(commands, std::move(callback));
+}
+
 QVector<int> ClusterClient::keyIndexes(const QByteArray &command,
                                        const QList<QByteArray> &args) const
 {

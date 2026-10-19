@@ -33,6 +33,7 @@ void RedisConnection::connectToHost(const QString &host, quint16 port, bool tls,
     m_db = db;
     m_tls = tls;
     m_userDisconnect = false;
+    m_inTransaction = false;
     m_authWithUsername = !m_username.isEmpty();
     m_resp2 = false;
 
@@ -75,6 +76,7 @@ void RedisConnection::createSocket(bool tls)
 void RedisConnection::disconnectFromHost()
 {
     m_userDisconnect = true;
+    m_inTransaction = false;
     m_reader.reset();
     if (m_stage != Stage::Idle)
         setStage(Stage::Idle, QStringLiteral("Disconnected"));
@@ -281,6 +283,91 @@ void RedisConnection::sendCommand(const QList<QByteArray> &args, ReplyCallback c
     }
 }
 
+struct RedisConnection::TransactionState {
+    QList<QList<QByteArray>> commands;
+    ReplyCallback callback;
+    int index = 0;
+};
+
+void RedisConnection::sendTransaction(const QList<QList<QByteArray>> &commands,
+                                      ReplyCallback callback)
+{
+    if (commands.isEmpty()) {
+        RespValue empty;
+        empty.type = RespType::Array;
+        if (callback)
+            callback(empty, {});
+        return;
+    }
+    if (m_inTransaction) {
+        if (callback)
+            callback(RespValue{}, tr("A transaction is already in progress"));
+        return;
+    }
+    m_inTransaction = true;
+    auto state = std::make_shared<TransactionState>();
+    state->commands = commands;
+    state->callback = std::move(callback);
+
+    sendCommand({QByteArrayLiteral("MULTI")}, [this, state](const RespValue &reply,
+                                                             const QString &error) {
+        if (!error.isEmpty() || reply.isError()) {
+            m_inTransaction = false;
+            if (state->callback)
+                state->callback(reply, error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
+            return;
+        }
+        sendTransactionStep(state);
+    });
+}
+
+void RedisConnection::sendTransactionStep(const std::shared_ptr<TransactionState> &state)
+{
+    if (!state)
+        return;
+    if (state->index >= state->commands.size()) {
+        sendCommand({QByteArrayLiteral("EXEC")},
+                    [this, state](const RespValue &reply, const QString &error) {
+            if (!error.isEmpty()) {
+                finishTransaction(state, reply, error);
+                return;
+            }
+            if (reply.isError()) {
+                finishTransaction(state, reply, QString::fromUtf8(reply.scalar));
+                return;
+            }
+            if (reply.isNull()) {
+                finishTransaction(state, reply, tr("Transaction aborted"));
+                return;
+            }
+            finishTransaction(state, reply, {});
+        });
+        return;
+    }
+
+    const QList<QByteArray> command = state->commands.at(state->index);
+    sendCommand(command, [this, state](const RespValue &reply, const QString &error) {
+        if (!error.isEmpty() || reply.isError()) {
+            const QString message = error.isEmpty() ? QString::fromUtf8(reply.scalar) : error;
+            sendCommand({QByteArrayLiteral("DISCARD")},
+                        [this, state, message](const RespValue &, const QString &) {
+                finishTransaction(state, RespValue{}, message);
+            });
+            return;
+        }
+        ++state->index;
+        sendTransactionStep(state);
+    });
+}
+
+void RedisConnection::finishTransaction(const std::shared_ptr<TransactionState> &state,
+                                        const RespValue &reply, const QString &error)
+{
+    m_inTransaction = false;
+    if (state && state->callback)
+        state->callback(reply, error);
+}
+
 bool RedisConnection::sendRaw(const QList<QByteArray> &args)
 {
     if (!m_socket || m_stage == Stage::Idle)
@@ -300,6 +387,7 @@ void RedisConnection::fail(const QString &error)
     if (m_stage == Stage::Idle)
         return;
     m_reader.reset();
+    m_inTransaction = false;
     setStage(Stage::Idle, QStringLiteral("Disconnected"));
     failPending(error);
     emit errorOccurred(error);

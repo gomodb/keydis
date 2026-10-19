@@ -31,6 +31,8 @@ public:
     void disconnectFromHost() override;
     [[nodiscard]] bool isReady() const override;
     void sendCommand(const QList<QByteArray> &args, ReplyCallback callback = {}) override;
+    void sendTransaction(const QList<QList<QByteArray>> &commands,
+                         ReplyCallback callback) override;
 
     void connectToCluster(const QStringList &seeds, bool tls, const QString &username,
                           const QString &password);

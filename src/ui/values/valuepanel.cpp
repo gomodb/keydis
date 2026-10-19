@@ -1738,25 +1738,22 @@ void ValuePanel::runCommands(const QList<QList<QByteArray>> &commands,
         done(true);
         return;
     }
-    auto remaining = std::make_shared<int>(commands.size());
-    auto errorText = std::make_shared<QString>();
     QPointer<ValuePanel> guard(this);
-    for (const QList<QByteArray> &command : commands) {
-        m_connection->sendCommand(command, [guard, remaining, errorText, done, this](
-                                                const RespValue &reply, const QString &error) {
-            if (!guard)
-                return;
-            if (!error.isEmpty() || reply.isError()) {
-                if (errorText->isEmpty())
-                    *errorText = error.isEmpty() ? QString::fromUtf8(reply.scalar) : error;
-            }
-            if (--(*remaining) == 0) {
-                if (!errorText->isEmpty())
-                    showError(*errorText);
-                done(errorText->isEmpty());
-            }
-        });
-    }
+    m_connection->sendTransaction(commands, [guard, done, this](const RespValue &reply,
+                                                                const QString &error) {
+        if (!guard)
+            return;
+        if (!error.isEmpty() || reply.isError() || reply.isNull()) {
+            const QString message = !error.isEmpty()
+                ? error
+                : (reply.isNull() ? tr("Transaction aborted")
+                                  : QString::fromUtf8(reply.scalar));
+            showError(message);
+            done(false);
+            return;
+        }
+        done(true);
+    });
 }
 
 void ValuePanel::addHashField()
@@ -1999,12 +1996,6 @@ void ValuePanel::deleteZSetMembers()
     });
 }
 
-void ValuePanel::setStatus(const QString &text)
-{
-    m_statusLabel->setStyleSheet({});
-    m_statusLabel->setText(text);
-}
-
 void ValuePanel::pushUndo(const QString &label, const QList<QList<QByteArray>> &commands)
 {
     if (commands.isEmpty())
@@ -2052,6 +2043,12 @@ void ValuePanel::updateUndoButton()
 {
     if (m_undoButton)
         m_undoButton->setEnabled(!m_readOnly && !m_undoActions.isEmpty());
+}
+
+void ValuePanel::setStatus(const QString &text)
+{
+    m_statusLabel->setStyleSheet(QString());
+    m_statusLabel->setText(text);
 }
 
 void ValuePanel::showError(const QString &error)

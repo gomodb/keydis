@@ -73,6 +73,37 @@ void TestClusterClient::routesKeysAndScans()
     QCOMPARE(command(client, {QByteArrayLiteral("GET"), keyC}, &error).scalar,
              QByteArray("three"));
 
+    bool txDone = false;
+    bool txSuccess = false;
+    QString txError;
+    RespValue txReply;
+    client.sendTransaction(
+        {{QByteArrayLiteral("SET"), keyA, QByteArrayLiteral("tx-one")},
+         {QByteArrayLiteral("SET"), keyA, QByteArrayLiteral("tx-two")}},
+        [&](const RespValue &reply, const QString &message) {
+            txReply = reply;
+            txError = message;
+            txDone = true;
+            txSuccess = message.isEmpty() && !reply.isError() && !reply.isNull();
+        });
+    QTRY_VERIFY_WITH_TIMEOUT(txDone, 5000);
+    QVERIFY2(txSuccess, qPrintable(txError));
+    QCOMPARE(txReply.type, RespType::Array);
+    QCOMPARE(command(client, {QByteArrayLiteral("GET"), keyA}, &error).scalar,
+             QByteArray("tx-two"));
+
+    txDone = false;
+    txError.clear();
+    client.sendTransaction(
+        {{QByteArrayLiteral("SET"), keyA, QByteArrayLiteral("one")},
+         {QByteArrayLiteral("SET"), keyB, QByteArrayLiteral("two")}},
+        [&](const RespValue &, const QString &message) {
+            txError = message;
+            txDone = true;
+        });
+    QTRY_VERIFY_WITH_TIMEOUT(txDone, 5000);
+    QVERIFY(txError.contains(QStringLiteral("CROSSSLOT")));
+
     const RespValue info = command(client, {QByteArrayLiteral("INFO")}, &error);
     QVERIFY2(error.isEmpty(), qPrintable(error));
     QVERIFY(info.scalar.contains("db0:keys="));

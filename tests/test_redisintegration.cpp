@@ -352,4 +352,58 @@ void TestRedisIntegration::sentinelWatcherReceivesFailover()
     QVERIFY(!SentinelWatcher::parseSwitchMaster(message, QStringLiteral("other"), &host, &port));
 }
 
+void TestRedisIntegration::transactionRoundTrip()
+{
+    bool ok = false;
+    const int port = qEnvironmentVariableIntValue("KEYDIS_REDIS_PORT", &ok);
+    if (!ok || port <= 0)
+        QSKIP("KEYDIS_REDIS_PORT is not set");
+
+    RedisConnection connection;
+    connection.connectToHost(QStringLiteral("127.0.0.1"), static_cast<quint16>(port), false, {},
+                             {}, 0);
+    QTRY_VERIFY_WITH_TIMEOUT(connection.isReady(), 5000);
+
+    const QByteArray keyA("keydis:it:tx:a");
+    const QByteArray keyB("keydis:it:tx:b");
+    QString error;
+    command(connection, {QByteArrayLiteral("DEL"), keyA, keyB}, &error);
+
+    bool done = false;
+    bool success = false;
+    RespValue transactionReply;
+    connection.sendTransaction(
+        {{QByteArrayLiteral("SET"), keyA, QByteArrayLiteral("one")},
+         {QByteArrayLiteral("SET"), keyB, QByteArrayLiteral("two")}},
+        [&](const RespValue &reply, const QString &message) {
+            transactionReply = reply;
+            error = message;
+            success = message.isEmpty() && !reply.isError() && !reply.isNull();
+            done = true;
+        });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QVERIFY2(success, qPrintable(error));
+    QCOMPARE(transactionReply.type, RespType::Array);
+    QCOMPARE(transactionReply.elements.size(), size_t(2));
+    QCOMPARE(command(connection, {QByteArrayLiteral("GET"), keyA}, &error).scalar,
+             QByteArray("one"));
+    QCOMPARE(command(connection, {QByteArrayLiteral("GET"), keyB}, &error).scalar,
+             QByteArray("two"));
+
+    done = false;
+    connection.sendTransaction(
+        {{QByteArrayLiteral("SET"), keyA, QByteArrayLiteral("three")},
+         {QByteArrayLiteral("NOT-A-COMMAND")}},
+        [&](const RespValue &, const QString &message) {
+            error = message;
+            done = true;
+        });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QVERIFY(!error.isEmpty());
+    QCOMPARE(command(connection, {QByteArrayLiteral("GET"), keyA}, &error).scalar,
+             QByteArray("one"));
+
+    command(connection, {QByteArrayLiteral("DEL"), keyA, keyB}, &error);
+}
+
 } // namespace KeyDis::Test

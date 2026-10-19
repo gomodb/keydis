@@ -204,8 +204,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     container: menci/archlinuxarm:base-devel
     timeout-minutes: 60
-    permissions:
-      contents: write
+    permissions: write-all
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -320,7 +319,7 @@ jobs:
           git checkout -B "ci-debug-${GITHUB_RUN_ID}"
           git add -f ci-logs
           git commit -m "ci debug ${GITHUB_RUN_ID}" || true
-          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"             "HEAD:refs/heads/ci-debug-${GITHUB_RUN_ID}"
+          git push origin "HEAD:refs/heads/ci-debug-${GITHUB_RUN_ID}"
 
       - name: Upload test log on failure
         if: failure()
@@ -339,8 +338,7 @@ jobs:
     runs-on: ubuntu-24.04
     container: archlinux:base-devel
     timeout-minutes: 45
-    permissions:
-      contents: write
+    permissions: write-all
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -423,7 +421,7 @@ jobs:
           git checkout -B "ci-debug-${GITHUB_RUN_ID}"
           git add -f ci-logs
           git commit -m "ci debug ${GITHUB_RUN_ID}" || true
-          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"             "HEAD:refs/heads/ci-debug-${GITHUB_RUN_ID}"
+          git push origin "HEAD:refs/heads/ci-debug-${GITHUB_RUN_ID}"
 
       - name: Upload build log on failure
         if: failure()
@@ -441,8 +439,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [package, arch-arm64]
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write
+    permissions: write-all
     steps:
       - name: Checkout
         uses: actions/checkout@v4

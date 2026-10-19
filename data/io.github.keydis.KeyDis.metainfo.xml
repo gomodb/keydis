@@ -18,6 +18,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.12" date="2026-10-19">
+      <description>
+        <p>Undo now covers single hash field, list element and sorted-set score edits, with safe rollback on failed writes.</p>
+      </description>
+    </release>
     <release version="0.4.11" date="2026-10-19">
       <description>
         <p>Batch-edit Undo for hash, list, set and sorted-set selections, with reload-safe inverse commands.</p>

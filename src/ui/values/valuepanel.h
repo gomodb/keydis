@@ -8,6 +8,7 @@
 #include "core/keyspace/keyinfo.h"
 
 #include <QByteArray>
+#include <QHash>
 #include <QList>
 #include <QString>
 #include <QVector>
@@ -156,6 +157,9 @@ private:
     QPushButton *m_listMoreButton = nullptr;
     QPushButton *m_setMoreButton = nullptr;
     QPushButton *m_zsetMoreButton = nullptr;
+    QHash<QString, QString> m_hashOriginal;
+    QHash<int, QString> m_listOriginal;
+    QHash<QString, QString> m_zsetOriginal;
     QByteArray m_hashCursor = QByteArrayLiteral("0");
     QByteArray m_setCursor = QByteArrayLiteral("0");
     QByteArray m_zsetCursor = QByteArrayLiteral("0");

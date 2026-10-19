@@ -274,16 +274,36 @@ QWidget *ValuePanel::buildHashPage()
         if (m_readOnly || m_loading || !item || item->column() != 1)
             return;
         QTableWidgetItem *fieldItem = m_hashTable->item(item->row(), 0);
-        if (!fieldItem)
+        if (!fieldItem || !m_hashOriginal.contains(fieldItem->text()))
             return;
-        runCommand({QByteArrayLiteral("HSET"), m_key, fieldItem->text().toUtf8(),
-                    item->text().toUtf8()},
-                   [this](const RespValue &reply, const QString &error) {
-                       if (!error.isEmpty() || reply.isError())
-                           showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
-                       else
-                           setStatus(tr("Field updated"));
-                   });
+        const QString field = fieldItem->text();
+        const QString oldValue = m_hashOriginal.value(field);
+        const QString newValue = item->text();
+        const quint64 generation = m_generation;
+        const QByteArray key = m_key;
+        runCommand({QByteArrayLiteral("HSET"), key, field.toUtf8(), newValue.toUtf8()},
+                   [this, generation, key, field, oldValue, newValue](const RespValue &reply,
+                                                                      const QString &error) {
+            if (generation != m_generation)
+                return;
+            if (!error.isEmpty() || reply.isError()) {
+                showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
+                m_loading = true;
+                for (int row = 0; row < m_hashTable->rowCount(); ++row) {
+                    if (m_hashTable->item(row, 0)->text() == field) {
+                        m_hashTable->item(row, 1)->setText(oldValue);
+                        break;
+                    }
+                }
+                m_loading = false;
+                return;
+            }
+            QList<QList<QByteArray>> undo;
+            undo.append({QByteArrayLiteral("HSET"), key, field.toUtf8(), oldValue.toUtf8()});
+            pushUndo(tr("hash field"), undo);
+            m_hashOriginal.insert(field, newValue);
+            setStatus(tr("Field updated"));
+        });
     });
     return tablePage(m_hashTable, {addButton, editButton, deleteButton, reloadButton, m_hashMoreButton}, this);
 }
@@ -316,14 +336,39 @@ QWidget *ValuePanel::buildListPage()
         QTableWidgetItem *indexItem = m_listTable->item(item->row(), 0);
         if (!indexItem)
             return;
-        runCommand({QByteArrayLiteral("LSET"), m_key, indexItem->text().toUtf8(),
-                    item->text().toUtf8()},
-                   [this](const RespValue &reply, const QString &error) {
-                       if (!error.isEmpty() || reply.isError())
-                           showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
-                       else
-                           setStatus(tr("List element updated"));
-                   });
+        bool indexOk = false;
+        const int index = indexItem->text().toInt(&indexOk);
+        if (!indexOk || !m_listOriginal.contains(index))
+            return;
+        const QString oldValue = m_listOriginal.value(index);
+        const QString newValue = item->text();
+        const quint64 generation = m_generation;
+        const QByteArray key = m_key;
+        runCommand({QByteArrayLiteral("LSET"), key, QByteArray::number(index),
+                    newValue.toUtf8()},
+                   [this, generation, key, index, oldValue, newValue](const RespValue &reply,
+                                                                       const QString &error) {
+            if (generation != m_generation)
+                return;
+            if (!error.isEmpty() || reply.isError()) {
+                showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
+                m_loading = true;
+                for (int row = 0; row < m_listTable->rowCount(); ++row) {
+                    if (m_listTable->item(row, 0)->text().toInt() == index) {
+                        m_listTable->item(row, 1)->setText(oldValue);
+                        break;
+                    }
+                }
+                m_loading = false;
+                return;
+            }
+            QList<QList<QByteArray>> undo;
+            undo.append({QByteArrayLiteral("LSET"), key, QByteArray::number(index),
+                         oldValue.toUtf8()});
+            pushUndo(tr("list element"), undo);
+            m_listOriginal.insert(index, newValue);
+            setStatus(tr("List element updated"));
+        });
     });
     return tablePage(m_listTable, {headButton, tailButton, editButton, deleteButton, reloadButton, m_listMoreButton}, this);
 }
@@ -375,22 +420,45 @@ QWidget *ValuePanel::buildZSetPage()
         if (m_readOnly || m_loading || !item || item->column() != 1)
             return;
         QTableWidgetItem *memberItem = m_zsetTable->item(item->row(), 0);
-        if (!memberItem)
+        if (!memberItem || !m_zsetOriginal.contains(memberItem->text()))
             return;
+        const QString member = memberItem->text();
+        const QString oldScore = m_zsetOriginal.value(member);
+        const QString newScore = item->text();
         bool ok = false;
-        item->text().toDouble(&ok);
+        newScore.toDouble(&ok);
         if (!ok) {
             showError(tr("Score must be a number"));
+            m_loading = true;
+            item->setText(oldScore);
+            m_loading = false;
             return;
         }
-        runCommand({QByteArrayLiteral("ZADD"), m_key, item->text().toUtf8(),
-                    memberItem->text().toUtf8()},
-                   [this](const RespValue &reply, const QString &error) {
-                       if (!error.isEmpty() || reply.isError())
-                           showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
-                       else
-                           setStatus(tr("Score updated"));
-                   });
+        const quint64 generation = m_generation;
+        const QByteArray key = m_key;
+        runCommand({QByteArrayLiteral("ZADD"), key, newScore.toUtf8(), member.toUtf8()},
+                   [this, generation, key, member, oldScore, newScore](const RespValue &reply,
+                                                                        const QString &error) {
+            if (generation != m_generation)
+                return;
+            if (!error.isEmpty() || reply.isError()) {
+                showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
+                m_loading = true;
+                for (int row = 0; row < m_zsetTable->rowCount(); ++row) {
+                    if (m_zsetTable->item(row, 0)->text() == member) {
+                        m_zsetTable->item(row, 1)->setText(oldScore);
+                        break;
+                    }
+                }
+                m_loading = false;
+                return;
+            }
+            QList<QList<QByteArray>> undo;
+            undo.append({QByteArrayLiteral("ZADD"), key, oldScore.toUtf8(), member.toUtf8()});
+            pushUndo(tr("zset score"), undo);
+            m_zsetOriginal.insert(member, newScore);
+            setStatus(tr("Score updated"));
+        });
     });
     return tablePage(m_zsetTable, {addButton, editButton, deleteButton, reloadButton, m_zsetMoreButton}, this);
 }
@@ -699,15 +767,18 @@ void ValuePanel::loadHashPage(const QByteArray &cursor, bool append)
                    }
                    const auto &flat = reply.elements[1].elements;
                    m_loading = true;
-                   if (!append)
+                   if (!append) {
                        m_hashTable->setRowCount(0);
+                       m_hashOriginal.clear();
+                   }
                    for (size_t index = 0; index + 1 < flat.size(); index += 2) {
+                       const QString field = QString::fromUtf8(flat[index].scalar);
+                       const QString value = QString::fromUtf8(flat[index + 1].scalar);
+                       m_hashOriginal.insert(field, value);
                        const int row = m_hashTable->rowCount();
                        m_hashTable->insertRow(row);
-                       m_hashTable->setItem(row, 0,
-                                            readOnlyItem(QString::fromUtf8(flat[index].scalar)));
-                       m_hashTable->setItem(row, 1,
-                                            new QTableWidgetItem(QString::fromUtf8(flat[index + 1].scalar)));
+                       m_hashTable->setItem(row, 0, readOnlyItem(field));
+                       m_hashTable->setItem(row, 1, new QTableWidgetItem(value));
                    }
                    m_loading = false;
                    m_hashCursor = reply.elements[0].scalar;
@@ -747,15 +818,18 @@ void ValuePanel::loadListPage(int offset, bool append)
                        return;
                    }
                    m_loading = true;
-                   if (!append)
+                   if (!append) {
                        m_listTable->setRowCount(0);
+                       m_listOriginal.clear();
+                   }
                    for (size_t index = 0; index < reply.elements.size(); ++index) {
+                       const int itemIndex = offset + int(index);
+                       const QString value = scalarText(reply.elements[index]);
+                       m_listOriginal.insert(itemIndex, value);
                        const int row = m_listTable->rowCount();
                        m_listTable->insertRow(row);
-                       m_listTable->setItem(row, 0,
-                                            readOnlyItem(QString::number(offset + int(index))));
-                       m_listTable->setItem(row, 1,
-                                            new QTableWidgetItem(scalarText(reply.elements[index])));
+                       m_listTable->setItem(row, 0, readOnlyItem(QString::number(itemIndex)));
+                       m_listTable->setItem(row, 1, new QTableWidgetItem(value));
                    }
                    m_listOffset = offset + int(reply.elements.size());
                    m_listMoreButton->setEnabled(reply.elements.size() == 500);
@@ -838,13 +912,18 @@ void ValuePanel::loadZSetPage(const QByteArray &cursor, bool append)
                    }
                    const auto &flat = reply.elements[1].elements;
                    m_loading = true;
-                   if (!append)
+                   if (!append) {
                        m_zsetTable->setRowCount(0);
+                       m_zsetOriginal.clear();
+                   }
                    for (size_t index = 0; index + 1 < flat.size(); index += 2) {
+                       const QString member = scalarText(flat[index]);
+                       const QString score = scalarText(flat[index + 1]);
+                       m_zsetOriginal.insert(member, score);
                        const int row = m_zsetTable->rowCount();
                        m_zsetTable->insertRow(row);
-                       m_zsetTable->setItem(row, 0, readOnlyItem(scalarText(flat[index])));
-                       m_zsetTable->setItem(row, 1, new QTableWidgetItem(scalarText(flat[index + 1])));
+                       m_zsetTable->setItem(row, 0, readOnlyItem(member));
+                       m_zsetTable->setItem(row, 1, new QTableWidgetItem(score));
                    }
                    m_loading = false;
                    m_zsetCursor = reply.elements[0].scalar;

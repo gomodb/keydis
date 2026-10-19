@@ -19,6 +19,7 @@ private slots:
     void sentinelResolvesMaster();
     void sentinelWatcherReceivesFailover();
     void transactionRoundTrip();
+    void unixSocketRoundTrip();
 };
 
 } // namespace KeyDis::Test

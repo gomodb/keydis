@@ -6,6 +6,8 @@
 #include "core/net/redisclient.h"
 
 #include <QAbstractSocket>
+#include <QIODevice>
+#include <QLocalSocket>
 #include <QList>
 #include <QObject>
 #include <QQueue>
@@ -17,7 +19,6 @@
 namespace KeyDis {
 
 class HiredisReader;
-
 class RedisConnection : public RedisClient
 {
     Q_OBJECT
@@ -28,6 +29,8 @@ public:
 
     void connectToHost(const QString &host, quint16 port, bool tls, const QString &username,
                        const QString &password, int db) override;
+    void connectToUnixSocket(const QString &path, const QString &username,
+                             const QString &password, int db) override;
     void setTlsConfig(const TlsConfig &config) override;
     void disconnectFromHost() override;
 
@@ -66,6 +69,8 @@ private:
     void fail(const QString &error);
     void failPending(const QString &error);
     void clearSocket();
+    [[nodiscard]] QIODevice *ioDevice() const;
+    [[nodiscard]] QString socketErrorString() const;
 
     struct Request {
         QList<QByteArray> args;
@@ -74,6 +79,7 @@ private:
     };
 
     QAbstractSocket *m_socket = nullptr;
+    QLocalSocket *m_unixSocket = nullptr;
     std::unique_ptr<HiredisReader> m_reader;
     Stage m_stage = Stage::Idle;
     QString m_host;

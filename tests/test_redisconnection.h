@@ -15,6 +15,8 @@ private slots:
     void handshakeSelectAndPing();
     void fallsBackToResp2();
     void rejectsMissingTlsFiles();
+    void rejectsMissingUnixSocket();
+    void unixSocketHandshake();
 };
 
 } // namespace KeyDis::Test

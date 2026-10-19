@@ -38,6 +38,15 @@ public:
     virtual void connectToHost(const QString &host, quint16 port, bool tls,
                                const QString &username, const QString &password, int db) = 0;
     virtual void setTlsConfig(const TlsConfig &config) { Q_UNUSED(config) }
+    virtual void connectToUnixSocket(const QString &path, const QString &username,
+                                     const QString &password, int db)
+    {
+        Q_UNUSED(path)
+        Q_UNUSED(username)
+        Q_UNUSED(password)
+        Q_UNUSED(db)
+        emit errorOccurred(tr("Unix sockets are not supported by this backend"));
+    }
     virtual void disconnectFromHost() = 0;
     [[nodiscard]] virtual bool isReady() const = 0;
     virtual void sendCommand(const QList<QByteArray> &args, ReplyCallback callback = {}) = 0;

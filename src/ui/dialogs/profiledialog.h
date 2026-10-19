@@ -33,6 +33,7 @@ private:
     QLineEdit *m_groupEdit = nullptr;
     QLineEdit *m_colorEdit = nullptr;
     QLineEdit *m_hostEdit = nullptr;
+    QLineEdit *m_unixSocketEdit = nullptr;
     QSpinBox *m_portSpin = nullptr;
     QCheckBox *m_tlsCheck = nullptr;
     QLineEdit *m_tlsCaEdit = nullptr;

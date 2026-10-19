@@ -52,6 +52,9 @@ int main(int argc, char *argv[])
     const QCommandLineOption hostOption(QStringLiteral("host"),
                                         QStringLiteral("Redis/Valkey host"),
                                         QStringLiteral("host"));
+    const QCommandLineOption unixSocketOption(QStringLiteral("unix-socket"),
+                                              QStringLiteral("Unix domain socket path"),
+                                              QStringLiteral("path"));
     const QCommandLineOption portOption(QStringLiteral("port"),
                                         QStringLiteral("Redis/Valkey port"),
                                         QStringLiteral("port"), QStringLiteral("6379"));
@@ -79,6 +82,7 @@ int main(int argc, char *argv[])
     const QCommandLineOption clusterOption(QStringLiteral("cluster"),
                                            QStringLiteral("Connect using Redis Cluster mode"));
     parser.addOption(hostOption);
+    parser.addOption(unixSocketOption);
     parser.addOption(portOption);
     parser.addOption(tlsOption);
     parser.addOption(usernameOption);
@@ -130,6 +134,8 @@ int main(int argc, char *argv[])
                                         parser.value(passwordOption),
                                         parser.value(dbOption).toInt());
     }
+    if (parser.isSet(unixSocketOption))
+        window->setUnixSocketPath(parser.value(unixSocketOption));
     host->show();
     if (parser.isSet(clusterOption))
         window->setClusterMode(true);

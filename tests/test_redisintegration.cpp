@@ -406,4 +406,22 @@ void TestRedisIntegration::transactionRoundTrip()
     command(connection, {QByteArrayLiteral("DEL"), keyA, keyB}, &error);
 }
 
+void TestRedisIntegration::unixSocketRoundTrip()
+{
+    const QString path = qEnvironmentVariable("KEYDIS_REDIS_UNIX");
+    if (path.isEmpty())
+        QSKIP("KEYDIS_REDIS_UNIX is not set");
+
+    RedisConnection connection;
+    QString error;
+    connect(&connection, &RedisConnection::errorOccurred, &connection,
+            [&](const QString &message) { error = message; });
+    connection.connectToUnixSocket(path, {}, {}, 0);
+    QTRY_VERIFY_WITH_TIMEOUT(connection.isReady(), 5000);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    const RespValue reply = command(connection, {QByteArrayLiteral("PING")}, &error);
+    QCOMPARE(reply.scalar, QByteArrayLiteral("PONG"));
+    connection.disconnectFromHost();
+}
+
 } // namespace KeyDis::Test

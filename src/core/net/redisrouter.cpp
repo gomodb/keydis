@@ -48,6 +48,15 @@ void RedisRouter::setTlsConfig(const TlsConfig &config)
         m_backend->setTlsConfig(config);
 }
 
+void RedisRouter::connectToUnixSocket(const QString &path, const QString &username,
+                                      const QString &password, int db)
+{
+    if (m_backend)
+        m_backend->connectToUnixSocket(path, username, password, db);
+    else
+        emit errorOccurred(tr("No connection backend"));
+}
+
 void RedisRouter::disconnectFromHost()
 {
     if (m_backend)

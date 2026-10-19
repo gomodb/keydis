@@ -142,6 +142,11 @@ void MainWindow::setConnectionParameters(const QString &host, quint16 port, bool
     m_dbSpin->setValue(db);
 }
 
+void MainWindow::setUnixSocketPath(const QString &path)
+{
+    m_ephemeralUnixSocket = path;
+}
+
 void MainWindow::connectNow()
 {
     if (!m_router.isReady())
@@ -1077,6 +1082,7 @@ void MainWindow::connectOrDisconnect(bool retryAuth)
         profile.db = m_dbSpin->value();
         profile.readOnly = m_readOnlyCheck->isChecked();
         profile.cluster = m_clusterCheck->isChecked();
+        profile.unixSocketPath = m_ephemeralUnixSocket;
     }
 
     emit sessionTitleChanged(profile.name.isEmpty()
@@ -1112,7 +1118,7 @@ void MainWindow::connectOrDisconnect(bool retryAuth)
         }
     }
 
-    if (profile.cluster) {
+    if (profile.cluster && profile.unixSocketPath.isEmpty()) {
         m_router.setBackend(std::make_unique<ClusterClient>());
     } else {
         m_router.setBackend(std::make_unique<RedisConnection>());
@@ -1127,6 +1133,14 @@ void MainWindow::connectOrDisconnect(bool retryAuth)
     m_scanStatus->setText(tr("Connecting..."));
     appendOutput(tr("Connecting..."));
     m_connectButton->setEnabled(false);
+    if (!profile.unixSocketPath.isEmpty()) {
+        m_effectiveHost = profile.unixSocketPath;
+        m_effectivePort = 0;
+        m_scanStatus->setText(tr("Connecting to Unix socket..."));
+        m_router.connectToUnixSocket(profile.unixSocketPath, profile.username,
+                                     m_passwordEdit->text(), profile.db);
+        return;
+    }
     if (profile.sshTunnel) {
         if (m_sshTunnel)
             m_sshTunnel->stop();
@@ -1801,8 +1815,13 @@ void MainWindow::copyKeyToProfile(const KeyInfo &info)
     });
     m_scanStatus->setText(tr("Copying key..."));
     target->setTlsConfig(tlsConfigForProfile(targetProfile));
-    target->connectToHost(targetProfile.host, targetProfile.port, targetProfile.tls,
-                          targetProfile.username, password, targetProfile.db);
+    if (!targetProfile.unixSocketPath.isEmpty()) {
+        target->connectToUnixSocket(targetProfile.unixSocketPath, targetProfile.username, password,
+                                    targetProfile.db);
+    } else {
+        target->connectToHost(targetProfile.host, targetProfile.port, targetProfile.tls,
+                              targetProfile.username, password, targetProfile.db);
+    }
 }
 
 void MainWindow::applyNamespaceFilter(const QString &path)

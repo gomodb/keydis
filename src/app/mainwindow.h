@@ -48,6 +48,7 @@ public:
 
     void setConnectionParameters(const QString &host, quint16 port, bool tls,
                                  const QString &username, const QString &password, int db);
+    void setUnixSocketPath(const QString &path);
     void connectNow();
     void showTab(const QString &name);
 
@@ -108,6 +109,7 @@ private:
     SshTunnel *m_sshTunnel = nullptr;
     SentinelWatcher *m_sentinelWatcher = nullptr;
     QString m_effectiveHost;
+    QString m_ephemeralUnixSocket;
     quint16 m_effectivePort = 0;
     QTabWidget *m_tabs = nullptr;
     QTreeWidget *m_profileList = nullptr;

@@ -15,6 +15,7 @@ struct ConnectionProfile {
     QString color;
     QString host = QStringLiteral("127.0.0.1");
     quint16 port = 6379;
+    QString unixSocketPath;
     bool tls = false;
     QString tlsCaFile;
     QString tlsCertFile;

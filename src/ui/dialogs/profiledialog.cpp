@@ -46,6 +46,9 @@ ProfileDialog::ProfileDialog(const ConnectionProfile &profile, QWidget *parent)
     m_portSpin->setRange(1, 65535);
     m_portSpin->setValue(profile.port);
     form->addRow(tr("Port"), m_portSpin);
+    m_unixSocketEdit = new QLineEdit(profile.unixSocketPath, connectionTab);
+    m_unixSocketEdit->setPlaceholderText(tr("Optional Unix socket path; overrides Host/Port"));
+    form->addRow(tr("Unix socket"), m_unixSocketEdit);
     m_tlsCheck = new QCheckBox(tr("Use TLS"), connectionTab);
     m_tlsCheck->setChecked(profile.tls);
     form->addRow(QString(), m_tlsCheck);
@@ -198,10 +201,16 @@ void ProfileDialog::testConnection()
     tlsConfig.keyFile = m_tlsKeyEdit->text().trimmed();
     tlsConfig.verifyPeer = m_tlsVerifyCheck->isChecked();
     connection->setTlsConfig(tlsConfig);
-    connection->connectToHost(m_hostEdit->text().trimmed(),
-                              static_cast<quint16>(m_portSpin->value()),
-                              m_tlsCheck->isChecked(), m_usernameEdit->text(),
-                              m_passwordEdit->text(), m_dbSpin->value());
+    if (!m_unixSocketEdit->text().trimmed().isEmpty()) {
+        connection->connectToUnixSocket(m_unixSocketEdit->text().trimmed(),
+                                        m_usernameEdit->text(), m_passwordEdit->text(),
+                                        m_dbSpin->value());
+    } else {
+        connection->connectToHost(m_hostEdit->text().trimmed(),
+                                  static_cast<quint16>(m_portSpin->value()),
+                                  m_tlsCheck->isChecked(), m_usernameEdit->text(),
+                                  m_passwordEdit->text(), m_dbSpin->value());
+    }
 }
 
 void ProfileDialog::accept()
@@ -219,7 +228,14 @@ void ProfileDialog::accept()
                              tr("Color must be a valid color name or hex value."));
         return;
     }
+    if (!m_unixSocketEdit->text().trimmed().isEmpty()
+        && (m_sshCheck->isChecked() || m_sentinelCheck->isChecked()
+            || m_clusterCheck->isChecked())) {
+        m_testStatus->setText(tr("Unix socket cannot be combined with SSH, Sentinel or Cluster."));
+        return;
+    }
     m_profile.host = m_hostEdit->text().trimmed();
+    m_profile.unixSocketPath = m_unixSocketEdit->text().trimmed();
     m_profile.port = static_cast<quint16>(m_portSpin->value());
     m_profile.tls = m_tlsCheck->isChecked();
     m_profile.tlsCaFile = m_tlsCaEdit->text().trimmed();

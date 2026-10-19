@@ -33,6 +33,7 @@ void TestProfileStore::roundTripsProfiles()
     first.sshKeyPath = QStringLiteral("/home/deploy/.ssh/id_ed25519");
     first.host = QStringLiteral("127.0.0.1");
     first.port = 6380;
+    first.unixSocketPath = QStringLiteral("/run/redis/redis.sock");
     first.tls = true;
     first.tlsCaFile = QStringLiteral("/etc/keydis/ca.pem");
     first.tlsCertFile = QStringLiteral("/etc/keydis/client.pem");
@@ -67,6 +68,7 @@ void TestProfileStore::roundTripsProfiles()
     QCOMPARE(loaded[0].sshKeyPath, first.sshKeyPath);
     QCOMPARE(loaded[0].host, first.host);
     QCOMPARE(loaded[0].port, first.port);
+    QCOMPARE(loaded[0].unixSocketPath, first.unixSocketPath);
     QCOMPARE(loaded[0].tls, true);
     QCOMPARE(loaded[0].tlsCaFile, first.tlsCaFile);
     QCOMPARE(loaded[0].tlsCertFile, first.tlsCertFile);

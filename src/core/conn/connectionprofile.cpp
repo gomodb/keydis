@@ -15,6 +15,7 @@ QJsonObject ConnectionProfile::toJson() const
     object.insert(QStringLiteral("group"), group);
     object.insert(QStringLiteral("color"), color);
     object.insert(QStringLiteral("host"), host);
+    object.insert(QStringLiteral("unixSocketPath"), unixSocketPath);
     object.insert(QStringLiteral("port"), port);
     object.insert(QStringLiteral("tls"), tls);
     object.insert(QStringLiteral("tlsCaFile"), tlsCaFile);
@@ -48,6 +49,7 @@ ConnectionProfile ConnectionProfile::fromJson(const QJsonObject &object)
     profile.group = object.value(QStringLiteral("group")).toString(profile.group);
     profile.color = object.value(QStringLiteral("color")).toString();
     profile.host = object.value(QStringLiteral("host")).toString(profile.host);
+    profile.unixSocketPath = object.value(QStringLiteral("unixSocketPath")).toString();
     const int port = object.value(QStringLiteral("port")).toInt(profile.port);
     profile.port = static_cast<quint16>(qBound(1, port, 65535));
     profile.tls = object.value(QStringLiteral("tls")).toBool(false);

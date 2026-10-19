@@ -7,6 +7,7 @@
 #include "core/resp/hiredisreader.h"
 
 #include <QFile>
+#include <QLocalSocket>
 #include <QSslCertificate>
 #include <QSslConfiguration>
 #include <QSslError>
@@ -56,6 +57,56 @@ void RedisConnection::connectToHost(const QString &host, quint16 port, bool tls,
     if (!m_socket)
         return;
     m_socket->connectToHost(host, port);
+}
+
+void RedisConnection::connectToUnixSocket(const QString &path, const QString &username,
+                                          const QString &password, int db)
+{
+    m_host = path;
+    m_username = username;
+    m_password = password;
+    m_db = db;
+    m_tls = false;
+    m_userDisconnect = false;
+    m_inTransaction = false;
+    m_authWithUsername = !m_username.isEmpty();
+    m_resp2 = false;
+
+    clearSocket();
+    failPending(QStringLiteral("Reconnecting"));
+    m_pending.clear();
+    m_reader.reset();
+
+    auto *socket = new QLocalSocket(this);
+    connect(socket, &QLocalSocket::connected, this, &RedisConnection::onTransportReady);
+    connect(socket, &QLocalSocket::readyRead, this, &RedisConnection::onReadyRead);
+    connect(socket, &QLocalSocket::errorOccurred, this,
+            [this, socket](QLocalSocket::LocalSocketError) {
+        if (m_stage == Stage::Idle)
+            return;
+        fail(QStringLiteral("Unix socket error: %1").arg(socket->errorString()));
+    });
+    connect(socket, &QLocalSocket::disconnected, this, &RedisConnection::onDisconnected);
+    m_unixSocket = socket;
+
+    setStage(Stage::Connecting, QStringLiteral("Connecting to %1...").arg(path));
+    socket->connectToServer(path);
+}
+
+QIODevice *RedisConnection::ioDevice() const
+{
+    if (m_socket)
+        return m_socket;
+    return m_unixSocket;
+}
+
+QString RedisConnection::socketErrorString() const
+{
+    if (m_socket)
+        return m_socket->errorString();
+    if (m_unixSocket)
+        return m_unixSocket->errorString();
+    return QStringLiteral("not connected");
 }
 
 void RedisConnection::createSocket(bool tls)
@@ -161,7 +212,7 @@ void RedisConnection::startHandshake()
         hello.append(m_password.toUtf8());
     }
     if (!sendRaw(hello))
-        fail(QStringLiteral("Failed to send HELLO: %1").arg(m_socket ? m_socket->errorString() : QString()));
+        fail(QStringLiteral("Failed to send HELLO: %1").arg(m_socket ? socketErrorString() : socketErrorString()));
 }
 
 void RedisConnection::startResp2Handshake()
@@ -250,10 +301,11 @@ void RedisConnection::handleReply(const RespValue &reply)
 
 void RedisConnection::onReadyRead()
 {
-    if (!m_socket || !m_reader)
+    QIODevice *device = ioDevice();
+    if (!device || !m_reader)
         return;
 
-    const QByteArray data = m_socket->readAll();
+    const QByteArray data = device->readAll();
     if (data.isEmpty())
         return;
 
@@ -281,7 +333,7 @@ void RedisConnection::onSocketError(QAbstractSocket::SocketError error)
     Q_UNUSED(error)
     if (m_stage == Stage::Idle || m_userDisconnect)
         return;
-    fail(m_socket ? m_socket->errorString() : QStringLiteral("socket error"));
+    fail(socketErrorString());
 }
 
 void RedisConnection::onDisconnected()
@@ -308,7 +360,7 @@ void RedisConnection::pumpPending()
         request.sent = true;
         if (!sendRaw(request.args)) {
             fail(QStringLiteral("Failed to write to socket: %1")
-                     .arg(m_socket ? m_socket->errorString() : QString()));
+                     .arg(m_socket ? socketErrorString() : socketErrorString()));
             return;
         }
     }
@@ -332,7 +384,7 @@ void RedisConnection::sendCommand(const QList<QByteArray> &args, ReplyCallback c
         m_pending.last().sent = true;
         if (!sendRaw(args))
             fail(QStringLiteral("Failed to write to socket: %1")
-                     .arg(m_socket ? m_socket->errorString() : QString()));
+                     .arg(m_socket ? socketErrorString() : socketErrorString()));
     }
 }
 
@@ -423,10 +475,11 @@ void RedisConnection::finishTransaction(const std::shared_ptr<TransactionState> 
 
 bool RedisConnection::sendRaw(const QList<QByteArray> &args)
 {
-    if (!m_socket || m_stage == Stage::Idle)
+    QIODevice *device = ioDevice();
+    if (!device || m_stage == Stage::Idle)
         return false;
     const QByteArray payload = CommandEncoder::encode(args);
-    return m_socket->write(payload) >= 0;
+    return device->write(payload) >= 0;
 }
 
 void RedisConnection::setStage(Stage stage, const QString &description)
@@ -458,12 +511,18 @@ void RedisConnection::failPending(const QString &error)
 
 void RedisConnection::clearSocket()
 {
-    if (!m_socket)
-        return;
-    QObject::disconnect(m_socket, nullptr, this, nullptr);
-    m_socket->abort();
-    m_socket->deleteLater();
-    m_socket = nullptr;
+    if (m_socket) {
+        QObject::disconnect(m_socket, nullptr, this, nullptr);
+        m_socket->abort();
+        m_socket->deleteLater();
+        m_socket = nullptr;
+    }
+    if (m_unixSocket) {
+        QObject::disconnect(m_unixSocket, nullptr, this, nullptr);
+        m_unixSocket->abort();
+        m_unixSocket->deleteLater();
+        m_unixSocket = nullptr;
+    }
 }
 
 } // namespace KeyDis

@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.27）
+# KeyDis 使用说明（0.4.28）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -29,7 +29,8 @@ Profile 字段：
 
 | 字段 | 说明 |
 |---|---|
-| Host | Redis/Valkey 主机，默认 `127.0.0.1` |
+| Host | Redis/Valkey 主机，默认 `127.0.0.1`；Unix Socket 非空时忽略 |
+| Unix socket | 可选 Unix Domain Socket 路径；不能与 SSH/Sentinel/Cluster 同时启用 |
 | Port | 默认 `6379` |
 | TLS | 使用 `QSslSocket`；Advanced 页可配置 CA、客户端证书、客户端私钥，并可关闭证书校验 |
 | ACL user | Redis 6+ 用户名；为空时使用 `default` |
@@ -39,6 +40,14 @@ Profile 字段：
 | Sentinel | Profile 中启用；通过 `SENTINEL get-master-addr-by-name` 解析主节点 |
 | SSH | Profile 中启用；本地 `ssh -L` 隧道，支持密钥/agent 或 SSH 密码（askpass，密码存 KWallet） |
 | Cluster | Profile 中勾选 Cluster；Host:Port 作为 seed，DB 固定 0 |
+
+Unix Socket 示例：
+
+```bash
+./build/keydis --unix-socket /run/redis/redis.sock --connect
+```
+
+Unix Socket 使用 `QLocalSocket`，不需要 TLS；当前不支持 SSH/Sentinel/Cluster 与 Unix Socket 组合。
 
 连接成功后，KeyDis 自动执行一次 `SCAN`（默认 `*`）。
 

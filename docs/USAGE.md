@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.29）
+# KeyDis 使用说明（0.4.30）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -177,6 +177,15 @@ Hash/List/Set/ZSet 每次加载最多 500 个元素；点击 **Load more** 继�
 ### 删除
 
 点击 **Delete**，确认后优先 `UNLINK`，失败时回退 `DEL`。删除成功后从列表移除。
+
+### 大 String 预览
+
+- 加载 String 时先执行 `STRLEN`；
+- 超过 **1 MiB** 时只读取前 1 MiB（`GETRANGE 0 1048575`），显示为只读预览；
+- 状态栏显示总字节数和当前预览大小；
+- 点击 **Load full...** 并确认后执行完整 `GET`，恢复编辑；
+- 预览状态下 **Save string / Edit bytes / Replace range** 禁用，避免只把预览片段写回服务器；
+- 完整加载后仍是一次性占用内存，没有增量分页编辑。
 
 ### String 保存
 

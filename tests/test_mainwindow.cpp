@@ -90,6 +90,7 @@ void TestMainWindow::browsesAndShowsValues()
     const QByteArray binaryKey("keydis:ui:binary");
     const QByteArray gzipKey("keydis:ui:gzip");
     const QByteArray msgPackKey("keydis:ui:msgpack");
+    const QByteArray largeKey("keydis:ui:large");
     const QByteArray batchKeyB("keydis:ui:batch-b");
 
     {
@@ -99,7 +100,7 @@ void TestMainWindow::browsesAndShowsValues()
         QTRY_VERIFY_WITH_TIMEOUT(seed.isReady(), 5000);
         QString error;
         command(seed, {QByteArrayLiteral("DEL"), stringKey, hashKey, bigHashKey, batchKeyA,
-                       batchKeyB, binaryKey, gzipKey, msgPackKey}, &error);
+                       batchKeyB, binaryKey, gzipKey, msgPackKey, largeKey}, &error);
         command(seed, {QByteArrayLiteral("SET"), binaryKey,
                        QByteArray("\x00\x01\xff", 3)}, &error);
         command(seed, {QByteArrayLiteral("SET"), gzipKey,
@@ -107,6 +108,8 @@ void TestMainWindow::browsesAndShowsValues()
                 &error);
         command(seed, {QByteArrayLiteral("SET"), msgPackKey,
                        QByteArray::fromHex("83a16101a16293c3a178c0a16302")}, &error);
+        command(seed, {QByteArrayLiteral("SET"), largeKey,
+                       QByteArray(1200 * 1024, 'x')}, &error);
         command(seed, {QByteArrayLiteral("SET"), batchKeyA, QByteArrayLiteral("batch-a")}, &error);
         command(seed, {QByteArrayLiteral("SET"), batchKeyB, QByteArrayLiteral("batch-b")}, &error);
         command(seed, {QByteArrayLiteral("SET"), stringKey, QByteArrayLiteral("hello")}, &error);
@@ -159,6 +162,8 @@ void TestMainWindow::browsesAndShowsValues()
         window.findChild<QPushButton *>(QStringLiteral("editBytesButton"));
     auto *decodeButton = window.findChild<QPushButton *>(QStringLiteral("decodeButton"));
     auto *msgPackButton = window.findChild<QPushButton *>(QStringLiteral("msgPackButton"));
+    auto *loadFullStringButton =
+        window.findChild<QPushButton *>(QStringLiteral("loadFullStringButton"));
     auto *keyLabel = window.findChild<QLabel *>(QStringLiteral("keyLabel"));
     auto *saveButton = window.findChild<QPushButton *>(QStringLiteral("saveStringButton"));
     auto *discardStringButton =
@@ -192,6 +197,7 @@ void TestMainWindow::browsesAndShowsValues()
     QVERIFY(editBytesButton);
     QVERIFY(decodeButton);
     QVERIFY(msgPackButton);
+    QVERIFY(loadFullStringButton);
     QVERIFY(keyLabel);
     QVERIFY(saveButton);
     QVERIFY(discardStringButton);
@@ -402,7 +408,7 @@ void TestMainWindow::browsesAndShowsValues()
                     &error);
         QCOMPARE(hashValue.scalar, QByteArray("value2"));
         command(cleanup, {QByteArrayLiteral("DEL"), stringKey, hashKey, bigHashKey, batchKeyA,
-                          batchKeyB, binaryKey, gzipKey, msgPackKey}, &error);
+                          batchKeyB, binaryKey, gzipKey, msgPackKey, largeKey}, &error);
         command(cleanup, {QByteArrayLiteral("SELECT"), QByteArrayLiteral("1")}, &error);
         command(cleanup, {QByteArrayLiteral("DEL"), QByteArrayLiteral("keydis:ui:db1")}, &error);
         command(cleanup, {QByteArrayLiteral("SELECT"), QByteArrayLiteral("0")}, &error);

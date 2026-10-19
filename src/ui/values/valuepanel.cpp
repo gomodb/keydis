@@ -330,6 +330,9 @@ QWidget *ValuePanel::buildStringPage()
     m_stringDiscardButton = new QPushButton(tr("Discard"), page);
     m_stringDiscardButton->setObjectName(QStringLiteral("discardStringButton"));
     m_stringDiscardButton->setEnabled(false);
+    m_stringLoadFullButton = new QPushButton(tr("Load full..."), page);
+    m_stringLoadFullButton->setObjectName(QStringLiteral("loadFullStringButton"));
+    m_stringLoadFullButton->setVisible(false);
     row->addWidget(saveButton);
     row->addWidget(m_stringDiscardButton);
     row->addWidget(rangeButton);
@@ -337,7 +340,9 @@ QWidget *ValuePanel::buildStringPage()
     row->addWidget(bytesButton);
     row->addWidget(decodeButton);
     row->addWidget(msgPackButton);
+    row->addWidget(m_stringLoadFullButton);
     m_writeWidgets << saveButton << m_stringDiscardButton << rangeButton << bytesButton;
+    m_stringWriteButtons << saveButton << rangeButton << bytesButton;
     row->addStretch();
     layout->addLayout(row);
     connect(saveButton, &QPushButton::clicked, this, &ValuePanel::saveString);
@@ -347,6 +352,7 @@ QWidget *ValuePanel::buildStringPage()
     connect(decodeButton, &QPushButton::clicked, this, &ValuePanel::showDecodedValue);
     connect(msgPackButton, &QPushButton::clicked, this, &ValuePanel::showMsgPackValue);
     connect(m_stringDiscardButton, &QPushButton::clicked, this, &ValuePanel::discardString);
+    connect(m_stringLoadFullButton, &QPushButton::clicked, this, &ValuePanel::loadFullString);
     connect(m_stringEdit, &QPlainTextEdit::textChanged, this, &ValuePanel::stringTextChanged);
     return page;
 }
@@ -707,6 +713,9 @@ void ValuePanel::loadKey(const KeyInfo &info)
     }
     m_key = info.key;
     m_type = info.type;
+    m_stringPartial = false;
+    m_stringTotalSize = 0;
+    updateStringControls();
     updateDirtyLabel();
     if (m_valueFilter) {
         const bool filterable = m_type == QLatin1String("hash")
@@ -963,6 +972,7 @@ void ValuePanel::setReadOnly(bool readOnly)
                                                    | QAbstractItemView::SelectedClicked
                                                    | QAbstractItemView::EditKeyPressed);
     }
+    updateStringControls();
     updateJsonButtons();
     updateDirtyLabel();
     updatePendingButtons();
@@ -988,28 +998,109 @@ void ValuePanel::loadString()
 {
     const quint64 generation = m_generation;
     QPointer<ValuePanel> guard(this);
-    runCommand({QByteArrayLiteral("GET"), m_key},
-               [guard, generation, this](const RespValue &reply, const QString &error) {
+    runCommand({QByteArrayLiteral("STRLEN"), m_key},
+               [guard, generation, this](const RespValue &lengthReply, const QString &lengthError) {
                    if (!guard || generation != m_generation)
                        return;
-                   if (!error.isEmpty()) {
-                       showError(error);
+                   constexpr qint64 kPreviewBytes = 1024 * 1024;
+                   if (lengthError.isEmpty() && !lengthReply.isError()
+                       && lengthReply.type == RespType::Integer
+                       && lengthReply.integer > kPreviewBytes) {
+                       runCommand({QByteArrayLiteral("GETRANGE"), m_key, QByteArrayLiteral("0"),
+                                   QByteArray::number(kPreviewBytes - 1)},
+                                  [guard, generation, this, lengthReply](const RespValue &reply,
+                                                                         const QString &error) {
+                           if (!guard || generation != m_generation)
+                               return;
+                           if (!error.isEmpty() || reply.isError()) {
+                               showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
+                               return;
+                           }
+                           applyStringBytes(reply.scalar, true, lengthReply.integer);
+                       });
                        return;
                    }
-                   if (reply.isError()) {
-                       showError(QString::fromUtf8(reply.scalar));
-                       return;
-                   }
-                   m_stringRaw = reply.scalar;
-                   m_stringLoadedRaw = m_stringRaw;
-                   m_stringUpdating = true;
-                   m_stringEdit->setPlainText(scalarText(reply));
-                   m_stringUpdating = false;
-                   m_stringLoaded = m_stringEdit->toPlainText();
-                   m_stringDirty = false;
-                   updateDirtyLabel();
-                   setStatus(tr("String loaded"));
+
+                   runCommand({QByteArrayLiteral("GET"), m_key},
+                              [guard, generation, this](const RespValue &reply,
+                                                        const QString &error) {
+                       if (!guard || generation != m_generation)
+                           return;
+                       if (!error.isEmpty()) {
+                           showError(error);
+                           return;
+                       }
+                       if (reply.isError()) {
+                           showError(QString::fromUtf8(reply.scalar));
+                           return;
+                       }
+                       applyStringBytes(reply.scalar, false, reply.scalar.size());
+                   });
                });
+}
+
+void ValuePanel::loadFullString()
+{
+    if (!m_stringPartial || m_key.isEmpty())
+        return;
+    if (QMessageBox::question(
+            this, tr("Load full string"),
+            tr("Load the complete value (%1 bytes) into memory?")
+                .arg(QString::number(m_stringTotalSize)))
+        != QMessageBox::Yes) {
+        return;
+    }
+    const quint64 generation = m_generation;
+    QPointer<ValuePanel> guard(this);
+    setStatus(tr("Loading full string..."));
+    runCommand({QByteArrayLiteral("GET"), m_key},
+               [guard, generation, this](const RespValue &reply, const QString &error) {
+        if (!guard || generation != m_generation)
+            return;
+        if (!error.isEmpty() || reply.isError()) {
+            showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
+            return;
+        }
+        applyStringBytes(reply.scalar, false, reply.scalar.size());
+    });
+}
+
+void ValuePanel::applyStringBytes(const QByteArray &bytes, bool partial, qint64 totalSize)
+{
+    m_stringRaw = bytes;
+    m_stringPartial = partial;
+    m_stringTotalSize = totalSize;
+    m_stringLoadedRaw = bytes;
+    m_stringUpdating = true;
+    m_stringEdit->setPlainText(QString::fromUtf8(bytes));
+    m_stringUpdating = false;
+    m_stringLoaded = m_stringEdit->toPlainText();
+    m_stringDirty = false;
+    updateStringControls();
+    updateDirtyLabel();
+    if (partial) {
+        setStatus(tr("Large value (%1 bytes); showing first %2 KiB. Use Load full.")
+                      .arg(QString::number(totalSize))
+                      .arg(bytes.size() / 1024));
+    } else {
+        setStatus(tr("String loaded"));
+    }
+}
+
+void ValuePanel::updateStringControls()
+{
+    if (!m_stringEdit)
+        return;
+    const bool editable = !m_readOnly && !m_stringPartial;
+    m_stringEdit->setReadOnly(!editable);
+    if (m_stringDiscardButton)
+        m_stringDiscardButton->setEnabled(editable && m_stringDirty);
+    if (m_stringLoadFullButton) {
+        m_stringLoadFullButton->setVisible(m_stringPartial);
+        m_stringLoadFullButton->setEnabled(m_stringPartial);
+    }
+    for (QPushButton *button : m_stringWriteButtons)
+        button->setEnabled(editable);
 }
 
 void ValuePanel::loadHash()
@@ -1800,7 +1891,7 @@ void ValuePanel::showMsgPackValue()
 
 void ValuePanel::editStringBytes()
 {
-    if (m_readOnly || m_key.isEmpty())
+    if (m_readOnly || m_stringPartial || m_key.isEmpty())
         return;
     BinaryEditDialog dialog(tr("Edit bytes: %1").arg(displayKey(m_key)), m_stringRaw, this);
     if (dialog.exec() != QDialog::Accepted)
@@ -1815,7 +1906,7 @@ void ValuePanel::editStringBytes()
 
 void ValuePanel::stringTextChanged()
 {
-    if (m_stringUpdating)
+    if (m_stringUpdating || m_stringPartial)
         return;
     m_stringRaw = m_stringEdit->toPlainText().toUtf8();
     updateDirtyLabel();
@@ -2054,7 +2145,7 @@ void ValuePanel::saveJson()
 
 void ValuePanel::saveString()
 {
-    if (m_readOnly)
+    if (m_readOnly || m_stringPartial)
         return;
     if (m_key.isEmpty())
         return;
@@ -2166,7 +2257,7 @@ void ValuePanel::deleteKey()
 
 void ValuePanel::partialStringEdit()
 {
-    if (m_readOnly)
+    if (m_readOnly || m_stringPartial)
         return;
     QDialog dialog(this);
     dialog.setWindowTitle(tr("Replace string range"));
@@ -2853,7 +2944,7 @@ void ValuePanel::updateDirtyLabel()
 
 void ValuePanel::discardString()
 {
-    if (m_readOnly || !m_stringDirty)
+    if (m_readOnly || m_stringPartial || !m_stringDirty)
         return;
     m_stringRaw = m_stringLoadedRaw;
     m_stringUpdating = true;

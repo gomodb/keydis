@@ -70,6 +70,9 @@ private:
     QWidget *buildRawPage();
 
     void loadString();
+    void loadFullString();
+    void applyStringBytes(const QByteArray &bytes, bool partial, qint64 totalSize);
+    void updateStringControls();
     void loadHash();
     void loadHashPage(const QByteArray &cursor, bool append);
     void refreshHashFieldTtl();
@@ -163,6 +166,10 @@ private:
     QStackedWidget *m_stack = nullptr;
     QPlainTextEdit *m_stringEdit = nullptr;
     QPushButton *m_stringDiscardButton = nullptr;
+    QPushButton *m_stringLoadFullButton = nullptr;
+    QList<QPushButton *> m_stringWriteButtons;
+    bool m_stringPartial = false;
+    qint64 m_stringTotalSize = 0;
     QByteArray m_stringRaw;
     QByteArray m_stringLoadedRaw;
     QString m_stringLoaded;

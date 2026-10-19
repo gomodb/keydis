@@ -77,8 +77,9 @@ QHash<QString, QString> responseMap(const RespValue &value)
 {
     QHash<QString, QString> result;
     if (value.type == RespType::Map) {
-        for (const auto &[key, item] : value.pairs)
-            result.insert(QString::fromUtf8(key.scalar), QString::fromUtf8(item.scalar));
+        for (size_t index = 0; index < value.mapValues.size(); ++index)
+            result.insert(QString::fromUtf8(value.mapKeys[index]),
+                          QString::fromUtf8(value.mapValues[index].scalar));
     } else if (value.type == RespType::Array) {
         for (size_t index = 0; index + 1 < value.elements.size(); index += 2) {
             result.insert(QString::fromUtf8(value.elements[index].scalar),
@@ -905,8 +906,8 @@ void ValuePanel::searchAllValues()
             m_hashOriginal.clear();
             QVector<QPair<QByteArray, QByteArray>> pairs;
             if (reply.type == RespType::Map) {
-                for (const auto &[field, value] : reply.pairs)
-                    pairs.append({field.scalar, value.scalar});
+                for (size_t index = 0; index < reply.mapValues.size(); ++index)
+                    pairs.append({reply.mapKeys[index], reply.mapValues[index].scalar});
             } else if (reply.type == RespType::Array) {
                 for (size_t index = 0; index + 1 < reply.elements.size(); index += 2)
                     pairs.append({reply.elements[index].scalar, reply.elements[index + 1].scalar});

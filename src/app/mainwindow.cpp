@@ -1800,9 +1800,9 @@ void MainWindow::copyValue(const KeyInfo &info)
         if (reply.type == RespType::BulkString || reply.type == RespType::SimpleString) {
             text = QString::fromUtf8(reply.scalar);
         } else if (reply.type == RespType::Map) {
-            for (const auto &[key, value] : reply.pairs)
-                text += QString::fromUtf8(key.scalar) + QLatin1Char('\t')
-                    + QString::fromUtf8(value.scalar) + QLatin1Char('\n');
+            for (size_t index = 0; index < reply.mapValues.size(); ++index)
+                text += QString::fromUtf8(reply.mapKeys[index]) + QLatin1Char('\t')
+                    + QString::fromUtf8(reply.mapValues[index].scalar) + QLatin1Char('\n');
         } else if (reply.type == RespType::Array || reply.type == RespType::Set) {
             for (const RespValue &element : reply.elements) {
                 if (element.type == RespType::Array && element.elements.size() == 2) {

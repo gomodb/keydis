@@ -100,6 +100,8 @@ private:
     void showHexView();
     void showDecodedValue();
     void showMsgPackValue();
+    void showBitmapView();
+    void showHyperLogLogView();
     void editStringBytes();
     void stringTextChanged();
     void addJsonChild();
@@ -167,6 +169,8 @@ private:
     QPlainTextEdit *m_stringEdit = nullptr;
     QPushButton *m_stringDiscardButton = nullptr;
     QPushButton *m_stringLoadFullButton = nullptr;
+    QPushButton *m_bitmapButton = nullptr;
+    QPushButton *m_hllButton = nullptr;
     QList<QPushButton *> m_stringWriteButtons;
     bool m_stringPartial = false;
     qint64 m_stringTotalSize = 0;

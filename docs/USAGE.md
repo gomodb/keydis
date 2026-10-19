@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.30）
+# KeyDis 使用说明（0.4.31）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -207,6 +207,17 @@ Hash/List/Set/ZSet 每次加载最多 500 个元素；点击 **Load more** 继�
 - **Auto detect** 通过 magic 识别 gzip/zlib/zstd；Brotli 无统一 magic，需要手动选择；
 - 解码结果只读显示，最大输出 64 MiB，防止压缩炸弹；
 - 状态栏显示压缩格式、压缩后/解码后字节数。
+
+**Bitmap...** 打开位图查看器：
+
+- 本地统计字节数、置位 bit 数、总 bit 数；
+- 显示前 4 KiB 的偏移、十六进制、二进制与 ASCII；
+- 只读，不修改 Bitmap。
+
+**HyperLogLog...** 仅在 String 以 `HYLL` magic 开头时显示：
+
+- 执行 `PFCOUNT key` 显示估算基数；
+- 只读，不修改 HLL。
 
 **MsgPack...** 打开 MessagePack 查看器：
 

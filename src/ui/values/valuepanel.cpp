@@ -7,7 +7,9 @@
 #include "core/resp/respvalue.h"
 #include "ui/dialogs/batcheditdialog.h"
 #include "ui/dialogs/binaryeditdialog.h"
+#include "ui/dialogs/bitmapviewdialog.h"
 #include "ui/dialogs/compressionviewdialog.h"
+#include "ui/dialogs/hyperloglogviewdialog.h"
 #include "ui/dialogs/msgpackviewdialog.h"
 
 #include <QDialog>
@@ -327,6 +329,11 @@ QWidget *ValuePanel::buildStringPage()
     decodeButton->setObjectName(QStringLiteral("decodeButton"));
     auto *msgPackButton = new QPushButton(tr("MsgPack..."), page);
     msgPackButton->setObjectName(QStringLiteral("msgPackButton"));
+    m_bitmapButton = new QPushButton(tr("Bitmap..."), page);
+    m_bitmapButton->setObjectName(QStringLiteral("bitmapButton"));
+    m_hllButton = new QPushButton(tr("HyperLogLog..."), page);
+    m_hllButton->setObjectName(QStringLiteral("hllButton"));
+    m_hllButton->setVisible(false);
     m_stringDiscardButton = new QPushButton(tr("Discard"), page);
     m_stringDiscardButton->setObjectName(QStringLiteral("discardStringButton"));
     m_stringDiscardButton->setEnabled(false);
@@ -340,6 +347,8 @@ QWidget *ValuePanel::buildStringPage()
     row->addWidget(bytesButton);
     row->addWidget(decodeButton);
     row->addWidget(msgPackButton);
+    row->addWidget(m_bitmapButton);
+    row->addWidget(m_hllButton);
     row->addWidget(m_stringLoadFullButton);
     m_writeWidgets << saveButton << m_stringDiscardButton << rangeButton << bytesButton;
     m_stringWriteButtons << saveButton << rangeButton << bytesButton;
@@ -351,6 +360,8 @@ QWidget *ValuePanel::buildStringPage()
     connect(bytesButton, &QPushButton::clicked, this, &ValuePanel::editStringBytes);
     connect(decodeButton, &QPushButton::clicked, this, &ValuePanel::showDecodedValue);
     connect(msgPackButton, &QPushButton::clicked, this, &ValuePanel::showMsgPackValue);
+    connect(m_bitmapButton, &QPushButton::clicked, this, &ValuePanel::showBitmapView);
+    connect(m_hllButton, &QPushButton::clicked, this, &ValuePanel::showHyperLogLogView);
     connect(m_stringDiscardButton, &QPushButton::clicked, this, &ValuePanel::discardString);
     connect(m_stringLoadFullButton, &QPushButton::clicked, this, &ValuePanel::loadFullString);
     connect(m_stringEdit, &QPlainTextEdit::textChanged, this, &ValuePanel::stringTextChanged);
@@ -1076,6 +1087,8 @@ void ValuePanel::applyStringBytes(const QByteArray &bytes, bool partial, qint64 
     m_stringUpdating = false;
     m_stringLoaded = m_stringEdit->toPlainText();
     m_stringDirty = false;
+    if (m_hllButton)
+        m_hllButton->setVisible(m_stringRaw.startsWith("HYLL"));
     updateStringControls();
     updateDirtyLabel();
     if (partial) {
@@ -1878,6 +1891,22 @@ void ValuePanel::showDecodedValue()
     if (m_key.isEmpty())
         return;
     CompressionViewDialog dialog(tr("Decoded value: %1").arg(displayKey(m_key)), m_stringRaw, this);
+    dialog.exec();
+}
+
+void ValuePanel::showBitmapView()
+{
+    if (m_key.isEmpty())
+        return;
+    BitmapViewDialog dialog(tr("Bitmap: %1").arg(displayKey(m_key)), m_stringRaw, this);
+    dialog.exec();
+}
+
+void ValuePanel::showHyperLogLogView()
+{
+    if (m_key.isEmpty() || !m_stringRaw.startsWith("HYLL"))
+        return;
+    HyperLogLogViewDialog dialog(m_connection, m_key, this);
     dialog.exec();
 }
 

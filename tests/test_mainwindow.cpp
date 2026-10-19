@@ -91,6 +91,8 @@ void TestMainWindow::browsesAndShowsValues()
     const QByteArray gzipKey("keydis:ui:gzip");
     const QByteArray msgPackKey("keydis:ui:msgpack");
     const QByteArray largeKey("keydis:ui:large");
+    const QByteArray bitmapKey("keydis:ui:bitmap");
+    const QByteArray hllKey("keydis:ui:hll");
     const QByteArray batchKeyB("keydis:ui:batch-b");
 
     {
@@ -100,7 +102,8 @@ void TestMainWindow::browsesAndShowsValues()
         QTRY_VERIFY_WITH_TIMEOUT(seed.isReady(), 5000);
         QString error;
         command(seed, {QByteArrayLiteral("DEL"), stringKey, hashKey, bigHashKey, batchKeyA,
-                       batchKeyB, binaryKey, gzipKey, msgPackKey, largeKey}, &error);
+                       batchKeyB, binaryKey, gzipKey, msgPackKey, largeKey, bitmapKey,
+                       hllKey}, &error);
         command(seed, {QByteArrayLiteral("SET"), binaryKey,
                        QByteArray("\x00\x01\xff", 3)}, &error);
         command(seed, {QByteArrayLiteral("SET"), gzipKey,
@@ -110,6 +113,10 @@ void TestMainWindow::browsesAndShowsValues()
                        QByteArray::fromHex("83a16101a16293c3a178c0a16302")}, &error);
         command(seed, {QByteArrayLiteral("SET"), largeKey,
                        QByteArray(1200 * 1024, 'x')}, &error);
+        command(seed, {QByteArrayLiteral("SET"), bitmapKey,
+                       QByteArray("\xff\x00", 2)}, &error);
+        command(seed, {QByteArrayLiteral("PFADD"), hllKey, QByteArrayLiteral("a"),
+                       QByteArrayLiteral("b"), QByteArrayLiteral("c")}, &error);
         command(seed, {QByteArrayLiteral("SET"), batchKeyA, QByteArrayLiteral("batch-a")}, &error);
         command(seed, {QByteArrayLiteral("SET"), batchKeyB, QByteArrayLiteral("batch-b")}, &error);
         command(seed, {QByteArrayLiteral("SET"), stringKey, QByteArrayLiteral("hello")}, &error);
@@ -164,6 +171,8 @@ void TestMainWindow::browsesAndShowsValues()
     auto *msgPackButton = window.findChild<QPushButton *>(QStringLiteral("msgPackButton"));
     auto *loadFullStringButton =
         window.findChild<QPushButton *>(QStringLiteral("loadFullStringButton"));
+    auto *bitmapButton = window.findChild<QPushButton *>(QStringLiteral("bitmapButton"));
+    auto *hllButton = window.findChild<QPushButton *>(QStringLiteral("hllButton"));
     auto *keyLabel = window.findChild<QLabel *>(QStringLiteral("keyLabel"));
     auto *saveButton = window.findChild<QPushButton *>(QStringLiteral("saveStringButton"));
     auto *discardStringButton =
@@ -198,6 +207,8 @@ void TestMainWindow::browsesAndShowsValues()
     QVERIFY(decodeButton);
     QVERIFY(msgPackButton);
     QVERIFY(loadFullStringButton);
+    QVERIFY(bitmapButton);
+    QVERIFY(hllButton);
     QVERIFY(keyLabel);
     QVERIFY(saveButton);
     QVERIFY(discardStringButton);
@@ -408,7 +419,8 @@ void TestMainWindow::browsesAndShowsValues()
                     &error);
         QCOMPARE(hashValue.scalar, QByteArray("value2"));
         command(cleanup, {QByteArrayLiteral("DEL"), stringKey, hashKey, bigHashKey, batchKeyA,
-                          batchKeyB, binaryKey, gzipKey, msgPackKey, largeKey}, &error);
+                          batchKeyB, binaryKey, gzipKey, msgPackKey, largeKey, bitmapKey,
+                       hllKey}, &error);
         command(cleanup, {QByteArrayLiteral("SELECT"), QByteArrayLiteral("1")}, &error);
         command(cleanup, {QByteArrayLiteral("DEL"), QByteArrayLiteral("keydis:ui:db1")}, &error);
         command(cleanup, {QByteArrayLiteral("SELECT"), QByteArrayLiteral("0")}, &error);

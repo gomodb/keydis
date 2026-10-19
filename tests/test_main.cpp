@@ -4,6 +4,7 @@
 #include "test_clusterclient.h"
 #include "test_byteformat.h"
 #include "test_compression.h"
+#include "test_msgpack.h"
 #include "test_commandsafety.h"
 #include "test_commandencoder.h"
 #include "test_keyscanner.h"
@@ -39,6 +40,9 @@ int main(int argc, char *argv[])
 
     KeyDis::Test::TestCompression compression;
     status |= QTest::qExec(&compression, argc, argv);
+
+    KeyDis::Test::TestMsgPack msgPack;
+    status |= QTest::qExec(&msgPack, argc, argv);
 
     KeyDis::Test::TestClusterClient cluster;
     status |= QTest::qExec(&cluster, argc, argv);

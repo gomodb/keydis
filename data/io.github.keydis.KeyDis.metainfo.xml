@@ -18,6 +18,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.25" date="2026-10-19">
+      <description>
+        <p>MessagePack value viewer with JSON-like nested output, binary/ext handling and size/depth guards.</p>
+      </description>
+    </release>
     <release version="0.4.24" date="2026-10-19">
       <description>
         <p>Compressed value viewer: gzip, zlib, zstd and Brotli decoding with auto-detection and a 64 MiB output guard.</p>

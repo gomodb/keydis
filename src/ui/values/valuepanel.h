@@ -94,6 +94,7 @@ private:
     void formatJson();
     void showHexView();
     void showDecodedValue();
+    void showMsgPackValue();
     void editStringBytes();
     void stringTextChanged();
     void addJsonChild();

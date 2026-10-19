@@ -8,6 +8,7 @@
 #include "ui/dialogs/batcheditdialog.h"
 #include "ui/dialogs/binaryeditdialog.h"
 #include "ui/dialogs/compressionviewdialog.h"
+#include "ui/dialogs/msgpackviewdialog.h"
 
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -317,6 +318,8 @@ QWidget *ValuePanel::buildStringPage()
     bytesButton->setObjectName(QStringLiteral("editBytesButton"));
     auto *decodeButton = new QPushButton(tr("Decode..."), page);
     decodeButton->setObjectName(QStringLiteral("decodeButton"));
+    auto *msgPackButton = new QPushButton(tr("MsgPack..."), page);
+    msgPackButton->setObjectName(QStringLiteral("msgPackButton"));
     m_stringDiscardButton = new QPushButton(tr("Discard"), page);
     m_stringDiscardButton->setObjectName(QStringLiteral("discardStringButton"));
     m_stringDiscardButton->setEnabled(false);
@@ -326,6 +329,7 @@ QWidget *ValuePanel::buildStringPage()
     row->addWidget(hexButton);
     row->addWidget(bytesButton);
     row->addWidget(decodeButton);
+    row->addWidget(msgPackButton);
     m_writeWidgets << saveButton << m_stringDiscardButton << rangeButton << bytesButton;
     row->addStretch();
     layout->addLayout(row);
@@ -334,6 +338,7 @@ QWidget *ValuePanel::buildStringPage()
     connect(hexButton, &QPushButton::clicked, this, &ValuePanel::showHexView);
     connect(bytesButton, &QPushButton::clicked, this, &ValuePanel::editStringBytes);
     connect(decodeButton, &QPushButton::clicked, this, &ValuePanel::showDecodedValue);
+    connect(msgPackButton, &QPushButton::clicked, this, &ValuePanel::showMsgPackValue);
     connect(m_stringDiscardButton, &QPushButton::clicked, this, &ValuePanel::discardString);
     connect(m_stringEdit, &QPlainTextEdit::textChanged, this, &ValuePanel::stringTextChanged);
     return page;
@@ -1528,6 +1533,14 @@ void ValuePanel::showDecodedValue()
     if (m_key.isEmpty())
         return;
     CompressionViewDialog dialog(tr("Decoded value: %1").arg(displayKey(m_key)), m_stringRaw, this);
+    dialog.exec();
+}
+
+void ValuePanel::showMsgPackValue()
+{
+    if (m_key.isEmpty())
+        return;
+    MsgPackViewDialog dialog(tr("MessagePack value: %1").arg(displayKey(m_key)), m_stringRaw, this);
     dialog.exec();
 }
 

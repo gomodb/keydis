@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.24）
+# KeyDis 使用说明（0.4.25）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -161,6 +161,13 @@ Hash/List/Set/ZSet 每次加载最多 500 个元素；点击 **Load more** 继�
 - **Auto detect** 通过 magic 识别 gzip/zlib/zstd；Brotli 无统一 magic，需要手动选择；
 - 解码结果只读显示，最大输出 64 MiB，防止压缩炸弹；
 - 状态栏显示压缩格式、压缩后/解码后字节数。
+
+**MsgPack...** 打开 MessagePack 查看器：
+
+- 将 MsgPack 对象、数组、Map、字符串、数字、布尔、nil 转为缩进 JSON-like 文本；
+- `bin` 和 `ext` 以 base64 显示；
+- 最大输出 8 MiB，最大嵌套 64 层；
+- 非 MsgPack 数据会显示错误，不会修改 Key。
 
 ### Key 右键菜单
 

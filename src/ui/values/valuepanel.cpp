@@ -572,19 +572,30 @@ QWidget *ValuePanel::buildJsonPage()
 
     auto *row = new QHBoxLayout;
     auto *refreshTreeButton = new QPushButton(tr("Refresh tree"), page);
+    m_jsonAddButton = new QPushButton(tr("Add child"), page);
+    m_jsonAddButton->setObjectName(QStringLiteral("jsonAddButton"));
+    m_jsonAddButton->setEnabled(false);
+    m_jsonDeleteButton = new QPushButton(tr("Delete node"), page);
+    m_jsonDeleteButton->setObjectName(QStringLiteral("jsonDeleteButton"));
+    m_jsonDeleteButton->setEnabled(false);
     auto *formatButton = new QPushButton(tr("Format JSON"), page);
     auto *saveButton = new QPushButton(tr("Save JSON"), page);
     saveButton->setObjectName(QStringLiteral("saveJsonButton"));
     row->addWidget(refreshTreeButton);
+    row->addWidget(m_jsonAddButton);
+    row->addWidget(m_jsonDeleteButton);
     row->addWidget(formatButton);
     row->addWidget(saveButton);
     row->addStretch();
     layout->addLayout(row);
     connect(loadPathButton, &QPushButton::clicked, this, &ValuePanel::loadJson);
     connect(refreshTreeButton, &QPushButton::clicked, this, &ValuePanel::rebuildJsonTree);
+    connect(m_jsonAddButton, &QPushButton::clicked, this, &ValuePanel::addJsonChild);
+    connect(m_jsonDeleteButton, &QPushButton::clicked, this, &ValuePanel::deleteJsonNode);
     connect(formatButton, &QPushButton::clicked, this, &ValuePanel::formatJson);
     connect(m_jsonTree, &QTreeWidget::itemChanged, this, &ValuePanel::handleJsonTreeEdited);
-    m_writeWidgets << saveButton;
+    connect(m_jsonTree, &QTreeWidget::itemSelectionChanged, this, &ValuePanel::updateJsonButtons);
+    m_writeWidgets << m_jsonAddButton << m_jsonDeleteButton << saveButton;
     connect(saveButton, &QPushButton::clicked, this, &ValuePanel::saveJson);
     return page;
 }
@@ -701,6 +712,7 @@ void ValuePanel::setReadOnly(bool readOnly)
                                                    | QAbstractItemView::SelectedClicked
                                                    | QAbstractItemView::EditKeyPressed);
     }
+    updateJsonButtons();
     updateUndoButton();
 }
 
@@ -1282,6 +1294,10 @@ void ValuePanel::rebuildJsonTree()
         item->setText(0, label);
         item->setData(0, Qt::UserRole, path);
         item->setFlags(item->flags() & ~Qt::ItemIsEditable);
+        item->setData(0, Qt::UserRole + 1, value.isObject() ? QStringLiteral("object")
+                                                             : value.isArray()
+                                                                   ? QStringLiteral("array")
+                                                                   : QStringLiteral("scalar"));
         if (value.isObject()) {
             item->setText(1, tr("{…}"));
             const QJsonObject object = value.toObject();
@@ -1307,6 +1323,10 @@ void ValuePanel::rebuildJsonTree()
     root->setText(0, basePath);
     root->setData(0, Qt::UserRole, basePath);
     root->setFlags(root->flags() & ~Qt::ItemIsEditable);
+    root->setData(0, Qt::UserRole + 1, rootValue.isObject() ? QStringLiteral("object")
+                                                             : rootValue.isArray()
+                                                                   ? QStringLiteral("array")
+                                                                   : QStringLiteral("scalar"));
     if (rootValue.isObject()) {
         root->setText(1, tr("{…}"));
         const QJsonObject object = rootValue.toObject();
@@ -1324,7 +1344,9 @@ void ValuePanel::rebuildJsonTree()
     }
     root->setExpanded(true);
     m_jsonTree->expandAll();
+    m_jsonTree->setCurrentItem(root);
     m_jsonTreeUpdating = false;
+    updateJsonButtons();
 }
 
 void ValuePanel::handleJsonTreeEdited(QTreeWidgetItem *item, int column)
@@ -1358,6 +1380,105 @@ void ValuePanel::handleJsonTreeEdited(QTreeWidgetItem *item, int column)
                    setStatus(tr("JSON path updated"));
                    loadJson();
                });
+}
+
+void ValuePanel::updateJsonButtons()
+{
+    if (!m_jsonAddButton || !m_jsonDeleteButton)
+        return;
+    QTreeWidgetItem *item = m_jsonTree ? m_jsonTree->currentItem() : nullptr;
+    const QString type = item ? item->data(0, Qt::UserRole + 1).toString() : QString();
+    const bool container = type == QLatin1String("object") || type == QLatin1String("array");
+    const bool root = item && m_jsonTree && item == m_jsonTree->topLevelItem(0);
+    m_jsonAddButton->setEnabled(!m_readOnly && container);
+    m_jsonDeleteButton->setEnabled(!m_readOnly && item && !root);
+}
+
+void ValuePanel::addJsonChild()
+{
+    if (m_readOnly || !m_jsonTree)
+        return;
+    QTreeWidgetItem *item = m_jsonTree->currentItem();
+    if (!item)
+        return;
+    const QString type = item->data(0, Qt::UserRole + 1).toString();
+    const QString basePath = item->data(0, Qt::UserRole).toString();
+    if (basePath.isEmpty() || (type != QLatin1String("object") && type != QLatin1String("array"))) {
+        setStatus(tr("Select an object or array node"));
+        return;
+    }
+
+    bool ok = false;
+    QString key;
+    if (type == QLatin1String("object")) {
+        key = QInputDialog::getText(this, tr("Add JSON child"), tr("Key name:"),
+                                    QLineEdit::Normal, {}, &ok);
+        if (!ok || key.trimmed().isEmpty())
+            return;
+    }
+    const QString valueText = QInputDialog::getMultiLineText(
+        this, tr("Add JSON child"), tr("JSON value:"), QStringLiteral("\"value\""), &ok);
+    if (!ok)
+        return;
+    QJsonParseError parseError{};
+    const QJsonDocument document =
+        QJsonDocument::fromJson("[" + valueText.toUtf8() + "]", &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isArray()
+        || document.array().size() != 1) {
+        showError(tr("Invalid JSON value"));
+        return;
+    }
+    const QByteArray encoded = QJsonDocument(document.array()).toJson(QJsonDocument::Compact);
+    const QByteArray value = encoded.mid(1, encoded.size() - 2);
+
+    QList<QByteArray> command;
+    if (type == QLatin1String("object")) {
+        command = {QByteArrayLiteral("JSON.SET"), m_key,
+                   jsonChildPath(basePath, key.trimmed(), false, 0).toUtf8(), value};
+    } else {
+        command = {QByteArrayLiteral("JSON.ARRAPPEND"), m_key, basePath.toUtf8(), value};
+    }
+
+    QPointer<ValuePanel> guard(this);
+    runCommand(command, [guard, this](const RespValue &reply, const QString &error) {
+        if (!guard)
+            return;
+        if (!error.isEmpty() || reply.isError()) {
+            showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
+            return;
+        }
+        setStatus(tr("JSON child added"));
+        loadJson();
+    });
+}
+
+void ValuePanel::deleteJsonNode()
+{
+    if (m_readOnly || !m_jsonTree)
+        return;
+    QTreeWidgetItem *item = m_jsonTree->currentItem();
+    if (!item || item == m_jsonTree->topLevelItem(0))
+        return;
+    const QString path = item->data(0, Qt::UserRole).toString();
+    if (path.isEmpty())
+        return;
+    if (QMessageBox::question(this, tr("Delete JSON node"),
+                              tr("Delete JSON node %1?").arg(path))
+        != QMessageBox::Yes) {
+        return;
+    }
+    QPointer<ValuePanel> guard(this);
+    runCommand({QByteArrayLiteral("JSON.DEL"), m_key, path.toUtf8()},
+               [guard, this](const RespValue &reply, const QString &error) {
+        if (!guard)
+            return;
+        if (!error.isEmpty() || reply.isError()) {
+            showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
+            return;
+        }
+        setStatus(tr("JSON node deleted"));
+        loadJson();
+    });
 }
 
 void ValuePanel::formatJson()

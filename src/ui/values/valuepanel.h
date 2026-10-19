@@ -91,6 +91,9 @@ private:
     void rebuildJsonTree();
     void handleJsonTreeEdited(QTreeWidgetItem *item, int column);
     void formatJson();
+    void addJsonChild();
+    void deleteJsonNode();
+    void updateJsonButtons();
     void loadRaw(const QString &type);
 
     void updateHeader();
@@ -138,6 +141,8 @@ private:
     QPlainTextEdit *m_jsonEdit = nullptr;
     QLineEdit *m_jsonPathEdit = nullptr;
     QTreeWidget *m_jsonTree = nullptr;
+    QPushButton *m_jsonAddButton = nullptr;
+    QPushButton *m_jsonDeleteButton = nullptr;
     bool m_jsonTreeUpdating = false;
     QPlainTextEdit *m_rawView = nullptr;
     QTableWidget *m_hashTable = nullptr;

@@ -9,6 +9,7 @@
 #include "ui/dialogs/binaryeditdialog.h"
 #include "ui/dialogs/bitmapviewdialog.h"
 #include "ui/dialogs/compressionviewdialog.h"
+#include "ui/dialogs/geosearchdialog.h"
 #include "ui/dialogs/hyperloglogviewdialog.h"
 #include "ui/dialogs/msgpackviewdialog.h"
 
@@ -498,6 +499,8 @@ QWidget *ValuePanel::buildZSetPage()
     m_zsetMoreButton = new QPushButton(tr("Load more"), this);
     m_zsetMoreButton->setObjectName(QStringLiteral("zsetMoreButton"));
     m_zsetMoreButton->setEnabled(false);
+    auto *geoButton = new QPushButton(tr("Geo..."), this);
+    geoButton->setObjectName(QStringLiteral("geoButton"));
     m_writeWidgets << addButton << editButton << deleteButton;
     connect(editButton, &QPushButton::clicked, this, &ValuePanel::editZSetSelected);
     connect(m_zsetMoreButton, &QPushButton::clicked, this,
@@ -505,6 +508,12 @@ QWidget *ValuePanel::buildZSetPage()
     connect(addButton, &QPushButton::clicked, this, &ValuePanel::addZSetMember);
     connect(deleteButton, &QPushButton::clicked, this, &ValuePanel::deleteZSetMembers);
     connect(reloadButton, &QPushButton::clicked, this, &ValuePanel::loadZSet);
+    connect(geoButton, &QPushButton::clicked, this, [this] {
+        if (m_key.isEmpty())
+            return;
+        GeoSearchDialog dialog(m_connection, m_key, this);
+        dialog.exec();
+    });
     connect(m_zsetTable, &QTableWidget::itemChanged, this, [this](QTableWidgetItem *item) {
         if (m_readOnly || m_loading || !item || item->column() != 1)
             return;
@@ -532,7 +541,8 @@ QWidget *ValuePanel::buildZSetPage()
         stageCommands(tr("zset score"), commands, undo, redo);
         m_zsetOriginal.insert(member, newScore);
     });
-    return tablePage(m_zsetTable, {addButton, editButton, deleteButton, reloadButton, m_zsetMoreButton}, this);
+    return tablePage(m_zsetTable, {addButton, editButton, deleteButton, reloadButton, geoButton,
+                                   m_zsetMoreButton}, this);
 }
 
 QWidget *ValuePanel::buildStreamPage()

@@ -93,6 +93,7 @@ void TestMainWindow::browsesAndShowsValues()
     const QByteArray largeKey("keydis:ui:large");
     const QByteArray bitmapKey("keydis:ui:bitmap");
     const QByteArray hllKey("keydis:ui:hll");
+    const QByteArray geoKey("keydis:ui:geo");
     const QByteArray batchKeyB("keydis:ui:batch-b");
 
     {
@@ -173,6 +174,7 @@ void TestMainWindow::browsesAndShowsValues()
         window.findChild<QPushButton *>(QStringLiteral("loadFullStringButton"));
     auto *bitmapButton = window.findChild<QPushButton *>(QStringLiteral("bitmapButton"));
     auto *hllButton = window.findChild<QPushButton *>(QStringLiteral("hllButton"));
+    auto *geoButton = window.findChild<QPushButton *>(QStringLiteral("geoButton"));
     auto *keyLabel = window.findChild<QLabel *>(QStringLiteral("keyLabel"));
     auto *saveButton = window.findChild<QPushButton *>(QStringLiteral("saveStringButton"));
     auto *discardStringButton =
@@ -209,6 +211,7 @@ void TestMainWindow::browsesAndShowsValues()
     QVERIFY(loadFullStringButton);
     QVERIFY(bitmapButton);
     QVERIFY(hllButton);
+    QVERIFY(geoButton);
     QVERIFY(keyLabel);
     QVERIFY(saveButton);
     QVERIFY(discardStringButton);

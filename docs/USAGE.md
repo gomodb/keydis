@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.31）
+# KeyDis 使用说明（0.4.32）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -117,7 +117,7 @@ Dashboard 只执行一次 `INFO`，不会逐 Key 发命令；适合作为连接�
 | Hash | `HSCAN` 分页，500/页；`HTTL` 字段 TTL | 单元格 `HSET`；**Edit selected** 多字段 `HSET`，旧服务器回退 `HMSET`；添加/删除字段；**Field TTL** 使用 `HEXPIRE`/`HPERSIST` |
 | List | `LRANGE` 分页，500/页 | 单元格 `LSET`；**Edit selected** 批量 `LSET`；头/尾插入；按值删除 |
 | Set | `SSCAN` 分页，500/页 | 添加 `SADD`；删除 `SREM`；**Edit selected** 重命名成员（`SREM`+`SADD`） |
-| ZSet | `ZSCAN` 分页，500/页 | 单元格/批量 `ZADD` 改分数；删除 `ZREM` |
+| ZSet | `ZSCAN` 分页，500/页；**Geo...** 使用 `GEOSEARCH` | 单元格/批量 `ZADD` 改分数；删除 `ZREM` |
 | Stream | `XRANGE - + COUNT 200` | 添加 `XADD`；删除 `XDEL`；组/Pending 仍用 CLI |
 | RedisJSON | `JSON.GET key path` | JSON 树 + raw 路径编辑；`JSON.SET` / `JSON.ARRAPPEND` / `JSON.DEL` |
 | 其他模块类型 | 只读提示 | 使用 CLI |
@@ -145,6 +145,16 @@ Hash/List/Set/ZSet 每次加载最多 500 个元素；点击 **Load more** 继�
 - **Delete node**：删除选中的非根节点（`JSON.DEL`），根节点不允许直接删除；
 - **Rename JSON key**：对象属性重命名，使用 `JSON.GET` 读取旧值后原子执行 `JSON.SET` + `JSON.DEL`；同名属性覆盖前确认；
 - 复杂结构仍可用 raw 编辑或 CLI。
+
+### GEO 搜索
+
+ZSet 页的 **Geo...** 打开地理搜索：
+
+- 输入经度、纬度、半径、单位（m/km/mi/ft）；
+- 执行 `GEOSEARCH key FROMLONLAT ... BYRADIUS ... ASC COUNT ... WITHDIST WITHCOORD`；
+- 结果显示成员、距离、经度、纬度；
+- 适用于以 GEO 命令写入的 ZSet；
+- 普通 ZSet 也可以打开，但没有地理坐标时结果为空或由 Redis 返回错误。
 
 ### Hash 字段 TTL
 

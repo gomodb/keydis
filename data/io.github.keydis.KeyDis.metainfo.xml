@@ -18,6 +18,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.32" date="2026-10-19">
+      <description>
+        <p>GEO search view for sorted sets: center/radius query with distance and coordinates.</p>
+      </description>
+    </release>
     <release version="0.4.31" date="2026-10-19">
       <description>
         <p>Bitmap byte/bit inspector and HyperLogLog cardinality viewer for String keys.</p>

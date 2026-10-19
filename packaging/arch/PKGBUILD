@@ -33,7 +33,7 @@ optdepends=(
 options=('!debug')
 install="$pkgname.install"
 source=("$pkgname-$pkgver.tar.gz::https://github.com/gomodb/keydis/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('9ae69aefc764072da92ef7d3dfeaadd9074bece59abed12392ef2838a0bc7d69')
+sha256sums=('26f5bdde746230e3abe2ca1a9ebab25eac8a4f518b54e31a7d04e6209a6f84cc')
 
 build() {
     cmake -S "$srcdir/$pkgname-$pkgver" -B "$srcdir/$pkgname-$pkgver/build" \

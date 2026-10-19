@@ -13,3 +13,8 @@ Dependencies use Arch's KF6 package names (`kconfig`, `kxmlgui`, `krunner`,
 `kwallet`, ...), not the upstream `kf6-*` names. `krunner` provides both the
 plugin headers and the runtime framework; `qt6-tools` is only needed for
 `lrelease` during the build.
+
+The package follows the NutSync packaging layout: `CMAKE_BUILD_TYPE=None`,
+`options=('!debug')`, and a `check()` phase that runs CTest. Tests that need a
+live Redis/Sentinel/Cluster skip themselves when the corresponding
+`KEYDIS_*_PORT` variables are not set.

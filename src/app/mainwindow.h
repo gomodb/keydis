@@ -52,6 +52,8 @@ public:
     void showTab(const QString &name);
 
 public slots:
+    void newWindow();
+    void openActiveProfileInNewWindow();
     void deleteSelectedKeys();
     void setSelectedKeysTtl();
     void setClusterMode(bool cluster);
@@ -83,6 +85,7 @@ private:
     void duplicateProfile();
     void connectProfile();
     void updateProfileButtons();
+    void openProfileInNewWindow(const QString &profileId);
     void saveProfiles();
     [[nodiscard]] ConnectionProfile *selectedProfile();
     void syncDatabaseUi(int db);
@@ -114,6 +117,7 @@ private:
     QCheckBox *m_clusterCheck = nullptr;
     QCheckBox *m_readOnlyDock = nullptr;
     QPushButton *m_profileConnectButton = nullptr;
+    QPushButton *m_profileNewWindowButton = nullptr;
     QPushButton *m_retryButton = nullptr;
     QPushButton *m_profileEditButton = nullptr;
     QPushButton *m_profileDeleteButton = nullptr;

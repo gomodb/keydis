@@ -273,6 +273,29 @@ void TestMainWindow::browsesAndShowsValues()
     QVERIFY(hexDialogSeen);
     QVERIFY(hexContentOk);
 
+    auto countWindows = [] {
+        int count = 0;
+        for (QWidget *widget : QApplication::topLevelWidgets()) {
+            if (qobject_cast<MainWindow *>(widget))
+                ++count;
+        }
+        return count;
+    };
+    const int windowsBefore = countWindows();
+    QVERIFY(QMetaObject::invokeMethod(&window, "newWindow", Qt::DirectConnection));
+    QTRY_VERIFY_WITH_TIMEOUT(countWindows() > windowsBefore, 5000);
+    MainWindow *extraWindow = nullptr;
+    for (QWidget *widget : QApplication::topLevelWidgets()) {
+        if (auto *candidate = qobject_cast<MainWindow *>(widget);
+            candidate && candidate != &window) {
+            extraWindow = candidate;
+            break;
+        }
+    }
+    QVERIFY(extraWindow);
+    extraWindow->close();
+    QTRY_COMPARE_WITH_TIMEOUT(countWindows(), windowsBefore, 5000);
+
     window.showTab(QStringLiteral("browser"));
     table->clearSelection();
     table->selectRow(rowForKey(table->model(), batchKeyA));

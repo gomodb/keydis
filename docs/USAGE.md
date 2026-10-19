@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.17）
+# KeyDis 使用说明（0.4.18）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -10,7 +10,7 @@ cmake --build build -j2
 ./build/keydis
 ```
 
-所有连接操作集中在左侧 **Connections** 面板：**New / Duplicate / Edit / Delete / Connect**（连接后同一按钮变为 **Disconnect**），以及 **Read-only** 开关。空列表会提示点击 **New** 创建连接；未选中 Profile 时，编辑/删除/复制/连接按钮禁用。分组可折叠，Profile 可设置颜色标记。双击 Profile 或点 **Connect** 打开。连接配置只保存非敏感字段，密码写入 **KWallet**。
+所有连接操作集中在左侧 **Connections** 面板：**New / Duplicate / Edit / Delete / Connect**（连接后同一按钮变为 **Disconnect**）、**New Window**，以及 **Read-only** 开关。空列表会提示点击 **New** 创建连接；未选中 Profile 时，编辑/删除/复制/连接按钮禁用。分组可折叠，Profile 可设置颜色标记。双击 Profile 或点 **Connect** 打开。连接配置只保存非敏感字段，密码写入 **KWallet**。
 
 Profile 对话框分为 **Connection** / **Advanced** 两页；底部 **Test connection** 可对直连 Host/Port 做一次真实握手测试（SSH/Sentinel 模式不支持测试按钮）。
 
@@ -30,6 +30,13 @@ Profile 字段：
 | Cluster | Profile 中勾选 Cluster；Host:Port 作为 seed，DB 固定 0 |
 
 连接成功后，KeyDis 自动执行一次 `SCAN`（默认 `*`）。
+
+### 多窗口连接
+
+- **File → New Window** 或 Connections 面板的 **New Window** 可打开独立窗口；
+- 新窗口拥有自己的连接、浏览和值编辑状态，可同时查看多个 Redis；
+- 每个窗口仍使用相同的 Profile 列表；编辑 Profile 后其他窗口需重新打开以加载最新列表；
+- 窗口内多连接标签页/分屏尚未实现，当前用独立窗口并行。
 
 连接失败时状态栏旁显示 **Retry**；若错误为 `NOAUTH`/`WRONGPASS`，会弹出一次密码输入框，输入后自动重试并写入 KWallet。
 
@@ -225,6 +232,7 @@ redis 127.0.0.1
 
 ## 10. 当前限制
 
+- 多连接目前使用独立窗口并行，尚未实现单窗口内标签页/分屏；
 - Cluster 已支持 slot 路由和全 master SCAN，但没有 resharding/节点拓扑编辑，Dashboard/工具只显示单节点；
 - Sentinel 通过 Profile 解析主节点，但不做持续 failover 监控；
 - SSH 隧道使用系统 `ssh`；密码通过 `SSH_ASKPASS` 临时辅助脚本从环境变量读取，不写入磁盘；

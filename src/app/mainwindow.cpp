@@ -20,10 +20,13 @@
 #include "ui/models/namespacetreemodel.h"
 #include "ui/values/valuepanel.h"
 
+#include <QApplication>
 #include <QCheckBox>
 #include <QDockWidget>
 #include <QClipboard>
 #include <QMenu>
+#include <QMenuBar>
+#include <QKeySequence>
 
 #include <algorithm>
 #include <functional>
@@ -93,6 +96,16 @@ MainWindow::MainWindow(QWidget *parent)
         }
     }
     setupGUI(Default, uiFile);
+
+    auto *fileMenu = menuBar()->addMenu(tr("&File"));
+    auto *newWindowAction = fileMenu->addAction(tr("New Window"));
+    newWindowAction->setObjectName(QStringLiteral("newWindowAction"));
+    newWindowAction->setShortcut(QKeySequence::New);
+    connect(newWindowAction, &QAction::triggered, this, &MainWindow::newWindow);
+    fileMenu->addSeparator();
+    auto *quitAction = fileMenu->addAction(tr("Quit"));
+    quitAction->setShortcut(QKeySequence::Quit);
+    connect(quitAction, &QAction::triggered, qApp, &QApplication::quit);
 }
 
 MainWindow::~MainWindow()
@@ -388,11 +401,15 @@ void MainWindow::buildUi()
     m_profileDeleteButton->setObjectName(QStringLiteral("deleteProfileButton"));
     m_profileConnectButton = new QPushButton(tr("Connect"), connectionsPanel);
     m_profileConnectButton->setObjectName(QStringLiteral("profileConnectButton"));
+    m_profileNewWindowButton = new QPushButton(tr("New Window"), connectionsPanel);
+    m_profileNewWindowButton->setObjectName(QStringLiteral("profileNewWindowButton"));
+    m_profileNewWindowButton->setToolTip(tr("Open the selected connection in a separate window"));
     profileButtons->addWidget(newProfileButton);
     profileButtons->addWidget(m_profileDuplicateButton);
     profileButtons->addWidget(m_profileEditButton);
     profileButtons->addWidget(m_profileDeleteButton);
     profileButtons->addWidget(m_profileConnectButton);
+    profileButtons->addWidget(m_profileNewWindowButton);
     connectionsLayout->addLayout(profileButtons);
     m_readOnlyDock = new QCheckBox(tr("Read-only"), connectionsPanel);
     m_readOnlyDock->setObjectName(QStringLiteral("readOnlyDock"));
@@ -432,6 +449,8 @@ void MainWindow::buildUi()
     connect(m_profileEditButton, &QPushButton::clicked, this, &MainWindow::editProfile);
     connect(m_profileDeleteButton, &QPushButton::clicked, this, &MainWindow::deleteProfile);
     connect(m_profileConnectButton, &QPushButton::clicked, this, &MainWindow::connectProfile);
+    connect(m_profileNewWindowButton, &QPushButton::clicked, this,
+            &MainWindow::openActiveProfileInNewWindow);
     connect(m_readOnlyDock, &QCheckBox::toggled, this, [this](bool readOnly) {
         const QSignalBlocker blocker(m_readOnlyCheck);
         m_readOnlyCheck->setChecked(readOnly);
@@ -912,6 +931,44 @@ void MainWindow::updateProfileButtons()
     m_profileDeleteButton->setEnabled(selected);
     m_profileDuplicateButton->setEnabled(selected);
     m_profileConnectButton->setEnabled(selected || m_router.isReady());
+    if (m_profileNewWindowButton)
+        m_profileNewWindowButton->setEnabled(selected);
+}
+
+void MainWindow::newWindow()
+{
+    auto *window = new MainWindow;
+    window->setAttribute(Qt::WA_DeleteOnClose);
+    window->show();
+    window->raise();
+    window->activateWindow();
+}
+
+void MainWindow::openActiveProfileInNewWindow()
+{
+    ConnectionProfile *profile = selectedProfile();
+    if (!profile)
+        return;
+    openProfileInNewWindow(profile->id);
+}
+
+void MainWindow::openProfileInNewWindow(const QString &profileId)
+{
+    const auto it = std::find_if(m_profiles.constBegin(), m_profiles.constEnd(),
+                                 [&profileId](const ConnectionProfile &profile) {
+                                     return profile.id == profileId;
+                                 });
+    if (it == m_profiles.constEnd())
+        return;
+    auto *window = new MainWindow;
+    window->setAttribute(Qt::WA_DeleteOnClose);
+    window->m_profiles = m_profiles;
+    window->m_activeProfileId = profileId;
+    window->rebuildProfileList();
+    window->show();
+    window->raise();
+    window->activateWindow();
+    window->connectProfile();
 }
 
 void MainWindow::connectProfile()

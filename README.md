@@ -10,7 +10,7 @@ KeyDis 是一个使用 **C++20、Qt 6 Widgets 和 KDE Frameworks 6** 构建的�
 
 ## 当前状态
 
-**可用版本 0.4.17。** 已具备一个可构建、可安装的 Qt 6 + KF6 客户端：连接 Redis/Valkey、SCAN 浏览 Key、Dashboard、命名空间树、核心类型编辑、Stream/JSON、服务器工具、DUMP/RESTORE 导入导出、多连接配置与 KWallet。Sentinel、SSH key/agent 隧道与 **Cluster 基础支持** 已接入；更完整的 Cluster 运维视图仍在后续。
+**可用版本 0.4.18。** 已具备一个可构建、可安装的 Qt 6 + KF6 客户端：连接 Redis/Valkey、SCAN 浏览 Key、Dashboard、命名空间树、核心类型编辑、Stream/JSON、服务器工具、DUMP/RESTORE 导入导出、多连接配置与 KWallet。Sentinel、SSH key/agent 隧道与 **Cluster 基础支持** 已接入；更完整的 Cluster 运维视图仍在后续。
 
 当前已落地：
 
@@ -31,7 +31,7 @@ KeyDis 是一个使用 **C++20、Qt 6 Widgets 和 KDE Frameworks 6** 构建的�
 - 中文界面 catalog（`translations/keydis_zh_CN.ts`）；
 - Arch PKGBUILD（`packaging/arch/`）；
 - `Index all`：完整扫描当前 DB，使命名空间计数精确（内存换精度）；
-- 多连接配置/分组、KWallet 密码、Sentinel、SSH key/agent 隧道、Cluster slot 路由、KRunner 插件、只读模式；
+- 多连接配置/分组、**多窗口并行连接**、KWallet 密码、Sentinel、SSH key/agent 隧道、Cluster slot 路由、KRunner 插件、只读模式；
 - 从 NutSync 复用并适配的 `AppPaths`、`Language`、`Logger`、`Diagnostics`；
 - RESP2/RESP3、命令编码、语言、日志、SCAN、连接、值读写、UI 集成测试；
 - 真实 Redis 7.4 集成测试与 offscreen UI 测试；
@@ -98,6 +98,7 @@ KEYDIS_REDIS_PORT=6399 ./build/keydis_ui_tests
 已完成 **v0.4 工作台**（standalone + Sentinel + SSH key/agent + Cluster 基础）。尚未实现：
 
 - 完整 Cluster 运维视图（resharding、节点详情）；
+- 窗口内多连接标签页/分屏（当前先支持独立窗口并行）；
 - 精确全库命名空间统计默认关闭（可用 `Index all` 显式触发）；
 - Flatpak（明确不做）；
 - RedisJSON 树形控件、Cluster 运维视图。

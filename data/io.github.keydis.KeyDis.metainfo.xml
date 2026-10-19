@@ -18,6 +18,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.21" date="2026-10-19">
+      <description>
+        <p>Single-window connection tabs: each tab is an independent KeyDis workspace, with a tab bar, Ctrl+T, closable/movable tabs and per-profile New Tab.</p>
+      </description>
+    </release>
     <release version="0.4.20" date="2026-10-19">
       <description>
         <p>Explicit Apply/Discard for collection cell and batch edits, with local pending state and transactional commit.</p>

@@ -401,9 +401,9 @@ void MainWindow::buildUi()
     m_profileDeleteButton->setObjectName(QStringLiteral("deleteProfileButton"));
     m_profileConnectButton = new QPushButton(tr("Connect"), connectionsPanel);
     m_profileConnectButton->setObjectName(QStringLiteral("profileConnectButton"));
-    m_profileNewWindowButton = new QPushButton(tr("New Window"), connectionsPanel);
+    m_profileNewWindowButton = new QPushButton(tr("New Tab"), connectionsPanel);
     m_profileNewWindowButton->setObjectName(QStringLiteral("profileNewWindowButton"));
-    m_profileNewWindowButton->setToolTip(tr("Open the selected connection in a separate window"));
+    m_profileNewWindowButton->setToolTip(tr("Open the selected connection in a new tab"));
     profileButtons->addWidget(newProfileButton);
     profileButtons->addWidget(m_profileDuplicateButton);
     profileButtons->addWidget(m_profileEditButton);
@@ -937,11 +937,22 @@ void MainWindow::updateProfileButtons()
 
 void MainWindow::newWindow()
 {
+    if (receivers(SIGNAL(newSessionRequested())) > 0) {
+        emit newSessionRequested();
+        return;
+    }
     auto *window = new MainWindow;
     window->setAttribute(Qt::WA_DeleteOnClose);
     window->show();
     window->raise();
     window->activateWindow();
+}
+
+void MainWindow::connectProfileById(const QString &profileId)
+{
+    m_activeProfileId = profileId;
+    rebuildProfileList();
+    connectProfile();
 }
 
 void MainWindow::openActiveProfileInNewWindow()
@@ -954,6 +965,10 @@ void MainWindow::openActiveProfileInNewWindow()
 
 void MainWindow::openProfileInNewWindow(const QString &profileId)
 {
+    if (receivers(SIGNAL(newSessionWithProfileRequested(QString))) > 0) {
+        emit newSessionWithProfileRequested(profileId);
+        return;
+    }
     const auto it = std::find_if(m_profiles.constBegin(), m_profiles.constEnd(),
                                  [&profileId](const ConnectionProfile &profile) {
                                      return profile.id == profileId;
@@ -1048,6 +1063,10 @@ void MainWindow::connectOrDisconnect(bool retryAuth)
         profile.readOnly = m_readOnlyCheck->isChecked();
         profile.cluster = m_clusterCheck->isChecked();
     }
+
+    emit sessionTitleChanged(profile.name.isEmpty()
+                                 ? tr("Connection %1").arg(profile.host)
+                                 : profile.name);
 
     SecretStore secrets;
     if (secrets.isAvailable() && !profile.id.isEmpty()) {

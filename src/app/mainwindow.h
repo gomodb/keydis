@@ -53,10 +53,16 @@ public:
 
 public slots:
     void newWindow();
+    void connectProfileById(const QString &profileId);
     void openActiveProfileInNewWindow();
     void deleteSelectedKeys();
     void setSelectedKeysTtl();
     void setClusterMode(bool cluster);
+
+signals:
+    void sessionTitleChanged(const QString &title);
+    void newSessionRequested();
+    void newSessionWithProfileRequested(const QString &profileId);
 
 private:
     void buildUi();

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 KeyDis contributors
 
 #include "app/mainwindow.h"
+#include "app/sessionhost.h"
 #include "core/app_paths.h"
 #include "core/language.h"
 #include "core/logger.h"
@@ -115,10 +116,10 @@ int main(int argc, char *argv[])
     if (qEnvironmentVariableIsEmpty("KEYDIS_NO_DBUS"))
         service = std::make_unique<KDBusService>(KDBusService::Unique);
 
-    // KXmlGuiWindow has Qt::WA_DeleteOnClose set by default, so it must live
-    // on the heap. QPointer lets us clean it up if the app quits without a
-    // close event.
-    QPointer<KeyDis::MainWindow> window = new KeyDis::MainWindow;
+    // The host owns one full MainWindow workspace per connection tab.
+    // QPointer lets us clean up if the app quits without a close event.
+    QPointer<KeyDis::SessionHost> host = new KeyDis::SessionHost;
+    QPointer<KeyDis::MainWindow> window = host->addSession();
     if (parser.isSet(hostOption) || parser.isSet(portOption) || parser.isSet(tlsOption)
         || parser.isSet(usernameOption) || parser.isSet(passwordOption) || parser.isSet(dbOption)) {
         bool portOk = false;
@@ -129,7 +130,7 @@ int main(int argc, char *argv[])
                                         parser.value(passwordOption),
                                         parser.value(dbOption).toInt());
     }
-    window->show();
+    host->show();
     if (parser.isSet(clusterOption))
         window->setClusterMode(true);
     if (parser.isSet(tabOption))
@@ -140,13 +141,13 @@ int main(int argc, char *argv[])
         QTimer::singleShot(parser.value(quitAfterOption).toInt(), &application,
                            &QCoreApplication::quit);
     if (parser.isSet(closeAfterOption)) {
-        QTimer::singleShot(parser.value(closeAfterOption).toInt(), window, [window] {
-            if (window)
-                window->close();
+        QTimer::singleShot(parser.value(closeAfterOption).toInt(), host, [host] {
+            if (host)
+                host->close();
         });
     }
     const int result = application.exec();
-    if (window)
-        delete window;
+    if (host)
+        delete host;
     return result;
 }

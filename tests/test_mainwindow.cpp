@@ -4,6 +4,7 @@
 #include "test_mainwindow.h"
 
 #include "app/mainwindow.h"
+#include "app/sessionhost.h"
 #include "core/app_paths.h"
 #include "core/conn/profilestore.h"
 #include "core/net/clusterclient.h"
@@ -376,6 +377,27 @@ void TestMainWindow::browsesAndShowsValues()
         command(cleanup, {QByteArrayLiteral("SELECT"), QByteArrayLiteral("0")}, &error);
         QVERIFY2(error.isEmpty(), qPrintable(error));
     }
+}
+
+void TestMainWindow::hostsMultipleSessionTabs()
+{
+    SessionHost host;
+    host.show();
+    auto *first = host.addSession();
+    QVERIFY(first);
+    auto *second = host.addSession();
+    QVERIFY(second);
+    QVERIFY(first != second);
+    QCOMPARE(host.sessionCount(), 2);
+    auto *tabs = host.findChild<QTabWidget *>(QStringLiteral("sessionTabs"));
+    QVERIFY(tabs);
+    QCOMPARE(tabs->count(), 2);
+
+    QVERIFY(QMetaObject::invokeMethod(first, "newWindow", Qt::DirectConnection));
+    QTRY_COMPARE_WITH_TIMEOUT(host.sessionCount(), 3, 5000);
+
+    tabs->tabCloseRequested(0);
+    QTRY_COMPARE_WITH_TIMEOUT(host.sessionCount(), 2, 5000);
 }
 
 void TestMainWindow::showsGroupedProfiles()

@@ -16,6 +16,7 @@ private slots:
     void browsesAndShowsValues();
     void browsesCluster();
     void showsGroupedProfiles();
+    void hostsMultipleSessionTabs();
 };
 
 } // namespace KeyDis::Test

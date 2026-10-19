@@ -268,9 +268,9 @@ void ProfileDialog::accept()
                              tr("SSH and Sentinel cannot be combined yet."));
         return;
     }
-    if (m_profile.cluster && (m_profile.sentinel || m_profile.sshTunnel)) {
+    if (m_profile.cluster && m_profile.sentinel) {
         QMessageBox::warning(this, tr("Invalid connection"),
-                             tr("Cluster cannot be combined with Sentinel or SSH yet."));
+                             tr("Cluster cannot be combined with Sentinel."));
         return;
     }
     if (m_profile.sentinel

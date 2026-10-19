@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.32）
+# KeyDis 使用说明（0.4.33）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -64,6 +64,15 @@ Unix Socket 使用 `QLocalSocket`，不需要 TLS；当前不支持 SSH/Sentinel
 - 分屏布局本身不持久化，重启后恢复单侧标签页。
 
 连接失败时状态栏旁显示 **Retry**；若错误为 `NOAUTH`/`WRONGPASS`，会弹出一次密码输入框，输入后自动重试并写入 KWallet。
+
+### SSH + Cluster
+
+- Profile 同时勾选 **Use SSH tunnel** 和 **Cluster**；
+- KeyDis 使用 `ssh -D 127.0.0.1:<port> -N` 建立 SOCKS5 动态代理；
+- seed 和 `CLUSTER SLOTS` 返回的所有节点地址都通过 SOCKS5 远程解析/连接，因此可直接使用内网地址；
+- 支持 SSH 密钥/agent 或 SSH 密码 askpass；
+- TLS 配置仍会应用在 SOCKS5 连接之上；
+- SSH + Sentinel 仍不支持。
 
 ### Cluster 模式
 
@@ -333,7 +342,7 @@ redis 127.0.0.1
 - 分屏布局不持久化；关闭右侧分屏会关闭其中的会话；
 - Cluster 已支持 slot 路由和全 master SCAN，但没有 resharding/节点拓扑编辑，Dashboard/工具只显示单节点；
 - Sentinel 通过 Profile 解析主节点，但不做持续 failover 监控；
-- SSH 隧道使用系统 `ssh`；密码通过 `SSH_ASKPASS` 临时辅助脚本从环境变量读取，不写入磁盘；
+- SSH 隧道使用系统 `ssh`；普通模式使用 `-L` 本地端口转发，Cluster 模式使用 `-D` SOCKS5 动态代理；密码通过 `SSH_ASKPASS` 临时辅助脚本从环境变量读取，不写入磁盘；
 - Sentinel 认证复用主连接用户名/密码，暂不支持独立 Sentinel ACL；
 - 只读模式是 UI 层保护，不是服务端 ACL；生产环境仍建议使用只读 ACL 用户；
 - 精确命名空间计数需要 `Index all`，大库会占用较多内存；

@@ -27,6 +27,8 @@ public:
     void start(const QString &sshHost, quint16 sshPort, const QString &sshUser,
                const QString &keyPath, const QString &password, const QString &targetHost,
                quint16 targetPort);
+    void startDynamic(const QString &sshHost, quint16 sshPort, const QString &sshUser,
+                      const QString &keyPath, const QString &password);
     void stop();
 
     [[nodiscard]] bool isActive() const;
@@ -37,6 +39,13 @@ signals:
     void failed(const QString &error);
 
 private:
+    enum class Mode {
+        Forward,
+        Dynamic,
+    };
+    void startWithMode(Mode mode, const QString &sshHost, quint16 sshPort, const QString &sshUser,
+                       const QString &keyPath, const QString &password,
+                       const QString &targetHost, quint16 targetPort);
     void probe();
 
     std::unique_ptr<QProcess> m_process;

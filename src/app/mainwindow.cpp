@@ -38,6 +38,7 @@
 #include <QPixmap>
 #include <QGroupBox>
 #include <QGuiApplication>
+#include <QNetworkProxy>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QInputDialog>
@@ -1148,6 +1149,17 @@ void MainWindow::connectOrDisconnect(bool retryAuth)
         m_sshTunnel = new SshTunnel(this);
         connect(m_sshTunnel, &SshTunnel::ready, this,
                 [this, profile](quint16 localPort) {
+            if (profile.cluster) {
+                m_scanStatus->setText(tr("SSH SOCKS proxy ready; connecting to cluster..."));
+                m_router.setNetworkProxy(
+                    QNetworkProxy(QNetworkProxy::Socks5Proxy, QStringLiteral("127.0.0.1"),
+                                  localPort));
+                m_effectiveHost = profile.host;
+                m_effectivePort = profile.port;
+                m_router.connectToHost(profile.host, profile.port, profile.tls,
+                                       profile.username, m_passwordEdit->text(), profile.db);
+                return;
+            }
             m_scanStatus->setText(tr("SSH tunnel ready; connecting..."));
             m_effectiveHost = QStringLiteral("127.0.0.1");
             m_effectivePort = localPort;
@@ -1159,8 +1171,13 @@ void MainWindow::connectOrDisconnect(bool retryAuth)
             m_connectButton->setEnabled(true);
             m_connectButton->setText(tr("Connect"));
         });
-        m_sshTunnel->start(profile.sshHost, profile.sshPort, profile.sshUser,
-                           profile.sshKeyPath, profile.sshPassword, profile.host, profile.port);
+        if (profile.cluster) {
+            m_sshTunnel->startDynamic(profile.sshHost, profile.sshPort, profile.sshUser,
+                                      profile.sshKeyPath, profile.sshPassword);
+        } else {
+            m_sshTunnel->start(profile.sshHost, profile.sshPort, profile.sshUser,
+                               profile.sshKeyPath, profile.sshPassword, profile.host, profile.port);
+        }
         return;
     }
     if (profile.sentinel) {

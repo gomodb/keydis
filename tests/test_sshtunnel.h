@@ -13,6 +13,7 @@ class TestSshTunnel : public QObject
 
 private slots:
     void failsForUnreachableHost();
+    void dynamicTunnelFailsForUnreachableHost();
 };
 
 } // namespace KeyDis::Test

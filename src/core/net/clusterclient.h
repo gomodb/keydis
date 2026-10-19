@@ -29,6 +29,7 @@ public:
     void connectToHost(const QString &host, quint16 port, bool tls, const QString &username,
                        const QString &password, int db) override;
     void setTlsConfig(const TlsConfig &config) override;
+    void setNetworkProxy(const QNetworkProxy &proxy) override;
     void disconnectFromHost() override;
     [[nodiscard]] bool isReady() const override;
     void sendCommand(const QList<QByteArray> &args, ReplyCallback callback = {}) override;
@@ -94,6 +95,7 @@ private:
     int m_seedIndex = 0;
     bool m_tls = false;
     TlsConfig m_tlsConfig;
+    QNetworkProxy m_proxy;
     QString m_username;
     QString m_password;
     std::unique_ptr<RedisConnection> m_seed;

@@ -23,6 +23,7 @@ public:
     void connectToHost(const QString &host, quint16 port, bool tls, const QString &username,
                        const QString &password, int db) override;
     void setTlsConfig(const TlsConfig &config) override;
+    void setNetworkProxy(const QNetworkProxy &proxy) override;
     void connectToUnixSocket(const QString &path, const QString &username,
                              const QString &password, int db) override;
     void disconnectFromHost() override;

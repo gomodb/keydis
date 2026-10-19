@@ -48,6 +48,12 @@ void RedisRouter::setTlsConfig(const TlsConfig &config)
         m_backend->setTlsConfig(config);
 }
 
+void RedisRouter::setNetworkProxy(const QNetworkProxy &proxy)
+{
+    if (m_backend)
+        m_backend->setNetworkProxy(proxy);
+}
+
 void RedisRouter::connectToUnixSocket(const QString &path, const QString &username,
                                       const QString &password, int db)
 {

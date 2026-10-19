@@ -32,6 +32,7 @@ public:
     void connectToUnixSocket(const QString &path, const QString &username,
                              const QString &password, int db) override;
     void setTlsConfig(const TlsConfig &config) override;
+    void setNetworkProxy(const QNetworkProxy &proxy) override;
     void disconnectFromHost() override;
 
     [[nodiscard]] bool isReady() const override;
@@ -88,6 +89,7 @@ private:
     int m_db = 0;
     bool m_tls = false;
     TlsConfig m_tlsConfig;
+    QNetworkProxy m_proxy;
     bool m_userDisconnect = false;
     bool m_authWithUsername = true;
     bool m_resp2 = false;

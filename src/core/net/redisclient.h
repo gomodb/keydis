@@ -7,6 +7,7 @@
 
 #include <QByteArray>
 #include <QList>
+#include <QNetworkProxy>
 #include <QObject>
 #include <QString>
 
@@ -38,6 +39,7 @@ public:
     virtual void connectToHost(const QString &host, quint16 port, bool tls,
                                const QString &username, const QString &password, int db) = 0;
     virtual void setTlsConfig(const TlsConfig &config) { Q_UNUSED(config) }
+    virtual void setNetworkProxy(const QNetworkProxy &proxy) { Q_UNUSED(proxy) }
     virtual void connectToUnixSocket(const QString &path, const QString &username,
                                      const QString &password, int db)
     {

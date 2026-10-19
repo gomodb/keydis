@@ -30,8 +30,23 @@ void SshTunnel::start(const QString &sshHost, quint16 sshPort, const QString &ss
                       const QString &keyPath, const QString &password, const QString &targetHost,
                       quint16 targetPort)
 {
+    startWithMode(Mode::Forward, sshHost, sshPort, sshUser, keyPath, password, targetHost,
+                  targetPort);
+}
+
+void SshTunnel::startDynamic(const QString &sshHost, quint16 sshPort, const QString &sshUser,
+                             const QString &keyPath, const QString &password)
+{
+    startWithMode(Mode::Dynamic, sshHost, sshPort, sshUser, keyPath, password, {}, 0);
+}
+
+void SshTunnel::startWithMode(Mode mode, const QString &sshHost, quint16 sshPort,
+                              const QString &sshUser, const QString &keyPath,
+                              const QString &password, const QString &targetHost,
+                              quint16 targetPort)
+{
     stop();
-    if (sshHost.isEmpty() || targetHost.isEmpty() || targetPort == 0) {
+    if (sshHost.isEmpty() || (mode == Mode::Forward && (targetHost.isEmpty() || targetPort == 0))) {
         emit failed(tr("SSH host and target are required"));
         return;
     }
@@ -56,9 +71,13 @@ void SshTunnel::start(const QString &sshHost, quint16 sshPort, const QString &ss
     } else {
         args << QStringLiteral("-o") << QStringLiteral("NumberOfPasswordPrompts=1");
     }
-    args << QStringLiteral("-L")
-         << QStringLiteral("127.0.0.1:%1:%2:%3").arg(m_localPort).arg(targetHost).arg(targetPort)
-         << QStringLiteral("-p") << QString::number(sshPort);
+    if (mode == Mode::Forward) {
+        args << QStringLiteral("-L")
+             << QStringLiteral("127.0.0.1:%1:%2:%3").arg(m_localPort).arg(targetHost).arg(targetPort);
+    } else {
+        args << QStringLiteral("-D") << QStringLiteral("127.0.0.1:%1").arg(m_localPort);
+    }
+    args << QStringLiteral("-p") << QString::number(sshPort);
     if (!keyPath.isEmpty())
         args << QStringLiteral("-i") << keyPath;
     const QString destination = sshUser.isEmpty() ? sshHost

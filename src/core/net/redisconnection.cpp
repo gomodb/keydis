@@ -34,6 +34,11 @@ void RedisConnection::setTlsConfig(const TlsConfig &config)
     m_tlsConfig = config;
 }
 
+void RedisConnection::setNetworkProxy(const QNetworkProxy &proxy)
+{
+    m_proxy = proxy;
+}
+
 void RedisConnection::connectToHost(const QString &host, quint16 port, bool tls,
                                     const QString &username, const QString &password, int db)
 {
@@ -149,6 +154,7 @@ void RedisConnection::createSocket(bool tls)
         if (!m_tlsConfig.verifyPeer)
             config.setPeerVerifyMode(QSslSocket::VerifyNone);
         auto *socket = new QSslSocket(this);
+        socket->setProxy(m_proxy);
         socket->setSslConfiguration(config);
         socket->setPeerVerifyMode(m_tlsConfig.verifyPeer ? QSslSocket::VerifyPeer
                                                          : QSslSocket::VerifyNone);
@@ -168,6 +174,7 @@ void RedisConnection::createSocket(bool tls)
         m_socket = socket;
     } else {
         auto *socket = new QTcpSocket(this);
+        socket->setProxy(m_proxy);
         connect(socket, &QTcpSocket::connected, this, &RedisConnection::onTransportReady);
         m_socket = socket;
     }

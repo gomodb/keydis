@@ -18,6 +18,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.33" date="2026-10-19">
+      <description>
+        <p>SSH + Cluster support through an ssh -D SOCKS5 proxy; cluster node addresses are resolved and reached remotely.</p>
+      </description>
+    </release>
     <release version="0.4.32" date="2026-10-19">
       <description>
         <p>GEO search view for sorted sets: center/radius query with distance and coordinates.</p>

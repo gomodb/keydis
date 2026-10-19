@@ -29,4 +29,22 @@ void TestSshTunnel::failsForUnreachableHost()
     tunnel.stop();
 }
 
+void TestSshTunnel::dynamicTunnelFailsForUnreachableHost()
+{
+    if (QStandardPaths::findExecutable(QStringLiteral("ssh")).isEmpty())
+        QSKIP("ssh executable not available");
+
+    SshTunnel tunnel;
+    bool failed = false;
+    QString error;
+    QObject::connect(&tunnel, &SshTunnel::failed, &tunnel, [&](const QString &message) {
+        failed = true;
+        error = message;
+    });
+    tunnel.startDynamic(QStringLiteral("127.0.0.1"), 1, {}, {}, {});
+    QTRY_VERIFY_WITH_TIMEOUT(failed, 15000);
+    QVERIFY(!error.isEmpty());
+    tunnel.stop();
+}
+
 } // namespace KeyDis::Test

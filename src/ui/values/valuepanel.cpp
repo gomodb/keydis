@@ -264,7 +264,13 @@ void ValuePanel::buildUi()
     m_valueFilter->setObjectName(QStringLiteral("valueFilter"));
     m_valueFilter->setPlaceholderText(tr("Filter loaded rows"));
     m_valueFilter->setClearButtonEnabled(true);
-    layout->addWidget(m_valueFilter);
+    m_searchAllButton = new QPushButton(tr("Search all..."), this);
+    m_searchAllButton->setObjectName(QStringLiteral("searchAllButton"));
+    m_searchAllButton->setToolTip(tr("Load all elements of this key and filter them locally"));
+    auto *filterRow = new QHBoxLayout;
+    filterRow->addWidget(m_valueFilter, 1);
+    filterRow->addWidget(m_searchAllButton);
+    layout->addLayout(filterRow);
 
     m_stack = new QStackedWidget(this);
     m_stack->setObjectName(QStringLiteral("valueStack"));
@@ -294,6 +300,7 @@ void ValuePanel::buildUi()
     connect(ttlButton, &QPushButton::clicked, this, &ValuePanel::editTtl);
     connect(deleteButton, &QPushButton::clicked, this, &ValuePanel::deleteKey);
     connect(m_valueFilter, &QLineEdit::textChanged, this, &ValuePanel::filterValueRows);
+    connect(m_searchAllButton, &QPushButton::clicked, this, &ValuePanel::searchAllValues);
 }
 
 QWidget *ValuePanel::buildStringPage()
@@ -702,11 +709,15 @@ void ValuePanel::loadKey(const KeyInfo &info)
     m_type = info.type;
     updateDirtyLabel();
     if (m_valueFilter) {
-        m_valueFilter->setVisible(m_type == QLatin1String("hash")
-                                  || m_type == QLatin1String("list")
-                                  || m_type == QLatin1String("set")
-                                  || m_type == QLatin1String("zset")
-                                  || m_type == QLatin1String("stream"));
+        const bool filterable = m_type == QLatin1String("hash")
+            || m_type == QLatin1String("list") || m_type == QLatin1String("set")
+            || m_type == QLatin1String("zset") || m_type == QLatin1String("stream");
+        m_valueFilter->setVisible(filterable);
+        if (m_searchAllButton)
+            m_searchAllButton->setVisible(m_type == QLatin1String("hash")
+                                          || m_type == QLatin1String("list")
+                                          || m_type == QLatin1String("set")
+                                          || m_type == QLatin1String("zset"));
     }
     m_ttlMs = info.ttlMs;
     m_hashCursor = QByteArrayLiteral("0");
@@ -783,6 +794,127 @@ void ValuePanel::clearKey()
     if (m_setMoreButton) m_setMoreButton->setEnabled(false);
     if (m_zsetMoreButton) m_zsetMoreButton->setEnabled(false);
     m_stack->setCurrentIndex(EmptyPage);
+}
+
+void ValuePanel::searchAllValues()
+{
+    if (m_key.isEmpty())
+        return;
+    if (m_type != QLatin1String("hash") && m_type != QLatin1String("list")
+        && m_type != QLatin1String("set") && m_type != QLatin1String("zset")) {
+        return;
+    }
+    if (QMessageBox::question(
+            this, tr("Search all values"),
+            tr("Load all elements of this key into memory? Large collections may block "
+               "the connection and use significant memory."))
+        != QMessageBox::Yes) {
+        return;
+    }
+
+    QList<QByteArray> command;
+    if (m_type == QLatin1String("hash"))
+        command = {QByteArrayLiteral("HGETALL"), m_key};
+    else if (m_type == QLatin1String("list"))
+        command = {QByteArrayLiteral("LRANGE"), m_key, QByteArrayLiteral("0"), QByteArrayLiteral("-1")};
+    else if (m_type == QLatin1String("set"))
+        command = {QByteArrayLiteral("SMEMBERS"), m_key};
+    else
+        command = {QByteArrayLiteral("ZRANGE"), m_key, QByteArrayLiteral("0"), QByteArrayLiteral("-1"),
+                   QByteArrayLiteral("WITHSCORES")};
+
+    const quint64 generation = m_generation;
+    QPointer<ValuePanel> guard(this);
+    setStatus(tr("Loading all values..."));
+    runCommand(command, [guard, generation, this](const RespValue &reply, const QString &error) {
+        if (!guard || generation != m_generation)
+            return;
+        if (!error.isEmpty() || reply.isError()) {
+            showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
+            return;
+        }
+        m_loading = true;
+        if (m_type == QLatin1String("hash")) {
+            m_hashTable->setRowCount(0);
+            m_hashOriginal.clear();
+            QVector<QPair<QByteArray, QByteArray>> pairs;
+            if (reply.type == RespType::Map) {
+                for (const auto &[field, value] : reply.pairs)
+                    pairs.append({field.scalar, value.scalar});
+            } else if (reply.type == RespType::Array) {
+                for (size_t index = 0; index + 1 < reply.elements.size(); index += 2)
+                    pairs.append({reply.elements[index].scalar, reply.elements[index + 1].scalar});
+            }
+            m_hashCursor = QByteArrayLiteral("0");
+            m_hashMoreButton->setEnabled(false);
+            for (const auto &[field, value] : pairs) {
+                const QString fieldText = QString::fromUtf8(field);
+                const QString valueText = QString::fromUtf8(value);
+                const int row = m_hashTable->rowCount();
+                m_hashTable->insertRow(row);
+                m_hashTable->setItem(row, 0, readOnlyItem(fieldText));
+                m_hashTable->setItem(row, 1, new QTableWidgetItem(valueText));
+                m_hashTable->setItem(row, 2, readOnlyItem(QStringLiteral("-")));
+                m_hashOriginal.insert(fieldText, valueText);
+            }
+        } else if (m_type == QLatin1String("list")) {
+            m_listTable->setRowCount(0);
+            m_listOriginal.clear();
+            for (size_t index = 0; index < reply.elements.size(); ++index) {
+                const int itemIndex = int(index);
+                const QString value = scalarText(reply.elements[index]);
+                const int row = m_listTable->rowCount();
+                m_listTable->insertRow(row);
+                m_listTable->setItem(row, 0, readOnlyItem(QString::number(itemIndex)));
+                m_listTable->setItem(row, 1, new QTableWidgetItem(value));
+                m_listOriginal.insert(itemIndex, value);
+            }
+            m_listOffset = int(reply.elements.size());
+            m_listMoreButton->setEnabled(false);
+        } else if (m_type == QLatin1String("set")) {
+            m_setTable->setRowCount(0);
+            for (const RespValue &member : reply.elements) {
+                const int row = m_setTable->rowCount();
+                m_setTable->insertRow(row);
+                m_setTable->setItem(row, 0, readOnlyItem(scalarText(member)));
+            }
+            m_setMoreButton->setEnabled(false);
+        } else {
+            m_zsetTable->setRowCount(0);
+            m_zsetOriginal.clear();
+            QVector<QPair<QString, QString>> pairs;
+            if (reply.type == RespType::Array) {
+                for (size_t index = 0; index < reply.elements.size(); ++index) {
+                    if (reply.elements[index].type == RespType::Array
+                        && reply.elements[index].elements.size() == 2) {
+                        pairs.append({scalarText(reply.elements[index].elements[0]),
+                                      scalarText(reply.elements[index].elements[1])});
+                    } else if (index + 1 < reply.elements.size()) {
+                        pairs.append({scalarText(reply.elements[index]),
+                                      scalarText(reply.elements[index + 1])});
+                        ++index;
+                    }
+                }
+            }
+            for (const auto &[member, score] : pairs) {
+                const int row = m_zsetTable->rowCount();
+                m_zsetTable->insertRow(row);
+                m_zsetTable->setItem(row, 0, readOnlyItem(member));
+                m_zsetTable->setItem(row, 1, new QTableWidgetItem(score));
+                m_zsetOriginal.insert(member, score);
+            }
+            m_zsetMoreButton->setEnabled(false);
+        }
+        m_loading = false;
+        filterValueRows(m_valueFilter ? m_valueFilter->text() : QString());
+        if (m_type == QLatin1String("hash"))
+            refreshHashFieldTtl();
+        setStatus(tr("%1 entries loaded (full key)").arg(
+            m_type == QLatin1String("hash") ? m_hashTable->rowCount()
+            : m_type == QLatin1String("list") ? m_listTable->rowCount()
+            : m_type == QLatin1String("set") ? m_setTable->rowCount()
+                                             : m_zsetTable->rowCount()));
+    });
 }
 
 void ValuePanel::filterValueRows(const QString &text)

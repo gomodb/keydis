@@ -18,6 +18,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.29" date="2026-10-19">
+      <description>
+        <p>Full-key collection search: Search all loads complete Hash/List/Set/ZSet contents for local filtering, with a memory warning.</p>
+      </description>
+    </release>
     <release version="0.4.28" date="2026-10-19">
       <description>
         <p>Unix domain socket connections for Profile and CLI, with RESP handshake support and validation against SSH/Sentinel/Cluster modes.</p>

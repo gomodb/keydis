@@ -103,6 +103,7 @@ private:
     void deleteJsonNode();
     void updateJsonButtons();
     void filterValueRows(const QString &text);
+    void searchAllValues();
     void renameJsonKey();
     void loadRaw(const QString &type);
 
@@ -173,6 +174,7 @@ private:
     bool m_jsonDirty = false;
     QLineEdit *m_jsonPathEdit = nullptr;
     QLineEdit *m_valueFilter = nullptr;
+    QPushButton *m_searchAllButton = nullptr;
     QTreeWidget *m_jsonTree = nullptr;
     QPushButton *m_jsonAddButton = nullptr;
     QPushButton *m_jsonDeleteButton = nullptr;

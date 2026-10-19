@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.28）
+# KeyDis 使用说明（0.4.29）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -124,7 +124,15 @@ Dashboard 只执行一次 `INFO`，不会逐 Key 发命令；适合作为连接�
 
 Hash/List/Set/ZSet 每次加载最多 500 个元素；点击 **Load more** 继续。所有修改会刷新到第一页。
 
-值面板顶部的 **Filter loaded rows** 只过滤当前已加载的表格行（Hash/List/Set/ZSet/Stream），不会重新向服务器查询。String 页的 **Hex view...** 以只读十六进制 + ASCII 形式查看原始字节。
+值面板顶部的 **Filter loaded rows** 只过滤当前已加载的表格行（Hash/List/Set/ZSet/Stream），不会重新向服务器查询。
+
+点击 **Search all...**：
+
+- 对 Hash/List/Set/ZSet 执行 `HGETALL` / `LRANGE 0 -1` / `SMEMBERS` / `ZRANGE 0 -1 WITHSCORES`；
+- 把完整集合加载到内存后再用过滤框搜索；
+- 会先确认，提示大集合可能阻塞连接、占用大量内存；
+- 一次性加载后 **Load more** 会禁用；
+- 这是客户端本地搜索，不是 Redis 服务端索引。String 页的 **Hex view...** 以只读十六进制 + ASCII 形式查看原始字节。
 
 ### RedisJSON
 

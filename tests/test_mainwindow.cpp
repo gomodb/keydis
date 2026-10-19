@@ -152,6 +152,8 @@ void TestMainWindow::browsesAndShowsValues()
     auto *discardPendingButton =
         window.findChild<QPushButton *>(QStringLiteral("discardPendingButton"));
     auto *valueFilter = window.findChild<QLineEdit *>(QStringLiteral("valueFilter"));
+    auto *searchAllButton =
+        window.findChild<QPushButton *>(QStringLiteral("searchAllButton"));
     auto *hexButton = window.findChild<QPushButton *>(QStringLiteral("hexViewButton"));
     auto *editBytesButton =
         window.findChild<QPushButton *>(QStringLiteral("editBytesButton"));
@@ -185,6 +187,7 @@ void TestMainWindow::browsesAndShowsValues()
     QVERIFY(applyButton);
     QVERIFY(discardPendingButton);
     QVERIFY(valueFilter);
+    QVERIFY(searchAllButton);
     QVERIFY(hexButton);
     QVERIFY(editBytesButton);
     QVERIFY(decodeButton);
@@ -298,6 +301,13 @@ void TestMainWindow::browsesAndShowsValues()
         QVERIFY(hashMoreButton->isEnabled());
         QTest::mouseClick(hashMoreButton, Qt::LeftButton);
     }
+    QTRY_COMPARE_WITH_TIMEOUT(hashTable->rowCount(), 600, 5000);
+    QTimer::singleShot(50, qApp, [] {
+        auto *box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
+        if (box)
+            box->button(QMessageBox::Yes)->click();
+    });
+    QTest::mouseClick(searchAllButton, Qt::LeftButton);
     QTRY_COMPARE_WITH_TIMEOUT(hashTable->rowCount(), 600, 5000);
     QVERIFY(!valueFilter->isHidden());
     valueFilter->setText(QStringLiteral("field-599"));

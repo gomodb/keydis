@@ -113,15 +113,108 @@ MainWindow::MainWindow(QWidget *parent)
     }
     setupGUI(Default, uiFile);
 
-    auto *fileMenu = menuBar()->addMenu(tr("&File"));
-    auto *newWindowAction = fileMenu->addAction(tr("New Window"));
-    newWindowAction->setObjectName(QStringLiteral("newWindowAction"));
-    newWindowAction->setShortcut(QKeySequence::New);
-    connect(newWindowAction, &QAction::triggered, this, &MainWindow::newWindow);
-    fileMenu->addSeparator();
-    auto *quitAction = fileMenu->addAction(tr("Quit"));
-    quitAction->setShortcut(QKeySequence::Quit);
-    connect(quitAction, &QAction::triggered, qApp, &QApplication::quit);
+    if (QAction *dockToggle = connectionsToggleAction()) {
+        auto *viewMenu = menuBar()->addMenu(tr("&View"));
+        viewMenu->addAction(dockToggle);
+    }
+    createContextActions();
+}
+
+void MainWindow::createContextActions()
+{
+    const auto makeAction = [this](const QString &name, const QString &text) {
+        auto *action = new QAction(text, this);
+        action->setObjectName(name);
+        return action;
+    };
+    m_keyRenameAction = makeAction(QStringLiteral("contextRenameKeyAction"), tr("Rename..."));
+    connect(m_keyRenameAction, &QAction::triggered, this, [this] {
+        if (m_contextKey.isValid())
+            renameKey(m_contextKey);
+        else
+            renameSelectedKey();
+    });
+    m_keyDeleteAction = makeAction(QStringLiteral("contextDeleteKeyAction"), tr("Delete..."));
+    connect(m_keyDeleteAction, &QAction::triggered, this, [this] {
+        if (m_contextKey.isValid())
+            deleteKey(m_contextKey);
+        else
+            deleteSelectedKeys();
+    });
+    m_keyTtlAction = makeAction(QStringLiteral("contextTtlAction"), tr("Set TTL..."));
+    connect(m_keyTtlAction, &QAction::triggered, this, &MainWindow::setSelectedKeysTtl);
+    m_keyCopyKeyAction = makeAction(QStringLiteral("contextCopyKeyAction"), tr("Copy key"));
+    connect(m_keyCopyKeyAction, &QAction::triggered, this, [this] {
+        if (m_contextKey.isValid())
+            copyKey(m_contextKey);
+    });
+    m_keyCopyValueAction =
+        makeAction(QStringLiteral("contextCopyValueAction"), tr("Copy value"));
+    connect(m_keyCopyValueAction, &QAction::triggered, this, [this] {
+        if (m_contextKey.isValid())
+            copyValue(m_contextKey);
+    });
+    m_keyCopyToAction =
+        makeAction(QStringLiteral("contextCopyToAction"), tr("Copy to connection..."));
+    connect(m_keyCopyToAction, &QAction::triggered, this, [this] {
+        if (m_contextKey.isValid())
+            copyKeyToProfile(m_contextKey);
+    });
+    m_keyRefreshAction =
+        makeAction(QStringLiteral("contextRefreshValueAction"), tr("Refresh value"));
+    connect(m_keyRefreshAction, &QAction::triggered, this, [this] {
+        if (m_contextKey.isValid())
+            m_valuePanel->loadKey(m_contextKey);
+    });
+    m_namespaceFilterAction =
+        makeAction(QStringLiteral("contextFilterNamespaceAction"), tr("Filter this namespace"));
+    connect(m_namespaceFilterAction, &QAction::triggered, this, [this] {
+        if (!m_contextPath.isEmpty())
+            applyNamespaceFilter(m_contextPath);
+    });
+    m_copyPrefixAction = makeAction(QStringLiteral("contextCopyPrefixAction"), tr("Copy prefix"));
+    connect(m_copyPrefixAction, &QAction::triggered, this, [this] {
+        if (!m_contextPath.isEmpty() && m_treeModel)
+            QGuiApplication::clipboard()->setText(m_contextPath + m_treeModel->separator());
+    });
+}
+
+QAction *MainWindow::connectionsToggleAction() const
+{
+    return m_connectionsDock ? m_connectionsDock->toggleViewAction() : nullptr;
+}
+
+bool MainWindow::isReadOnly() const
+{
+    return m_readOnlyDock && m_readOnlyDock->isChecked();
+}
+
+void MainWindow::setReadOnlyMode(bool readOnly)
+{
+    if (m_readOnlyDock)
+        m_readOnlyDock->setChecked(readOnly);
+}
+
+void MainWindow::toggleConnection()
+{
+    connectOrDisconnect();
+}
+
+void MainWindow::refreshKeys()
+{
+    if (!m_router.isReady()) {
+        if (m_scanStatus)
+            m_scanStatus->setText(tr("Not connected"));
+        return;
+    }
+    startScan();
+}
+
+void MainWindow::renameSelectedKey()
+{
+    const QVector<KeyInfo> keys = selectedKeys();
+    if (keys.size() == 1)
+        renameKey(keys.first());
 }
 
 MainWindow::~MainWindow()
@@ -460,6 +553,9 @@ void MainWindow::buildUi()
     addDockWidget(Qt::LeftDockWidgetArea, connectionsDock);
     connect(connectionsDock, &QDockWidget::visibilityChanged, this,
             [this](bool visible) { emit connectionsDockVisibilityChanged(visible); });
+    QAction *dockToggle = connectionsDock->toggleViewAction();
+    dockToggle->setObjectName(QStringLiteral("connectionsDockAction"));
+    dockToggle->setText(tr("Connections Dock"));
 
     m_hostEdit->setAccessibleName(tr("Host"));
     m_portSpin->setAccessibleName(tr("Port"));
@@ -497,6 +593,7 @@ void MainWindow::buildUi()
     connect(m_readOnlyDock, &QCheckBox::toggled, this, [this](bool readOnly) {
         const QSignalBlocker blocker(m_readOnlyCheck);
         m_readOnlyCheck->setChecked(readOnly);
+        emit readOnlyChanged(readOnly);
         m_valuePanel->setReadOnly(readOnly);
         if (ConnectionProfile *selected = selectedProfile()) {
             selected->readOnly = readOnly;
@@ -603,6 +700,7 @@ void MainWindow::buildUi()
         }
     });
     connect(m_readOnlyCheck, &QCheckBox::toggled, this, [this](bool readOnly) {
+        emit readOnlyChanged(readOnly);
         m_valuePanel->setReadOnly(readOnly);
         if (ConnectionProfile *selected = selectedProfile()) {
             selected->readOnly = readOnly;
@@ -1373,53 +1471,43 @@ void MainWindow::showKeyContextMenu(const QPoint &position)
     if (!m_keyTable->selectionModel()->isRowSelected(index.row(), QModelIndex()))
         m_keyTable->selectRow(index.row());
 
+    m_contextKey = KeyInfo{};
     const QVector<KeyInfo> selection = selectedKeys();
     if (selection.size() > 1) {
         QMenu menu(this);
-        QAction *deleteAction = menu.addAction(tr("Delete %1 keys...").arg(selection.size()));
-        deleteAction->setObjectName(QStringLiteral("batchDeleteAction"));
-        QAction *ttlAction = menu.addAction(tr("Set TTL for %1 keys...").arg(selection.size()));
-        ttlAction->setObjectName(QStringLiteral("batchTtlAction"));
-        deleteAction->setEnabled(!m_readOnlyCheck->isChecked());
-        ttlAction->setEnabled(!m_readOnlyCheck->isChecked());
-        const QAction *chosen = menu.exec(m_keyTable->viewport()->mapToGlobal(position));
-        if (chosen == deleteAction)
-            deleteSelectedKeys();
-        else if (chosen == ttlAction)
-            setSelectedKeysTtl();
+        m_keyDeleteAction->setText(tr("Delete %1 keys...").arg(selection.size()));
+        m_keyTtlAction->setText(tr("Set TTL for %1 keys...").arg(selection.size()));
+        m_keyDeleteAction->setEnabled(!m_readOnlyCheck->isChecked());
+        m_keyTtlAction->setEnabled(!m_readOnlyCheck->isChecked());
+        menu.addAction(m_keyDeleteAction);
+        menu.addAction(m_keyTtlAction);
+        menu.exec(m_keyTable->viewport()->mapToGlobal(position));
         return;
     }
 
     const KeyInfo info = m_model->keyAt(index.row());
     if (!info.isValid())
         return;
-
+    m_contextKey = info;
     QMenu menu(this);
-    QAction *renameAction = menu.addAction(tr("Rename..."));
-    QAction *deleteAction = menu.addAction(tr("Delete..."));
-    renameAction->setEnabled(!m_readOnlyCheck->isChecked());
-    deleteAction->setEnabled(!m_readOnlyCheck->isChecked());
+    m_keyRenameAction->setText(tr("Rename..."));
+    m_keyDeleteAction->setText(tr("Delete..."));
+    m_keyRenameAction->setEnabled(!m_readOnlyCheck->isChecked());
+    m_keyDeleteAction->setEnabled(!m_readOnlyCheck->isChecked());
+    m_keyCopyKeyAction->setEnabled(true);
+    m_keyCopyValueAction->setEnabled(true);
+    m_keyCopyToAction->setEnabled(!m_readOnlyCheck->isChecked() && !m_profiles.isEmpty());
+    m_keyRefreshAction->setEnabled(true);
+    menu.addAction(m_keyRenameAction);
+    menu.addAction(m_keyDeleteAction);
     menu.addSeparator();
-    QAction *copyKeyAction = menu.addAction(tr("Copy key"));
-    QAction *copyValueAction = menu.addAction(tr("Copy value"));
-    QAction *copyToAction = menu.addAction(tr("Copy to connection..."));
-    copyToAction->setEnabled(!m_readOnlyCheck->isChecked() && !m_profiles.isEmpty());
+    menu.addAction(m_keyCopyKeyAction);
+    menu.addAction(m_keyCopyValueAction);
+    menu.addAction(m_keyCopyToAction);
     menu.addSeparator();
-    QAction *refreshAction = menu.addAction(tr("Refresh value"));
-
-    const QAction *chosen = menu.exec(m_keyTable->viewport()->mapToGlobal(position));
-    if (chosen == renameAction)
-        renameKey(info);
-    else if (chosen == deleteAction)
-        deleteKey(info);
-    else if (chosen == copyKeyAction)
-        copyKey(info);
-    else if (chosen == copyValueAction)
-        copyValue(info);
-    else if (chosen == copyToAction)
-        copyKeyToProfile(info);
-    else if (chosen == refreshAction)
-        m_valuePanel->loadKey(info);
+    menu.addAction(m_keyRefreshAction);
+    menu.exec(m_keyTable->viewport()->mapToGlobal(position));
+    m_contextKey = KeyInfo{};
 }
 
 void MainWindow::deleteSelectedKeys()
@@ -1569,42 +1657,35 @@ void MainWindow::showTreeContextMenu(const QPoint &position)
         return;
 
     if (m_treeModel->isKey(index)) {
-        const KeyInfo info = m_treeModel->keyInfo(index);
+        m_contextKey = m_treeModel->keyInfo(index);
         QMenu menu(this);
-        QAction *renameAction = menu.addAction(tr("Rename..."));
-        QAction *deleteAction = menu.addAction(tr("Delete..."));
-        renameAction->setEnabled(!m_readOnlyCheck->isChecked());
-        deleteAction->setEnabled(!m_readOnlyCheck->isChecked());
+        m_keyRenameAction->setText(tr("Rename..."));
+        m_keyDeleteAction->setText(tr("Delete..."));
+        m_keyRenameAction->setEnabled(!m_readOnlyCheck->isChecked());
+        m_keyDeleteAction->setEnabled(!m_readOnlyCheck->isChecked());
+        m_keyCopyToAction->setEnabled(!m_readOnlyCheck->isChecked() && !m_profiles.isEmpty());
+        m_keyCopyKeyAction->setEnabled(true);
+        m_keyCopyValueAction->setEnabled(true);
+        menu.addAction(m_keyRenameAction);
+        menu.addAction(m_keyDeleteAction);
         menu.addSeparator();
-        QAction *copyKeyAction = menu.addAction(tr("Copy key"));
-        QAction *copyValueAction = menu.addAction(tr("Copy value"));
-        QAction *copyToAction = menu.addAction(tr("Copy to connection..."));
-        copyToAction->setEnabled(!m_readOnlyCheck->isChecked() && !m_profiles.isEmpty());
-        const QAction *chosen = menu.exec(m_treeView->viewport()->mapToGlobal(position));
-        if (chosen == renameAction)
-            renameKey(info);
-        else if (chosen == deleteAction)
-            deleteKey(info);
-        else if (chosen == copyKeyAction)
-            copyKey(info);
-        else if (chosen == copyValueAction)
-            copyValue(info);
-        else if (chosen == copyToAction)
-            copyKeyToProfile(info);
+        menu.addAction(m_keyCopyKeyAction);
+        menu.addAction(m_keyCopyValueAction);
+        menu.addAction(m_keyCopyToAction);
+        menu.exec(m_treeView->viewport()->mapToGlobal(position));
+        m_contextKey = KeyInfo{};
         return;
     }
 
     const QString path = index.data(NamespaceTreeModel::PathRole).toString();
     if (path.isEmpty())
         return;
+    m_contextPath = path;
     QMenu menu(this);
-    QAction *filterAction = menu.addAction(tr("Filter this namespace"));
-    QAction *copyPrefixAction = menu.addAction(tr("Copy prefix"));
-    const QAction *chosen = menu.exec(m_treeView->viewport()->mapToGlobal(position));
-    if (chosen == filterAction)
-        applyNamespaceFilter(path);
-    else if (chosen == copyPrefixAction)
-        QGuiApplication::clipboard()->setText(path + m_treeModel->separator());
+    menu.addAction(m_namespaceFilterAction);
+    menu.addAction(m_copyPrefixAction);
+    menu.exec(m_treeView->viewport()->mapToGlobal(position));
+    m_contextPath.clear();
 }
 
 void MainWindow::renameKey(const KeyInfo &info)

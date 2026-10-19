@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.37）
+# KeyDis 使用说明（0.4.38）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -50,6 +50,17 @@ Unix Socket 示例：
 Unix Socket 使用 `QLocalSocket`，不需要 TLS；当前不支持 SSH/Sentinel/Cluster 与 Unix Socket 组合。
 
 连接成功后，KeyDis 自动执行一次 `SCAN`（默认 `*`）。
+
+### 菜单与工具栏
+
+- **File**：New Tab（`Ctrl+T`/`Ctrl+N`）、Close Tab（`Ctrl+W`）、Quit（`Ctrl+Q`）；
+- **View**：Split Right（`Ctrl+Shift+T`）、Close Split、Connections Dock（`Ctrl+B`）、Full Screen（`F11`）、Toolbars；
+- **Connection**：Connect / Disconnect、Refresh Keys（`F5`）、Read-only Mode；
+- **Data**：Rename Key（`F2`）、Delete Selected Keys、Set TTL；
+- **Help**：About KeyDis、About Qt；
+- 三个可拖动工具栏（Connection / Data / View）与菜单复用同一批 `QAction`；
+- View 中的 Connections Dock 直接使用当前会话 `dockWidget->toggleViewAction()`，勾选状态与面板显隐同步；
+- 没有单独的 Edit 菜单：撤销/重做属于当前值编辑面板，避免全局快捷键抢占文本输入。
 
 ### 多连接标签页
 

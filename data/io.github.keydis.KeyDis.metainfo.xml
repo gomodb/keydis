@@ -18,6 +18,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.38" date="2026-10-20">
+      <description>
+        <p>KDE-style menu and toolbar redesign: shared QActions, three movable toolbars, dock toggleViewAction, full screen, and reusable context-menu actions.</p>
+      </description>
+    </release>
     <release version="0.4.37" date="2026-10-20">
       <description>
         <p>Restore the Connections panel from View / toolbar (Ctrl+B) and make split handles easier to drag.</p>

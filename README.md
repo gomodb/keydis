@@ -13,7 +13,7 @@ KeyDis 使用 **C++20、Qt 6 Widgets 和 KDE Frameworks 6** 构建，面向 Linu
 ## 功能
 
 - **连接**：Standalone、TLS（CA/客户端证书）、Unix Socket、SSH、SSH + Cluster（SOCKS5）、Sentinel、Redis Cluster、ACL、KWallet、只读模式。
-- **多连接**：连接标签页、左右分屏、独立窗口。
+- **多连接**：连接标签页、左右分屏、可拖动分隔条、KDE 风格菜单/工具栏。
 - **Key 浏览**：SCAN 分页、命名空间树、类型/pattern 过滤、TTL、多选批量删除/TTL、跨连接复制。
 - **值查看与编辑**：String、Hash、List、Set、ZSet、Stream、RedisJSON、GEO。
   - String：二进制安全编辑、Hex/Base64、gzip/zlib/zstd/Brotli、MessagePack、Protobuf、Bitmap、HyperLogLog、大值分段加载。
@@ -23,7 +23,7 @@ KeyDis 使用 **C++20、Qt 6 Widgets 和 KDE Frameworks 6** 构建，面向 Linu
 - **工具**：Dashboard、Slowlog、Clients、Pub/Sub、Monitor、内存分析、Cluster 节点、DUMP/RESTORE 导入导出。
 - **KDE 集成**：KRunner、系统主题、KWallet、中文界面。
 
-当前版本：**0.4.37**。
+当前版本：**0.4.38**。
 
 ## 构建
 

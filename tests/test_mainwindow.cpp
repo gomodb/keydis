@@ -33,6 +33,7 @@
 #include <QTreeWidget>
 #include <QTableWidget>
 #include <QTest>
+#include <QToolBar>
 #include <QTimer>
 
 namespace KeyDis::Test {
@@ -429,6 +430,16 @@ void TestMainWindow::hostsMultipleSessionTabs()
     auto *splitter = host.findChild<QSplitter *>(QStringLiteral("sessionSplitter"));
     QVERIFY(splitter);
     QCOMPARE(splitter->handleWidth(), 8);
+    QCOMPARE(host.centralWidget(), splitter);
+    auto *connectionToolBar =
+        host.findChild<QToolBar *>(QStringLiteral("toolBarConnection"));
+    auto *newTabAction = host.findChild<QAction *>(QStringLiteral("newSessionAction"));
+    auto *refreshAction = host.findChild<QAction *>(QStringLiteral("refreshKeysAction"));
+    QVERIFY(connectionToolBar);
+    QVERIFY(newTabAction);
+    QVERIFY(refreshAction);
+    QVERIFY(connectionToolBar->actions().contains(newTabAction));
+    QVERIFY(connectionToolBar->actions().contains(refreshAction));
     tabs->setCurrentWidget(first);
     auto *dock = first->findChild<QDockWidget *>(QStringLiteral("connectionsDock"));
     auto *dockAction = host.findChild<QAction *>(QStringLiteral("connectionsDockAction"));
@@ -437,8 +448,10 @@ void TestMainWindow::hostsMultipleSessionTabs()
     QVERIFY(!dock->isHidden());
     dock->close();
     QVERIFY(dock->isHidden());
+    QVERIFY(!dockAction->isChecked());
     dockAction->trigger();
     QVERIFY(!dock->isHidden());
+    QVERIFY(dockAction->isChecked());
 
     QVERIFY(QMetaObject::invokeMethod(first, "newWindow", Qt::DirectConnection));
     QTRY_COMPARE_WITH_TIMEOUT(host.sessionCount(), 3, 5000);

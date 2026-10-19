@@ -9,6 +9,7 @@
 
 #include <KXmlGuiWindow>
 
+class QAction;
 class QCheckBox;
 class QComboBox;
 class QDockWidget;
@@ -53,6 +54,8 @@ public:
     void showTab(const QString &name);
     void setConnectionsDockVisible(bool visible);
     [[nodiscard]] bool connectionsDockVisible() const;
+    [[nodiscard]] QAction *connectionsToggleAction() const;
+    [[nodiscard]] bool isReadOnly() const;
 
 public slots:
     void newWindow();
@@ -61,15 +64,21 @@ public slots:
     void deleteSelectedKeys();
     void setSelectedKeysTtl();
     void setClusterMode(bool cluster);
+    void toggleConnection();
+    void refreshKeys();
+    void renameSelectedKey();
+    void setReadOnlyMode(bool readOnly);
 
 signals:
     void sessionTitleChanged(const QString &title);
     void newSessionRequested();
     void newSessionWithProfileRequested(const QString &profileId);
     void connectionsDockVisibilityChanged(bool visible);
+    void readOnlyChanged(bool readOnly);
 
 private:
     void buildUi();
+    void createContextActions();
     void connectOrDisconnect(bool retryAuth = false);
     void startScan();
     void selectDatabase(int db);
@@ -117,6 +126,17 @@ private:
     QTabWidget *m_tabs = nullptr;
     QTreeWidget *m_profileList = nullptr;
     QDockWidget *m_connectionsDock = nullptr;
+    KeyInfo m_contextKey;
+    QString m_contextPath;
+    QAction *m_keyRenameAction = nullptr;
+    QAction *m_keyDeleteAction = nullptr;
+    QAction *m_keyTtlAction = nullptr;
+    QAction *m_keyCopyKeyAction = nullptr;
+    QAction *m_keyCopyValueAction = nullptr;
+    QAction *m_keyCopyToAction = nullptr;
+    QAction *m_keyRefreshAction = nullptr;
+    QAction *m_namespaceFilterAction = nullptr;
+    QAction *m_copyPrefixAction = nullptr;
     QSet<QString> m_collapsedGroups;
     QVector<ConnectionProfile> m_profiles;
     QString m_activeProfileId;

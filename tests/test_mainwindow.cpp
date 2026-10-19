@@ -133,10 +133,14 @@ void TestMainWindow::browsesAndShowsValues()
     auto *hashMoreButton = window.findChild<QPushButton *>(QStringLiteral("hashMoreButton"));
     auto *hashBatchButton = window.findChild<QPushButton *>(QStringLiteral("hashBatchEditButton"));
     auto *undoButton = window.findChild<QPushButton *>(QStringLiteral("undoButton"));
+    auto *redoButton = window.findChild<QPushButton *>(QStringLiteral("redoButton"));
     auto *valueFilter = window.findChild<QLineEdit *>(QStringLiteral("valueFilter"));
     auto *hexButton = window.findChild<QPushButton *>(QStringLiteral("hexViewButton"));
     auto *keyLabel = window.findChild<QLabel *>(QStringLiteral("keyLabel"));
     auto *saveButton = window.findChild<QPushButton *>(QStringLiteral("saveStringButton"));
+    auto *discardStringButton =
+        window.findChild<QPushButton *>(QStringLiteral("discardStringButton"));
+    auto *dirtyLabel = window.findChild<QLabel *>(QStringLiteral("dirtyLabel"));
     auto *readOnlyCheck = window.findChild<QCheckBox *>(QStringLiteral("readOnlyCheck"));
     auto *profileList = window.findChild<QTreeWidget *>(QStringLiteral("profileList"));
     auto *profileConnect = window.findChild<QPushButton *>(QStringLiteral("profileConnectButton"));
@@ -156,10 +160,13 @@ void TestMainWindow::browsesAndShowsValues()
     QVERIFY(hashMoreButton);
     QVERIFY(hashBatchButton);
     QVERIFY(undoButton);
+    QVERIFY(redoButton);
     QVERIFY(valueFilter);
     QVERIFY(hexButton);
     QVERIFY(keyLabel);
     QVERIFY(saveButton);
+    QVERIFY(discardStringButton);
+    QVERIFY(dirtyLabel);
     QVERIFY(readOnlyCheck);
     QVERIFY(profileList);
     QVERIFY(profileConnect);
@@ -193,6 +200,12 @@ void TestMainWindow::browsesAndShowsValues()
     readOnlyCheck->setChecked(false);
     QVERIFY(saveButton->isEnabled());
 
+    stringEdit->setPlainText(QStringLiteral("hello2"));
+    QVERIFY(!dirtyLabel->isHidden());
+    QVERIFY(discardStringButton->isEnabled());
+    QTest::mouseClick(discardStringButton, Qt::LeftButton);
+    QCOMPARE(stringEdit->toPlainText(), QStringLiteral("hello"));
+    QVERIFY(dirtyLabel->isHidden());
     stringEdit->setPlainText(QStringLiteral("hello2"));
     QTest::mouseClick(saveButton, Qt::LeftButton);
     QTest::qWait(200);
@@ -233,6 +246,11 @@ void TestMainWindow::browsesAndShowsValues()
     QTest::mouseClick(hashBatchButton, Qt::LeftButton);
     QTRY_COMPARE_WITH_TIMEOUT(hashTable->item(0, 1)->text(), QStringLiteral("batch-value"), 5000);
     QTRY_VERIFY_WITH_TIMEOUT(undoButton->isEnabled(), 2000);
+    QTest::mouseClick(undoButton, Qt::LeftButton);
+    QTRY_COMPARE_WITH_TIMEOUT(hashTable->item(0, 1)->text(), QStringLiteral("value2"), 5000);
+    QTRY_VERIFY_WITH_TIMEOUT(redoButton->isEnabled(), 2000);
+    QTest::mouseClick(redoButton, Qt::LeftButton);
+    QTRY_COMPARE_WITH_TIMEOUT(hashTable->item(0, 1)->text(), QStringLiteral("batch-value"), 5000);
     QTest::mouseClick(undoButton, Qt::LeftButton);
     QTRY_COMPARE_WITH_TIMEOUT(hashTable->item(0, 1)->text(), QStringLiteral("value2"), 5000);
 

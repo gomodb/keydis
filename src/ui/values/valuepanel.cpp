@@ -221,19 +221,29 @@ void ValuePanel::buildUi()
     m_ttlLabel->setMinimumWidth(150);
     m_ttlLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     header->addWidget(m_ttlLabel);
+    m_dirtyLabel = new QLabel(this);
+    m_dirtyLabel->setObjectName(QStringLiteral("dirtyLabel"));
+    m_dirtyLabel->setStyleSheet(QStringLiteral("color: #f67400;"));
+    m_dirtyLabel->setVisible(false);
+    header->addWidget(m_dirtyLabel);
 
     auto *refreshButton = new QPushButton(tr("Refresh"), this);
     m_undoButton = new QPushButton(tr("Undo"), this);
     m_undoButton->setObjectName(QStringLiteral("undoButton"));
     m_undoButton->setEnabled(false);
+    m_redoButton = new QPushButton(tr("Redo"), this);
+    m_redoButton->setObjectName(QStringLiteral("redoButton"));
+    m_redoButton->setEnabled(false);
     auto *ttlButton = new QPushButton(tr("TTL..."), this);
     auto *deleteButton = new QPushButton(tr("Delete"), this);
     header->addWidget(refreshButton);
     header->addWidget(m_undoButton);
+    header->addWidget(m_redoButton);
     header->addWidget(ttlButton);
     header->addWidget(deleteButton);
-    m_writeWidgets << m_undoButton << ttlButton << deleteButton;
+    m_writeWidgets << m_undoButton << m_redoButton << ttlButton << deleteButton;
     connect(m_undoButton, &QPushButton::clicked, this, &ValuePanel::undoLast);
+    connect(m_redoButton, &QPushButton::clicked, this, &ValuePanel::redoLast);
     layout->addLayout(header);
 
     m_valueFilter = new QLineEdit(this);
@@ -290,15 +300,21 @@ QWidget *ValuePanel::buildStringPage()
     rangeButton->setObjectName(QStringLiteral("replaceRangeButton"));
     auto *hexButton = new QPushButton(tr("Hex view..."), page);
     hexButton->setObjectName(QStringLiteral("hexViewButton"));
+    m_stringDiscardButton = new QPushButton(tr("Discard"), page);
+    m_stringDiscardButton->setObjectName(QStringLiteral("discardStringButton"));
+    m_stringDiscardButton->setEnabled(false);
     row->addWidget(saveButton);
+    row->addWidget(m_stringDiscardButton);
     row->addWidget(rangeButton);
     row->addWidget(hexButton);
-    m_writeWidgets << saveButton << rangeButton;
+    m_writeWidgets << saveButton << m_stringDiscardButton << rangeButton;
     row->addStretch();
     layout->addLayout(row);
     connect(saveButton, &QPushButton::clicked, this, &ValuePanel::saveString);
     connect(rangeButton, &QPushButton::clicked, this, &ValuePanel::partialStringEdit);
     connect(hexButton, &QPushButton::clicked, this, &ValuePanel::showHexView);
+    connect(m_stringDiscardButton, &QPushButton::clicked, this, &ValuePanel::discardString);
+    connect(m_stringEdit, &QPlainTextEdit::textChanged, this, &ValuePanel::updateDirtyLabel);
     return page;
 }
 
@@ -352,7 +368,9 @@ QWidget *ValuePanel::buildHashPage()
             }
             QList<QList<QByteArray>> undo;
             undo.append({QByteArrayLiteral("HSET"), key, field.toUtf8(), oldValue.toUtf8()});
-            pushUndo(tr("hash field"), undo);
+            QList<QList<QByteArray>> redo;
+            redo.append({QByteArrayLiteral("HSET"), key, field.toUtf8(), newValue.toUtf8()});
+            pushUndo(tr("hash field"), undo, redo);
             m_hashOriginal.insert(field, newValue);
             setStatus(tr("Field updated"));
         });
@@ -417,7 +435,10 @@ QWidget *ValuePanel::buildListPage()
             QList<QList<QByteArray>> undo;
             undo.append({QByteArrayLiteral("LSET"), key, QByteArray::number(index),
                          oldValue.toUtf8()});
-            pushUndo(tr("list element"), undo);
+            QList<QList<QByteArray>> redo;
+            redo.append({QByteArrayLiteral("LSET"), key, QByteArray::number(index),
+                         newValue.toUtf8()});
+            pushUndo(tr("list element"), undo, redo);
             m_listOriginal.insert(index, newValue);
             setStatus(tr("List element updated"));
         });
@@ -507,7 +528,9 @@ QWidget *ValuePanel::buildZSetPage()
             }
             QList<QList<QByteArray>> undo;
             undo.append({QByteArrayLiteral("ZADD"), key, oldScore.toUtf8(), member.toUtf8()});
-            pushUndo(tr("zset score"), undo);
+            QList<QList<QByteArray>> redo;
+            redo.append({QByteArrayLiteral("ZADD"), key, newScore.toUtf8(), member.toUtf8()});
+            pushUndo(tr("zset score"), undo, redo);
             m_zsetOriginal.insert(member, newScore);
             setStatus(tr("Score updated"));
         });
@@ -636,12 +659,16 @@ QWidget *ValuePanel::buildJsonPage()
     auto *formatButton = new QPushButton(tr("Format JSON"), page);
     auto *saveButton = new QPushButton(tr("Save JSON"), page);
     saveButton->setObjectName(QStringLiteral("saveJsonButton"));
+    m_jsonDiscardButton = new QPushButton(tr("Discard"), page);
+    m_jsonDiscardButton->setObjectName(QStringLiteral("discardJsonButton"));
+    m_jsonDiscardButton->setEnabled(false);
     row->addWidget(refreshTreeButton);
     row->addWidget(m_jsonAddButton);
     row->addWidget(m_jsonDeleteButton);
     row->addWidget(m_jsonRenameButton);
     row->addWidget(formatButton);
     row->addWidget(saveButton);
+    row->addWidget(m_jsonDiscardButton);
     row->addStretch();
     layout->addLayout(row);
     connect(loadPathButton, &QPushButton::clicked, this, &ValuePanel::loadJson);
@@ -652,8 +679,11 @@ QWidget *ValuePanel::buildJsonPage()
     connect(formatButton, &QPushButton::clicked, this, &ValuePanel::formatJson);
     connect(m_jsonTree, &QTreeWidget::itemChanged, this, &ValuePanel::handleJsonTreeEdited);
     connect(m_jsonTree, &QTreeWidget::itemSelectionChanged, this, &ValuePanel::updateJsonButtons);
-    m_writeWidgets << m_jsonAddButton << m_jsonDeleteButton << m_jsonRenameButton << saveButton;
+    m_writeWidgets << m_jsonAddButton << m_jsonDeleteButton << m_jsonRenameButton << saveButton
+                   << m_jsonDiscardButton;
     connect(saveButton, &QPushButton::clicked, this, &ValuePanel::saveJson);
+    connect(m_jsonDiscardButton, &QPushButton::clicked, this, &ValuePanel::discardJson);
+    connect(m_jsonEdit, &QPlainTextEdit::textChanged, this, &ValuePanel::updateDirtyLabel);
     return page;
 }
 
@@ -689,11 +719,14 @@ void ValuePanel::loadKey(const KeyInfo &info)
     }
     ++m_generation;
     clearUndo();
+    m_stringDirty = false;
+    m_jsonDirty = false;
     if (m_valueFilter) {
         m_valueFilter->clear();
     }
     m_key = info.key;
     m_type = info.type;
+    updateDirtyLabel();
     if (m_valueFilter) {
         m_valueFilter->setVisible(m_type == QLatin1String("hash")
                                   || m_type == QLatin1String("list")
@@ -749,6 +782,11 @@ void ValuePanel::clearKey()
         m_valueFilter->setVisible(false);
     }
     m_stringRaw.clear();
+    m_stringLoaded.clear();
+    m_jsonLoaded.clear();
+    m_stringDirty = false;
+    m_jsonDirty = false;
+    updateDirtyLabel();
     m_key.clear();
     m_type.clear();
     m_ttlMs = -2;
@@ -814,6 +852,7 @@ void ValuePanel::setReadOnly(bool readOnly)
                                                    | QAbstractItemView::EditKeyPressed);
     }
     updateJsonButtons();
+    updateDirtyLabel();
     updateUndoButton();
 }
 
@@ -850,6 +889,9 @@ void ValuePanel::loadString()
                    }
                    m_stringRaw = reply.scalar;
                    m_stringEdit->setPlainText(scalarText(reply));
+                   m_stringLoaded = m_stringEdit->toPlainText();
+                   m_stringDirty = false;
+                   updateDirtyLabel();
                    setStatus(tr("String loaded"));
                });
 }
@@ -1702,6 +1744,9 @@ void ValuePanel::loadJson()
                        return;
                    }
                    m_jsonEdit->setPlainText(QString::fromUtf8(reply.scalar));
+                   m_jsonLoaded = m_jsonEdit->toPlainText();
+                   m_jsonDirty = false;
+                   updateDirtyLabel();
                    rebuildJsonTree();
                    setStatus(tr("JSON loaded"));
                });
@@ -1729,6 +1774,9 @@ void ValuePanel::saveJson()
                        showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
                        return;
                    }
+                   m_jsonLoaded = m_jsonEdit->toPlainText();
+                   m_jsonDirty = false;
+                   updateDirtyLabel();
                    setStatus(tr("JSON saved"));
                    rebuildJsonTree();
                    emit keyChanged(m_key);
@@ -1752,6 +1800,9 @@ void ValuePanel::saveString()
                        return;
                    }
                    m_stringRaw = m_stringEdit->toPlainText().toUtf8();
+                   m_stringLoaded = m_stringEdit->toPlainText();
+                   m_stringDirty = false;
+                   updateDirtyLabel();
                    setStatus(tr("String saved"));
                    emit keyChanged(m_key);
                });
@@ -1897,7 +1948,7 @@ void ValuePanel::editHashSelected()
         return;
     const QList<QByteArray> hsetArgs = args;
     QPointer<ValuePanel> guard(this);
-    auto complete = [guard, this, rows] {
+    auto complete = [guard, this, rows, hsetArgs] {
         if (!guard)
             return;
         setStatus(tr("Hash fields updated"));
@@ -1909,7 +1960,9 @@ void ValuePanel::editHashSelected()
         if (inverse.size() > 3) {
             QList<QList<QByteArray>> undoCommands;
             undoCommands.append(inverse);
-            pushUndo(tr("hash fields"), undoCommands);
+            QList<QList<QByteArray>> redoCommands;
+            redoCommands.append(hsetArgs);
+            pushUndo(tr("hash fields"), undoCommands, redoCommands);
         }
         loadHash();
     };
@@ -1964,7 +2017,7 @@ void ValuePanel::editListSelected()
         QList<QList<QByteArray>> inverse;
         for (const auto &[index, oldValue] : rows)
             inverse.append({QByteArrayLiteral("LSET"), m_key, index.toUtf8(), oldValue.toUtf8()});
-        pushUndo(tr("list elements"), inverse);
+        pushUndo(tr("list elements"), inverse, commands);
         loadList();
     });
 }
@@ -1991,7 +2044,7 @@ void ValuePanel::editSetSelected()
     }
     if (commands.isEmpty())
         return;
-    runCommands(commands, [this, rows](bool success) {
+    runCommands(commands, [this, rows, commands](bool success) {
         if (!success)
             return;
         setStatus(tr("Set members updated"));
@@ -2002,7 +2055,7 @@ void ValuePanel::editSetSelected()
             inverse.append({QByteArrayLiteral("SREM"), m_key, newMember.toUtf8()});
             inverse.append({QByteArrayLiteral("SADD"), m_key, oldMember.toUtf8()});
         }
-        pushUndo(tr("set members"), inverse);
+        pushUndo(tr("set members"), inverse, commands);
         loadSet();
     });
 }
@@ -2029,14 +2082,14 @@ void ValuePanel::editZSetSelected()
         }
         commands.append({QByteArrayLiteral("ZADD"), m_key, score.toUtf8(), member.toUtf8()});
     }
-    runCommands(commands, [this, rows](bool success) {
+    runCommands(commands, [this, rows, commands](bool success) {
         if (!success)
             return;
         setStatus(tr("Scores updated"));
         QList<QList<QByteArray>> inverse;
         for (const auto &[member, oldScore] : rows)
             inverse.append({QByteArrayLiteral("ZADD"), m_key, oldScore.toUtf8(), member.toUtf8()});
-        pushUndo(tr("scores"), inverse);
+        pushUndo(tr("scores"), inverse, commands);
         loadZSet();
     });
 }
@@ -2306,11 +2359,13 @@ void ValuePanel::deleteZSetMembers()
     });
 }
 
-void ValuePanel::pushUndo(const QString &label, const QList<QList<QByteArray>> &commands)
+void ValuePanel::pushUndo(const QString &label, const QList<QList<QByteArray>> &undoCommands,
+                          const QList<QList<QByteArray>> &redoCommands)
 {
-    if (commands.isEmpty())
+    if (undoCommands.isEmpty())
         return;
-    m_undoActions.prepend({label, commands});
+    m_undoActions.prepend({label, undoCommands, redoCommands});
+    m_redoActions.clear();
     while (m_undoActions.size() > 20)
         m_undoActions.removeLast();
     updateUndoButton();
@@ -2322,7 +2377,7 @@ void ValuePanel::undoLast()
         return;
     const UndoAction action = m_undoActions.takeFirst();
     QPointer<ValuePanel> guard(this);
-    runCommands(action.commands, [guard, this, action](bool success) {
+    runCommands(action.undoCommands, [guard, this, action](bool success) {
         if (!guard)
             return;
         if (!success) {
@@ -2330,7 +2385,42 @@ void ValuePanel::undoLast()
             updateUndoButton();
             return;
         }
+        if (!action.redoCommands.isEmpty()) {
+            m_redoActions.prepend(action);
+            while (m_redoActions.size() > 20)
+                m_redoActions.removeLast();
+        }
         setStatus(tr("Undone: %1").arg(action.label));
+        if (m_type == QLatin1String("hash"))
+            loadHash();
+        else if (m_type == QLatin1String("list"))
+            loadList();
+        else if (m_type == QLatin1String("set"))
+            loadSet();
+        else if (m_type == QLatin1String("zset"))
+            loadZSet();
+        updateUndoButton();
+    });
+}
+
+void ValuePanel::redoLast()
+{
+    if (m_readOnly || m_redoActions.isEmpty())
+        return;
+    const UndoAction action = m_redoActions.takeFirst();
+    QPointer<ValuePanel> guard(this);
+    runCommands(action.redoCommands, [guard, this, action](bool success) {
+        if (!guard)
+            return;
+        if (!success) {
+            m_redoActions.prepend(action);
+            updateUndoButton();
+            return;
+        }
+        m_undoActions.prepend(action);
+        while (m_undoActions.size() > 20)
+            m_undoActions.removeLast();
+        setStatus(tr("Redone: %1").arg(action.label));
         if (m_type == QLatin1String("hash"))
             loadHash();
         else if (m_type == QLatin1String("list"))
@@ -2346,6 +2436,7 @@ void ValuePanel::undoLast()
 void ValuePanel::clearUndo()
 {
     m_undoActions.clear();
+    m_redoActions.clear();
     updateUndoButton();
 }
 
@@ -2353,6 +2444,49 @@ void ValuePanel::updateUndoButton()
 {
     if (m_undoButton)
         m_undoButton->setEnabled(!m_readOnly && !m_undoActions.isEmpty());
+    if (m_redoButton)
+        m_redoButton->setEnabled(!m_readOnly && !m_redoActions.isEmpty());
+}
+
+void ValuePanel::updateDirtyLabel()
+{
+    if (m_type == QLatin1String("string") && m_stringEdit) {
+        m_stringDirty = m_stringEdit->toPlainText() != m_stringLoaded;
+    } else if ((m_type == QLatin1String("ReJSON-RL") || m_type == QLatin1String("json"))
+               && m_jsonEdit) {
+        m_jsonDirty = m_jsonEdit->toPlainText() != m_jsonLoaded;
+    }
+    const bool dirty = (m_type == QLatin1String("string") && m_stringDirty)
+        || ((m_type == QLatin1String("ReJSON-RL") || m_type == QLatin1String("json")) && m_jsonDirty);
+    if (m_dirtyLabel) {
+        m_dirtyLabel->setText(tr("● Modified"));
+        m_dirtyLabel->setVisible(dirty);
+    }
+    if (m_stringDiscardButton)
+        m_stringDiscardButton->setEnabled(!m_readOnly && m_stringDirty);
+    if (m_jsonDiscardButton)
+        m_jsonDiscardButton->setEnabled(!m_readOnly && m_jsonDirty);
+}
+
+void ValuePanel::discardString()
+{
+    if (m_readOnly || !m_stringDirty)
+        return;
+    m_stringEdit->setPlainText(m_stringLoaded);
+    m_stringDirty = false;
+    updateDirtyLabel();
+    setStatus(tr("String changes discarded"));
+}
+
+void ValuePanel::discardJson()
+{
+    if (m_readOnly || !m_jsonDirty)
+        return;
+    m_jsonEdit->setPlainText(m_jsonLoaded);
+    m_jsonDirty = false;
+    updateDirtyLabel();
+    rebuildJsonTree();
+    setStatus(tr("JSON changes discarded"));
 }
 
 void ValuePanel::setStatus(const QString &text)

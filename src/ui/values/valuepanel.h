@@ -123,8 +123,13 @@ private:
     void runCommand(const QList<QByteArray> &args,
                     std::function<void(const RespValue &, const QString &)> callback);
     void runCommands(const QList<QList<QByteArray>> &commands, std::function<void(bool)> done);
-    void pushUndo(const QString &label, const QList<QList<QByteArray>> &commands);
+    void pushUndo(const QString &label, const QList<QList<QByteArray>> &undoCommands,
+                  const QList<QList<QByteArray>> &redoCommands = {});
     void undoLast();
+    void redoLast();
+    void updateDirtyLabel();
+    void discardString();
+    void discardJson();
     void clearUndo();
     void updateUndoButton();
 
@@ -140,10 +145,17 @@ private:
     QLabel *m_typeLabel = nullptr;
     QLabel *m_ttlLabel = nullptr;
     QLabel *m_statusLabel = nullptr;
+    QLabel *m_dirtyLabel = nullptr;
     QStackedWidget *m_stack = nullptr;
     QPlainTextEdit *m_stringEdit = nullptr;
+    QPushButton *m_stringDiscardButton = nullptr;
     QByteArray m_stringRaw;
+    QString m_stringLoaded;
+    bool m_stringDirty = false;
     QPlainTextEdit *m_jsonEdit = nullptr;
+    QPushButton *m_jsonDiscardButton = nullptr;
+    QString m_jsonLoaded;
+    bool m_jsonDirty = false;
     QLineEdit *m_jsonPathEdit = nullptr;
     QLineEdit *m_valueFilter = nullptr;
     QTreeWidget *m_jsonTree = nullptr;
@@ -160,11 +172,14 @@ private:
     QTableWidget *m_streamGroupsTable = nullptr;
     QTableWidget *m_streamPendingTable = nullptr;
     QPushButton *m_undoButton = nullptr;
+    QPushButton *m_redoButton = nullptr;
     struct UndoAction {
         QString label;
-        QList<QList<QByteArray>> commands;
+        QList<QList<QByteArray>> undoCommands;
+        QList<QList<QByteArray>> redoCommands;
     };
     QVector<UndoAction> m_undoActions;
+    QVector<UndoAction> m_redoActions;
     QPushButton *m_hashMoreButton = nullptr;
     QPushButton *m_listMoreButton = nullptr;
     QPushButton *m_setMoreButton = nullptr;

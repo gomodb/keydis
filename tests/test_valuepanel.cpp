@@ -7,6 +7,9 @@
 #include "core/keyspace/keyinfo.h"
 #include "ui/values/valuepanel.h"
 
+#include <QLabel>
+#include <QPlainTextEdit>
+#include <QPushButton>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
 #include <QTest>
@@ -93,6 +96,21 @@ void TestValuePanel::buildsAndEditsJsonTree()
     QVERIFY(tags);
     QCOMPARE(tags->childCount(), 2);
 
+    auto *jsonEdit = panel.findChild<QPlainTextEdit *>(QStringLiteral("jsonEdit"));
+    auto *discardJson = panel.findChild<QPushButton *>(QStringLiteral("discardJsonButton"));
+    auto *dirtyLabel = panel.findChild<QLabel *>(QStringLiteral("dirtyLabel"));
+    QVERIFY(jsonEdit);
+    QVERIFY(discardJson);
+    QVERIFY(dirtyLabel);
+    const QString originalJson = jsonEdit->toPlainText();
+    jsonEdit->setPlainText(QStringLiteral("{\"changed\":true}"));
+    QVERIFY(!dirtyLabel->isHidden());
+    QVERIFY(discardJson->isEnabled());
+    QTest::mouseClick(discardJson, Qt::LeftButton);
+    QCOMPARE(jsonEdit->toPlainText(), originalJson);
+
+    name = findItem(tree->topLevelItem(0), QStringLiteral("$.name"));
+    QVERIFY(name);
     name->setText(1, QStringLiteral("\"Bob\""));
     bool foundSet = false;
     for (const auto &command : client.commands) {

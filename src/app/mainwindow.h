@@ -54,7 +54,7 @@ public:
 
 private:
     void buildUi();
-    void connectOrDisconnect();
+    void connectOrDisconnect(bool retryAuth = false);
     void startScan();
     void selectDatabase(int db);
     void loadMore();
@@ -108,6 +108,7 @@ private:
     QCheckBox *m_clusterCheck = nullptr;
     QCheckBox *m_readOnlyDock = nullptr;
     QPushButton *m_profileConnectButton = nullptr;
+    QPushButton *m_retryButton = nullptr;
     QPushButton *m_profileEditButton = nullptr;
     QPushButton *m_profileDeleteButton = nullptr;
     QPushButton *m_profileDuplicateButton = nullptr;
@@ -127,6 +128,7 @@ private:
     QPushButton *m_indexAllButton = nullptr;
     QLabel *m_scanStatus = nullptr;
     bool m_indexingAll = false;
+    bool m_authPromptTried = false;
     QTableView *m_keyTable = nullptr;
     QTreeView *m_treeView = nullptr;
     NamespaceTreeModel *m_treeModel = nullptr;

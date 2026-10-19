@@ -192,9 +192,16 @@ void MainWindow::buildUi()
     layout->addWidget(connectionBox);
     connectionBox->hide();
 
+    auto *statusRow = new QHBoxLayout;
     m_statusLabel = new QLabel(tr("Disconnected"), central);
     m_statusLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    layout->addWidget(m_statusLabel);
+    statusRow->addWidget(m_statusLabel, 1);
+    m_retryButton = new QPushButton(tr("Retry"), central);
+    m_retryButton->setObjectName(QStringLiteral("retryButton"));
+    m_retryButton->hide();
+    statusRow->addWidget(m_retryButton);
+    layout->addLayout(statusRow);
+    connect(m_retryButton, &QPushButton::clicked, this, [this] { connectOrDisconnect(); });
 
     m_tabs = new QTabWidget(central);
     m_tabs->setObjectName(QStringLiteral("tabs"));
@@ -614,6 +621,8 @@ void MainWindow::buildUi()
                 m_tlsCheck->isChecked(), m_usernameEdit->text(), m_passwordEdit->text(),
                 m_dbSpin->value());
             m_tools->setConnected(true);
+            m_retryButton->hide();
+            m_authPromptTried = false;
             if (m_clusterCheck->isChecked())
                 appendOutput(tr("[cluster] Browser scans all masters; Dashboard/INFO and "
                                 "server tools show one node."));
@@ -629,16 +638,43 @@ void MainWindow::buildUi()
         } else {
             m_connectButton->setText(tr("Connecting..."));
             m_connectButton->setEnabled(false);
+            m_retryButton->hide();
         }
     });
     connect(&m_router, &RedisClient::errorOccurred, this, [this](const QString &error) {
         appendOutput(QStringLiteral("[error] ") + error);
         m_statusLabel->setText(error);
+        m_statusLabel->setToolTip(error);
+        m_retryButton->show();
         setConnectedUi(false);
         m_dashboard->setConnected(false);
         m_tools->setConnected(false);
         m_connectButton->setText(tr("Connect"));
         m_connectButton->setEnabled(true);
+
+        const bool authRequired = error.contains(QStringLiteral("NOAUTH"), Qt::CaseInsensitive)
+            || error.contains(QStringLiteral("WRONGPASS"), Qt::CaseInsensitive);
+        if (authRequired && !m_authPromptTried
+            && !error.contains(QStringLiteral("without any password configured"),
+                               Qt::CaseInsensitive)) {
+            m_authPromptTried = true;
+            bool ok = false;
+            const QString password = QInputDialog::getText(
+                this, tr("Authentication required"),
+                tr("Redis requested authentication. Enter the password:"),
+                QLineEdit::Password, {}, &ok);
+            if (ok) {
+                m_passwordEdit->setText(password);
+                if (ConnectionProfile *selected = selectedProfile(); selected
+                    && !password.isEmpty()) {
+                    selected->password = password;
+                    SecretStore secrets;
+                    if (secrets.isAvailable())
+                        secrets.writePassword(selected->id, password);
+                }
+                connectOrDisconnect(true);
+            }
+        }
     });
     connect(&m_router, &RedisClient::replyReady, this, [this](const RespValue &reply) {
         if (reply.type == RespType::BulkString || reply.type == RespType::SimpleString) {
@@ -881,7 +917,7 @@ ConnectionProfile *MainWindow::selectedProfile()
     return nullptr;
 }
 
-void MainWindow::connectOrDisconnect()
+void MainWindow::connectOrDisconnect(bool retryAuth)
 {
     if (m_connectButton->text() == tr("Disconnect")) {
         if (m_sshTunnel)
@@ -891,6 +927,8 @@ void MainWindow::connectOrDisconnect()
     }
     if (m_sentinelWatcher)
         m_sentinelWatcher->stop();
+    if (!retryAuth)
+        m_authPromptTried = false;
 
     ConnectionProfile profile;
     if (ConnectionProfile *selected = selectedProfile()) {

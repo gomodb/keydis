@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.5）
+# KeyDis 使用说明（0.4.6）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -30,6 +30,8 @@ Profile 字段：
 | Cluster | Profile 中勾选 Cluster；Host:Port 作为 seed，DB 固定 0 |
 
 连接成功后，KeyDis 自动执行一次 `SCAN`（默认 `*`）。
+
+连接失败时状态栏旁显示 **Retry**；若错误为 `NOAUTH`/`WRONGPASS`，会弹出一次密码输入框，输入后自动重试并写入 KWallet。
 
 ### Cluster 模式
 

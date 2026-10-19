@@ -182,12 +182,17 @@ void ValuePanel::buildUi()
     header->addWidget(m_ttlLabel);
 
     auto *refreshButton = new QPushButton(tr("Refresh"), this);
+    m_undoButton = new QPushButton(tr("Undo"), this);
+    m_undoButton->setObjectName(QStringLiteral("undoButton"));
+    m_undoButton->setEnabled(false);
     auto *ttlButton = new QPushButton(tr("TTL..."), this);
     auto *deleteButton = new QPushButton(tr("Delete"), this);
     header->addWidget(refreshButton);
+    header->addWidget(m_undoButton);
     header->addWidget(ttlButton);
     header->addWidget(deleteButton);
-    m_writeWidgets << ttlButton << deleteButton;
+    m_writeWidgets << m_undoButton << ttlButton << deleteButton;
+    connect(m_undoButton, &QPushButton::clicked, this, &ValuePanel::undoLast);
     layout->addLayout(header);
 
     m_stack = new QStackedWidget(this);
@@ -542,6 +547,7 @@ void ValuePanel::loadKey(const KeyInfo &info)
         return;
     }
     ++m_generation;
+    clearUndo();
     m_key = info.key;
     m_type = info.type;
     m_ttlMs = info.ttlMs;
@@ -586,6 +592,7 @@ void ValuePanel::loadKey(const KeyInfo &info)
 void ValuePanel::clearKey()
 {
     ++m_generation;
+    clearUndo();
     m_key.clear();
     m_type.clear();
     m_ttlMs = -2;
@@ -626,6 +633,7 @@ void ValuePanel::setReadOnly(bool readOnly)
                                                    | QAbstractItemView::SelectedClicked
                                                    | QAbstractItemView::EditKeyPressed);
     }
+    updateUndoButton();
 }
 
 bool ValuePanel::isReadOnly() const
@@ -1500,7 +1508,24 @@ void ValuePanel::editHashSelected()
         return;
     const QList<QByteArray> hsetArgs = args;
     QPointer<ValuePanel> guard(this);
-    runCommand(args, [guard, this, hsetArgs](const RespValue &reply, const QString &error) {
+    auto complete = [guard, this, rows] {
+        if (!guard)
+            return;
+        setStatus(tr("Hash fields updated"));
+        QList<QByteArray> inverse{QByteArrayLiteral("HSET"), m_key};
+        for (const auto &[field, oldValue] : rows) {
+            inverse.append(field.toUtf8());
+            inverse.append(oldValue.toUtf8());
+        }
+        if (inverse.size() > 3) {
+            QList<QList<QByteArray>> undoCommands;
+            undoCommands.append(inverse);
+            pushUndo(tr("hash fields"), undoCommands);
+        }
+        loadHash();
+    };
+    runCommand(args, [guard, this, hsetArgs, complete](const RespValue &reply,
+                                                       const QString &error) {
         if (!guard)
             return;
         if (!error.isEmpty() || reply.isError()) {
@@ -1508,26 +1533,23 @@ void ValuePanel::editHashSelected()
             if (hsetArgs.size() > 4) {
                 QList<QByteArray> hmsetArgs = hsetArgs;
                 hmsetArgs[0] = QByteArrayLiteral("HMSET");
-                runCommand(hmsetArgs, [guard, this](const RespValue &fallback,
-                                                     const QString &fallbackError) {
+                runCommand(hmsetArgs, [guard, this, complete](const RespValue &fallback,
+                                                              const QString &fallbackError) {
                     if (!guard)
                         return;
                     if (!fallbackError.isEmpty() || fallback.isError())
                         showError(fallbackError.isEmpty()
                                       ? QString::fromUtf8(fallback.scalar)
                                       : fallbackError);
-                    else {
-                        setStatus(tr("Hash fields updated"));
-                        loadHash();
-                    }
+                    else
+                        complete();
                 });
                 return;
             }
             showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
             return;
         }
-        setStatus(tr("Hash fields updated"));
-        loadHash();
+        complete();
     });
 }
 
@@ -1546,8 +1568,14 @@ void ValuePanel::editListSelected()
     QList<QList<QByteArray>> commands;
     for (const auto &[index, value] : dialog.values())
         commands.append({QByteArrayLiteral("LSET"), m_key, index.toUtf8(), value.toUtf8()});
-    runCommands(commands, [this] {
+    runCommands(commands, [this, rows, commands](bool success) {
+        if (!success)
+            return;
         setStatus(tr("List elements updated"));
+        QList<QList<QByteArray>> inverse;
+        for (const auto &[index, oldValue] : rows)
+            inverse.append({QByteArrayLiteral("LSET"), m_key, index.toUtf8(), oldValue.toUtf8()});
+        pushUndo(tr("list elements"), inverse);
         loadList();
     });
 }
@@ -1574,8 +1602,18 @@ void ValuePanel::editSetSelected()
     }
     if (commands.isEmpty())
         return;
-    runCommands(commands, [this] {
+    runCommands(commands, [this, rows](bool success) {
+        if (!success)
+            return;
         setStatus(tr("Set members updated"));
+        QList<QList<QByteArray>> inverse;
+        for (const auto &[oldMember, newMember] : rows) {
+            if (oldMember == newMember)
+                continue;
+            inverse.append({QByteArrayLiteral("SREM"), m_key, newMember.toUtf8()});
+            inverse.append({QByteArrayLiteral("SADD"), m_key, oldMember.toUtf8()});
+        }
+        pushUndo(tr("set members"), inverse);
         loadSet();
     });
 }
@@ -1602,17 +1640,23 @@ void ValuePanel::editZSetSelected()
         }
         commands.append({QByteArrayLiteral("ZADD"), m_key, score.toUtf8(), member.toUtf8()});
     }
-    runCommands(commands, [this] {
+    runCommands(commands, [this, rows](bool success) {
+        if (!success)
+            return;
         setStatus(tr("Scores updated"));
+        QList<QList<QByteArray>> inverse;
+        for (const auto &[member, oldScore] : rows)
+            inverse.append({QByteArrayLiteral("ZADD"), m_key, oldScore.toUtf8(), member.toUtf8()});
+        pushUndo(tr("scores"), inverse);
         loadZSet();
     });
 }
 
 void ValuePanel::runCommands(const QList<QList<QByteArray>> &commands,
-                             std::function<void()> done)
+                             std::function<void(bool)> done)
 {
     if (commands.isEmpty()) {
-        done();
+        done(true);
         return;
     }
     auto remaining = std::make_shared<int>(commands.size());
@@ -1630,7 +1674,7 @@ void ValuePanel::runCommands(const QList<QList<QByteArray>> &commands,
             if (--(*remaining) == 0) {
                 if (!errorText->isEmpty())
                     showError(*errorText);
-                done();
+                done(errorText->isEmpty());
             }
         });
     }
@@ -1880,6 +1924,55 @@ void ValuePanel::setStatus(const QString &text)
 {
     m_statusLabel->setStyleSheet({});
     m_statusLabel->setText(text);
+}
+
+void ValuePanel::pushUndo(const QString &label, const QList<QList<QByteArray>> &commands)
+{
+    if (commands.isEmpty())
+        return;
+    m_undoActions.prepend({label, commands});
+    while (m_undoActions.size() > 20)
+        m_undoActions.removeLast();
+    updateUndoButton();
+}
+
+void ValuePanel::undoLast()
+{
+    if (m_readOnly || m_undoActions.isEmpty())
+        return;
+    const UndoAction action = m_undoActions.takeFirst();
+    QPointer<ValuePanel> guard(this);
+    runCommands(action.commands, [guard, this, action](bool success) {
+        if (!guard)
+            return;
+        if (!success) {
+            m_undoActions.prepend(action);
+            updateUndoButton();
+            return;
+        }
+        setStatus(tr("Undone: %1").arg(action.label));
+        if (m_type == QLatin1String("hash"))
+            loadHash();
+        else if (m_type == QLatin1String("list"))
+            loadList();
+        else if (m_type == QLatin1String("set"))
+            loadSet();
+        else if (m_type == QLatin1String("zset"))
+            loadZSet();
+        updateUndoButton();
+    });
+}
+
+void ValuePanel::clearUndo()
+{
+    m_undoActions.clear();
+    updateUndoButton();
+}
+
+void ValuePanel::updateUndoButton()
+{
+    if (m_undoButton)
+        m_undoButton->setEnabled(!m_readOnly && !m_undoActions.isEmpty());
 }
 
 void ValuePanel::showError(const QString &error)

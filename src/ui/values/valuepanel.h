@@ -10,6 +10,7 @@
 #include <QByteArray>
 #include <QList>
 #include <QString>
+#include <QVector>
 
 #include <functional>
 #include <QWidget>
@@ -113,7 +114,11 @@ private:
     void showError(const QString &error);
     void runCommand(const QList<QByteArray> &args,
                     std::function<void(const RespValue &, const QString &)> callback);
-    void runCommands(const QList<QList<QByteArray>> &commands, std::function<void()> done);
+    void runCommands(const QList<QList<QByteArray>> &commands, std::function<void(bool)> done);
+    void pushUndo(const QString &label, const QList<QList<QByteArray>> &commands);
+    void undoLast();
+    void clearUndo();
+    void updateUndoButton();
 
     RedisClient *m_connection = nullptr;
     QByteArray m_key;
@@ -141,6 +146,12 @@ private:
     QTableWidget *m_streamTable = nullptr;
     QTableWidget *m_streamGroupsTable = nullptr;
     QTableWidget *m_streamPendingTable = nullptr;
+    QPushButton *m_undoButton = nullptr;
+    struct UndoAction {
+        QString label;
+        QList<QList<QByteArray>> commands;
+    };
+    QVector<UndoAction> m_undoActions;
     QPushButton *m_hashMoreButton = nullptr;
     QPushButton *m_listMoreButton = nullptr;
     QPushButton *m_setMoreButton = nullptr;

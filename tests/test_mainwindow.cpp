@@ -125,6 +125,7 @@ void TestMainWindow::browsesAndShowsValues()
     auto *hashTable = window.findChild<QTableWidget *>(QStringLiteral("hashTable"));
     auto *hashMoreButton = window.findChild<QPushButton *>(QStringLiteral("hashMoreButton"));
     auto *hashBatchButton = window.findChild<QPushButton *>(QStringLiteral("hashBatchEditButton"));
+    auto *undoButton = window.findChild<QPushButton *>(QStringLiteral("undoButton"));
     auto *keyLabel = window.findChild<QLabel *>(QStringLiteral("keyLabel"));
     auto *saveButton = window.findChild<QPushButton *>(QStringLiteral("saveStringButton"));
     auto *readOnlyCheck = window.findChild<QCheckBox *>(QStringLiteral("readOnlyCheck"));
@@ -145,6 +146,7 @@ void TestMainWindow::browsesAndShowsValues()
     QVERIFY(hashTable);
     QVERIFY(hashMoreButton);
     QVERIFY(hashBatchButton);
+    QVERIFY(undoButton);
     QVERIFY(keyLabel);
     QVERIFY(saveButton);
     QVERIFY(readOnlyCheck);
@@ -219,6 +221,9 @@ void TestMainWindow::browsesAndShowsValues()
     });
     QTest::mouseClick(hashBatchButton, Qt::LeftButton);
     QTRY_COMPARE_WITH_TIMEOUT(hashTable->item(0, 1)->text(), QStringLiteral("batch-value"), 5000);
+    QTRY_VERIFY_WITH_TIMEOUT(undoButton->isEnabled(), 2000);
+    QTest::mouseClick(undoButton, Qt::LeftButton);
+    QTRY_COMPARE_WITH_TIMEOUT(hashTable->item(0, 1)->text(), QStringLiteral("value2"), 5000);
 
     table->selectRow(bigHashRow);
     QTRY_VERIFY_WITH_TIMEOUT(hashTable->rowCount() >= 500, 5000);
@@ -245,7 +250,7 @@ void TestMainWindow::browsesAndShowsValues()
         const RespValue hashValue =
             command(cleanup, {QByteArrayLiteral("HGET"), hashKey, QByteArrayLiteral("field")},
                     &error);
-        QCOMPARE(hashValue.scalar, QByteArray("batch-value"));
+        QCOMPARE(hashValue.scalar, QByteArray("value2"));
         command(cleanup, {QByteArrayLiteral("DEL"), stringKey, hashKey, bigHashKey}, &error);
         command(cleanup, {QByteArrayLiteral("SELECT"), QByteArrayLiteral("1")}, &error);
         command(cleanup, {QByteArrayLiteral("DEL"), QByteArrayLiteral("keydis:ui:db1")}, &error);

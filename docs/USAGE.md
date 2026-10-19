@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.10）
+# KeyDis 使用说明（0.4.11）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -106,6 +106,7 @@ Hash/List/Set/ZSet 每次加载最多 500 个元素；点击 **Load more** 继�
 - **Set**：选中多行 → 输入新成员名，按 `SREM old` + `SADD new` 重命名；
 - **ZSet**：选中多行 → 批量改分数；
 - **String**：**Replace range...** 使用 `SETRANGE key <byte-offset> <replacement>`，只改指定字节区间；
+- **Undo**：Hash/List/Set/ZSet 的批量编辑成功后，可用值面板顶部的 **Undo** 撤销最近一次批量修改（最多保留 20 步）；
 - Stream 条目不可原地修改，使用删除/新增或 CLI。
 
 ### TTL

@@ -8,8 +8,10 @@
 #include <QDialog>
 
 class QCheckBox;
+class QLabel;
 class QLineEdit;
 class QSpinBox;
+class QTabWidget;
 
 namespace KeyDis {
 
@@ -24,6 +26,7 @@ public:
 
 private:
     void accept() override;
+    void testConnection();
 
     ConnectionProfile m_profile;
     QLineEdit *m_nameEdit = nullptr;
@@ -46,6 +49,9 @@ private:
     QSpinBox *m_sshPortSpin = nullptr;
     QLineEdit *m_sshUserEdit = nullptr;
     QLineEdit *m_sshKeyEdit = nullptr;
+    QTabWidget *m_tabs = nullptr;
+    QLabel *m_testStatus = nullptr;
+    bool m_testing = false;
 };
 
 } // namespace KeyDis

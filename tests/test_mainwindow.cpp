@@ -128,6 +128,8 @@ void TestMainWindow::browsesAndShowsValues()
     auto *saveButton = window.findChild<QPushButton *>(QStringLiteral("saveStringButton"));
     auto *readOnlyCheck = window.findChild<QCheckBox *>(QStringLiteral("readOnlyCheck"));
     auto *profileList = window.findChild<QListWidget *>(QStringLiteral("profileList"));
+    auto *profileConnect = window.findChild<QPushButton *>(QStringLiteral("profileConnectButton"));
+    auto *profileEmpty = window.findChild<QLabel *>(QStringLiteral("profileEmptyLabel"));
 
     QVERIFY(host);
     QVERIFY(portSpin);
@@ -146,6 +148,10 @@ void TestMainWindow::browsesAndShowsValues()
     QVERIFY(saveButton);
     QVERIFY(readOnlyCheck);
     QVERIFY(profileList);
+    QVERIFY(profileConnect);
+    QVERIFY(profileEmpty);
+    QVERIFY(!profileConnect->isEnabled());
+    QVERIFY(profileEmpty->isVisible());
 
     host->setText(QStringLiteral("127.0.0.1"));
     portSpin->setValue(port);
@@ -183,6 +189,12 @@ void TestMainWindow::browsesAndShowsValues()
     QCOMPARE(hashTable->item(0, 1)->text(), QStringLiteral("value"));
     QVERIFY(keyLabel->text().contains(QString::fromUtf8(hashKey)));
 
+    const QString dashboardCapture = qEnvironmentVariable("KEYDIS_CAPTURE_DASHBOARD");
+    if (!dashboardCapture.isEmpty()) {
+        window.showTab(QStringLiteral("dashboard"));
+        QTest::qWait(150);
+        window.grab().save(dashboardCapture);
+    }
     const QString capturePath = qEnvironmentVariable("KEYDIS_CAPTURE");
     if (!capturePath.isEmpty()) {
         window.showTab(QStringLiteral("browser"));

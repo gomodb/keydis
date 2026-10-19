@@ -353,19 +353,30 @@ void MainWindow::buildUi()
     auto *connectionsPanel = new QWidget(connectionsDock);
     auto *connectionsLayout = new QVBoxLayout(connectionsPanel);
     connectionsLayout->setContentsMargins(6, 6, 6, 6);
+    m_profileEmptyLabel = new QLabel(tr("No saved connections. Click New to create one."),
+                                     connectionsPanel);
+    m_profileEmptyLabel->setAlignment(Qt::AlignCenter);
+    m_profileEmptyLabel->setWordWrap(true);
+    m_profileEmptyLabel->setObjectName(QStringLiteral("profileEmptyLabel"));
+    connectionsLayout->addWidget(m_profileEmptyLabel);
     m_profileList = new QListWidget(connectionsPanel);
     m_profileList->setObjectName(QStringLiteral("profileList"));
     m_profileList->setAlternatingRowColors(true);
     connectionsLayout->addWidget(m_profileList, 1);
     auto *profileButtons = new QHBoxLayout;
     auto *newProfileButton = new QPushButton(tr("New"), connectionsPanel);
-    auto *editProfileButton = new QPushButton(tr("Edit"), connectionsPanel);
-    auto *deleteProfileButton = new QPushButton(tr("Delete"), connectionsPanel);
+    m_profileDuplicateButton = new QPushButton(tr("Duplicate"), connectionsPanel);
+    m_profileDuplicateButton->setObjectName(QStringLiteral("duplicateProfileButton"));
+    m_profileEditButton = new QPushButton(tr("Edit"), connectionsPanel);
+    m_profileEditButton->setObjectName(QStringLiteral("editProfileButton"));
+    m_profileDeleteButton = new QPushButton(tr("Delete"), connectionsPanel);
+    m_profileDeleteButton->setObjectName(QStringLiteral("deleteProfileButton"));
     m_profileConnectButton = new QPushButton(tr("Connect"), connectionsPanel);
     m_profileConnectButton->setObjectName(QStringLiteral("profileConnectButton"));
     profileButtons->addWidget(newProfileButton);
-    profileButtons->addWidget(editProfileButton);
-    profileButtons->addWidget(deleteProfileButton);
+    profileButtons->addWidget(m_profileDuplicateButton);
+    profileButtons->addWidget(m_profileEditButton);
+    profileButtons->addWidget(m_profileDeleteButton);
     profileButtons->addWidget(m_profileConnectButton);
     connectionsLayout->addLayout(profileButtons);
     m_readOnlyDock = new QCheckBox(tr("Read-only"), connectionsPanel);
@@ -402,8 +413,9 @@ void MainWindow::buildUi()
     m_scanner = new KeyScanner(&m_router, this);
 
     connect(newProfileButton, &QPushButton::clicked, this, &MainWindow::createProfile);
-    connect(editProfileButton, &QPushButton::clicked, this, &MainWindow::editProfile);
-    connect(deleteProfileButton, &QPushButton::clicked, this, &MainWindow::deleteProfile);
+    connect(m_profileDuplicateButton, &QPushButton::clicked, this, &MainWindow::duplicateProfile);
+    connect(m_profileEditButton, &QPushButton::clicked, this, &MainWindow::editProfile);
+    connect(m_profileDeleteButton, &QPushButton::clicked, this, &MainWindow::deleteProfile);
     connect(m_profileConnectButton, &QPushButton::clicked, this, &MainWindow::connectProfile);
     connect(m_readOnlyDock, &QCheckBox::toggled, this, [this](bool readOnly) {
         const QSignalBlocker blocker(m_readOnlyCheck);
@@ -435,6 +447,7 @@ void MainWindow::buildUi()
                         break;
                     }
                 }
+                updateProfileButtons();
             });
     connect(m_connectButton, &QPushButton::clicked, this, &MainWindow::connectOrDisconnect);
     connect(m_sendButton, &QPushButton::clicked, this, &MainWindow::sendCommand);
@@ -703,6 +716,9 @@ void MainWindow::rebuildProfileList()
     }
     if (activeItem)
         m_profileList->setCurrentItem(activeItem);
+    if (m_profileEmptyLabel)
+        m_profileEmptyLabel->setVisible(m_profiles.isEmpty());
+    updateProfileButtons();
 }
 
 void MainWindow::applyProfile(const ConnectionProfile &profile)
@@ -793,6 +809,34 @@ void MainWindow::deleteProfile()
         secrets.deletePassword(id);
     saveProfiles();
     rebuildProfileList();
+}
+
+void MainWindow::duplicateProfile()
+{
+    ConnectionProfile *selected = selectedProfile();
+    if (!selected)
+        return;
+    ConnectionProfile copy = *selected;
+    copy.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    copy.name = tr("%1 copy").arg(selected->name);
+    m_profiles.append(copy);
+    m_activeProfileId = copy.id;
+    saveProfiles();
+    rebuildProfileList();
+    applyProfile(copy);
+}
+
+void MainWindow::updateProfileButtons()
+{
+    if (!m_profileEditButton || !m_profileDeleteButton || !m_profileDuplicateButton
+        || !m_profileConnectButton) {
+        return;
+    }
+    const bool selected = selectedProfile() != nullptr;
+    m_profileEditButton->setEnabled(selected);
+    m_profileDeleteButton->setEnabled(selected);
+    m_profileDuplicateButton->setEnabled(selected);
+    m_profileConnectButton->setEnabled(selected || m_router.isReady());
 }
 
 void MainWindow::connectProfile()
@@ -1459,6 +1503,7 @@ void MainWindow::setConnectedUi(bool connected)
         m_scanner->stop();
         m_loadMoreButton->setEnabled(false);
     }
+    updateProfileButtons();
     if (connected) {
         m_connectButton->setText(tr("Disconnect"));
         m_connectButton->setEnabled(true);

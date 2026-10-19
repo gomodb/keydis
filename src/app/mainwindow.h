@@ -75,7 +75,9 @@ private:
     void createProfile();
     void editProfile();
     void deleteProfile();
+    void duplicateProfile();
     void connectProfile();
+    void updateProfileButtons();
     void saveProfiles();
     [[nodiscard]] ConnectionProfile *selectedProfile();
     void syncDatabaseUi(int db);
@@ -106,6 +108,10 @@ private:
     QCheckBox *m_clusterCheck = nullptr;
     QCheckBox *m_readOnlyDock = nullptr;
     QPushButton *m_profileConnectButton = nullptr;
+    QPushButton *m_profileEditButton = nullptr;
+    QPushButton *m_profileDeleteButton = nullptr;
+    QPushButton *m_profileDuplicateButton = nullptr;
+    QLabel *m_profileEmptyLabel = nullptr;
     QLineEdit *m_usernameEdit = nullptr;
     QLineEdit *m_passwordEdit = nullptr;
     QSpinBox *m_dbSpin = nullptr;

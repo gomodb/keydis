@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 3.28)
 
 project(KeyDis
-    VERSION 0.4.4
+    VERSION 0.4.5
     DESCRIPTION "Native Redis/Valkey client for KDE"
     HOMEPAGE_URL "https://github.com/gomodb/keydis"
     LANGUAGES C CXX
@@ -271,6 +271,8 @@ if(BUILD_TESTING)
     add_executable(keydis_ui_tests
         tests/test_mainwindow.cpp
         tests/test_mainwindow.h
+        tests/test_profiledialog.cpp
+        tests/test_profiledialog.h
         tests/test_ui_main.cpp
         tests/test_valuepanel.cpp
         tests/test_valuepanel.h

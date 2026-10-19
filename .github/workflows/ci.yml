@@ -313,6 +313,7 @@ jobs:
         run: |
           mkdir -p ci-logs
           cp build.log packaging/arch/arch-build.log arm-install.log ci-logs/ 2>/dev/null || true
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config user.name "KeyDis CI"
           git config user.email "ci@keydis.invalid"
           git checkout -B "ci-debug-${GITHUB_RUN_ID}"
@@ -414,6 +415,7 @@ jobs:
         run: |
           mkdir -p ci-logs
           cp packaging/arch/arch-build.log namcap-pkgbuild.log namcap-package.log ci-logs/ 2>/dev/null || true
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config user.name "KeyDis CI"
           git config user.email "ci@keydis.invalid"
           git checkout -B "ci-debug-${GITHUB_RUN_ID}"

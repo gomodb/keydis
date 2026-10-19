@@ -37,7 +37,10 @@ struct RespValue {
     double real = 0.0;
     QString verbatimType;
     std::vector<RespValue> elements;
-    std::vector<std::pair<RespValue, RespValue>> pairs;
+    // RESP3 map entries use parallel vectors so RespValue remains complete
+    // inside its own definition on all supported compilers.
+    std::vector<QByteArray> mapKeys;
+    std::vector<RespValue> mapValues;
 
     [[nodiscard]] bool isError() const;
     [[nodiscard]] bool isNull() const;

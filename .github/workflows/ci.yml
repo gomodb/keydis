@@ -5,6 +5,8 @@ on:
     branches: [main]
     tags: ['v*']
   pull_request:
+  schedule:
+    - cron: '0 3 * * 1'
   workflow_dispatch:
 
 concurrency:
@@ -16,12 +18,13 @@ permissions:
 
 jobs:
   build-arch:
-    name: Arch Linux / build and test
+    name: Arch Linux x86_64 / build and test
     runs-on: ubuntu-24.04
     container: archlinux:base-devel
+    timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
@@ -30,7 +33,7 @@ jobs:
             qt6-base qt6-tools \
             kconfig kconfigwidgets kcolorscheme kcoreaddons kdbusaddons \
             ki18n kwallet kxmlgui krunner \
-            hiredis zlib zstd brotli msgpack-c \
+            hiredis zlib zstd brotli msgpack-c curl \
             redis appstream desktop-file-utils
 
       - name: Configure
@@ -71,19 +74,69 @@ jobs:
 
       - name: Upload test log on failure
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
-          name: arch-test-log
-          path: build/Testing/Temporary/LastTest.log
+          name: x86_64-test-log
+          path: |
+            build/Testing/Temporary/LastTest.log
+            build.log
+          if-no-files-found: ignore
+
+  clang-build:
+    name: Arch Linux x86_64 / Clang
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            cmake ninja git pkgconf clang \
+            qt6-base qt6-tools \
+            kconfig kconfigwidgets kcolorscheme kcoreaddons kdbusaddons \
+            ki18n kwallet kxmlgui krunner \
+            hiredis zlib zstd brotli msgpack-c redis
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DBUILD_TESTING=ON
+
+      - name: Build
+        run: |
+          set -o pipefail
+          cmake --build build --parallel 2>&1 | tee build.log
+
+      - name: Test
+        env:
+          KEYDIS_REDIS_PORT: 6379
+        run: |
+          redis-server --daemonize yes
+          ctest --test-dir build --output-on-failure
+
+      - name: Upload test log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clang-test-log
+          path: |
+            build/Testing/Temporary/LastTest.log
+            build.log
           if-no-files-found: ignore
 
   sanitizers:
-    name: Arch Linux / ASan + UBSan
+    name: Arch Linux x86_64 / ASan + UBSan
     runs-on: ubuntu-24.04
     container: archlinux:base-devel
+    timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
@@ -103,7 +156,9 @@ jobs:
             -DBUILD_TESTING=ON
 
       - name: Build
-        run: cmake --build build --parallel
+        run: |
+          set -o pipefail
+          cmake --build build --parallel 2>&1 | tee build.log
 
       - name: Test
         env:
@@ -114,24 +169,92 @@ jobs:
           redis-server --daemonize yes
           ctest --test-dir build --output-on-failure
 
-  package:
-    name: Arch Linux package
-    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+      - name: Upload test log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sanitizer-test-log
+          path: |
+            build/Testing/Temporary/LastTest.log
+            build.log
+          if-no-files-found: ignore
+
+  metadata:
+    name: Desktop and AppStream metadata
     runs-on: ubuntu-24.04
-    container: archlinux:base-devel
+    timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
-      - name: Install packaging dependencies
+      - name: Install validators
         run: |
-          pacman -Syu --noconfirm --needed \
-            base-devel git cmake ninja pkgconf sudo util-linux \
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            appstream desktop-file-utils
+
+      - name: Validate AppStream metadata
+        run: appstreamcli validate --no-net data/io.github.keydis.KeyDis.metainfo.xml
+
+      - name: Validate desktop entry
+        run: desktop-file-validate data/io.github.keydis.KeyDis.desktop
+
+  arch-arm64:
+    name: Arch Linux ARM64 / build, test, package
+    runs-on: ubuntu-24.04-arm
+    container: menci/archlinuxarm:base-devel
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Bootstrap Arch Linux ARM
+        run: |
+          set -x
+          sed -i 's|^Server = http://|Server = https://|' /etc/pacman.d/mirrorlist
+          sed -i 's/^#DisableSandboxFilesystem/DisableSandboxFilesystem/' /etc/pacman.conf
+          sed -i 's/^#DisableSandboxSyscalls/DisableSandboxSyscalls/' /etc/pacman.conf
+          pacman-key --init
+          pacman-key --populate archlinuxarm
+          pacman -Syu --noconfirm
+
+      - name: Install dependencies
+        run: |
+          pacman -S --noconfirm --needed \
+            base-devel shadow util-linux cmake ninja git pkgconf sudo \
             qt6-base qt6-tools \
             kconfig kconfigwidgets kcolorscheme kcoreaddons kdbusaddons \
             ki18n kwallet kxmlgui krunner \
-            hiredis zlib zstd brotli msgpack-c \
-            appstream desktop-file-utils
+            hiredis zlib zstd brotli msgpack-c curl \
+            redis appstream desktop-file-utils
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DBUILD_TESTING=ON
+
+      - name: Build
+        run: |
+          set -o pipefail
+          cmake --build build --parallel 2>&1 | tee build.log
+
+      - name: Build failure summary
+        if: failure()
+        run: |
+          {
+            echo '### Build log'
+            echo '```'
+            tail -n 120 build.log 2>/dev/null || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Test
+        env:
+          KEYDIS_REDIS_PORT: 6379
+        run: |
+          redis-server --daemonize yes
+          ctest --test-dir build --output-on-failure
 
       - name: Verify tag matches PKGBUILD version
         if: startsWith(github.ref, 'refs/tags/')
@@ -140,6 +263,94 @@ jobs:
           pkgver="$(sed -n 's/^pkgver=//p' packaging/arch/PKGBUILD)"
           echo "tag=[$tag] pkgver=[$pkgver]"
           test "$tag" = "$pkgver"
+
+      - name: Pin tag source checksum
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          url="https://github.com/gomodb/keydis/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz"
+          curl -L --fail --retry 3 --max-time 120 "$url" -o /tmp/keydis-source.tar.gz
+          sha="$(sha256sum /tmp/keydis-source.tar.gz | cut -d' ' -f1)"
+          sed -i "s|^sha256sums=.*|sha256sums=('$sha')|" packaging/arch/PKGBUILD
+          grep '^sha256sums=' packaging/arch/PKGBUILD
+
+      - name: Prepare package builder
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        run: |
+          useradd -m builder
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+
+      - name: Build package
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        run: |
+          cd "$GITHUB_WORKSPACE/packaging/arch"
+          set -o pipefail
+          sudo -u builder makepkg -f --noconfirm 2>&1 | tee arch-build.log
+
+      - name: Install and smoke test
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        run: |
+          package="$(find packaging/arch -maxdepth 1 -name 'keydis-[0-9]*.pkg.tar.zst' | head -n1)"
+          test -n "$package"
+          pacman -U --noconfirm "$package"
+          QT_QPA_PLATFORM=offscreen keydis --version
+          desktop-file-validate /usr/share/applications/io.github.keydis.KeyDis.desktop
+          appstreamcli validate --no-net /usr/share/metainfo/io.github.keydis.KeyDis.metainfo.xml
+
+      - name: Upload aarch64 package
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: keydis-archlinuxarm
+          path: packaging/arch/keydis-[0-9]*.pkg.tar.zst
+          if-no-files-found: error
+
+      - name: Upload test log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arm64-test-log
+          path: |
+            build/Testing/Temporary/LastTest.log
+            build.log
+            packaging/arch/arch-build.log
+          if-no-files-found: ignore
+
+  package:
+    name: Arch Linux x86_64 package
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install packaging dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            base-devel git cmake ninja pkgconf sudo util-linux \
+            qt6-base qt6-tools \
+            kconfig kconfigwidgets kcolorscheme kcoreaddons kdbusaddons \
+            ki18n kwallet kxmlgui krunner \
+            hiredis zlib zstd brotli msgpack-c curl \
+            appstream desktop-file-utils namcap
+
+      - name: Verify tag matches PKGBUILD version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkgver="$(sed -n 's/^pkgver=//p' packaging/arch/PKGBUILD)"
+          echo "tag=[$tag] pkgver=[$pkgver]"
+          test "$tag" = "$pkgver"
+
+      - name: Pin tag source checksum
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          url="https://github.com/gomodb/keydis/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz"
+          curl -L --fail --retry 3 --max-time 120 "$url" -o /tmp/keydis-source.tar.gz
+          sha="$(sha256sum /tmp/keydis-source.tar.gz | cut -d' ' -f1)"
+          sed -i "s|^sha256sums=.*|sha256sums=('$sha')|" packaging/arch/PKGBUILD
+          grep '^sha256sums=' packaging/arch/PKGBUILD
 
       - name: Prepare builder
         run: |
@@ -161,28 +372,55 @@ jobs:
           desktop-file-validate /usr/share/applications/io.github.keydis.KeyDis.desktop
           appstreamcli validate --no-net /usr/share/metainfo/io.github.keydis.KeyDis.metainfo.xml
 
+      - name: Run namcap
+        run: |
+          set -o pipefail
+          namcap packaging/arch/PKGBUILD | tee namcap-pkgbuild.log
+          namcap packaging/arch/keydis-[0-9]*.pkg.tar.zst | tee namcap-package.log
+          if grep -Eq '(^|[[:space:]])E: ' namcap-pkgbuild.log namcap-package.log; then
+            echo "namcap reported errors"
+            exit 1
+          fi
+
       - name: Upload package
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: keydis-arch-package
           path: packaging/arch/keydis-[0-9]*.pkg.tar.zst
           if-no-files-found: error
 
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-build-log
+          path: |
+            packaging/arch/arch-build.log
+            namcap-pkgbuild.log
+            namcap-package.log
+          if-no-files-found: ignore
+
   release:
     name: GitHub Release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [package]
+    needs: [package, arch-arm64]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
-      - name: Download package
-        uses: actions/download-artifact@v8
+      - name: Download x86_64 package
+        uses: actions/download-artifact@v4
         with:
           name: keydis-arch-package
+          path: dist
+
+      - name: Download aarch64 package
+        uses: actions/download-artifact@v4
+        with:
+          name: keydis-archlinuxarm
           path: dist
 
       - name: Create or update release

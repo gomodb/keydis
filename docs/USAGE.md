@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.38）
+# KeyDis 使用说明（0.4.39）
 
 ![KeyDis Dashboard](dashboard.png)
 

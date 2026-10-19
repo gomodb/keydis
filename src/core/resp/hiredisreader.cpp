@@ -116,7 +116,8 @@ bool convertReply(const redisReply *reply, RespValue *out, int depth, int maxDep
                 *error = QStringLiteral("RESP map contains too many pairs (%1)").arg(pairCount);
             return false;
         }
-        out->pairs.reserve(pairCount);
+        out->mapKeys.reserve(pairCount);
+        out->mapValues.reserve(pairCount);
         for (size_t index = 0; index < pairCount; ++index) {
             RespValue key;
             RespValue value;
@@ -126,7 +127,8 @@ bool convertReply(const redisReply *reply, RespValue *out, int depth, int maxDep
                                  maxElements, error)) {
                 return false;
             }
-            out->pairs.emplace_back(std::move(key), std::move(value));
+            out->mapKeys.push_back(key.scalar);
+            out->mapValues.push_back(std::move(value));
         }
         return true;
     }

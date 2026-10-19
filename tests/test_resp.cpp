@@ -70,9 +70,9 @@ void TestResp::parsesAggregates()
     QVERIFY2(feed(reader, "%2\r\n+one\r\n:1\r\n+two\r\n:2\r\n", &error), qPrintable(error));
     QVERIFY(readOne(reader, &value, &error));
     QVERIFY(value.type == RespType::Map);
-    QCOMPARE(value.pairs.size(), size_t(2));
-    QCOMPARE(value.pairs[1].first.scalar, QByteArray("two"));
-    QCOMPARE(value.pairs[1].second.integer, qint64(2));
+    QCOMPARE(value.mapValues.size(), size_t(2));
+    QCOMPARE(value.mapKeys[1], QByteArray("two"));
+    QCOMPARE(value.mapValues[1].integer, qint64(2));
 
     QVERIFY2(feed(reader, "~2\r\n+alpha\r\n+beta\r\n", &error), qPrintable(error));
     QVERIFY(readOne(reader, &value, &error));

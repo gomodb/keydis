@@ -112,8 +112,10 @@ public:
             RespValue lastId;
             lastId.type = RespType::BulkString;
             lastId.scalar = QByteArrayLiteral("0-0");
-            map.pairs = {{nameKey, name}, {consumersKey, consumers}, {pendingKey, pending},
-                         {lastIdKey, lastId}};
+            map.mapKeys = {QByteArrayLiteral("name"), QByteArrayLiteral("consumers"),
+                           QByteArrayLiteral("pending"),
+                           QByteArrayLiteral("last-delivered-id")};
+            map.mapValues = {name, consumers, pending, lastId};
             reply.type = RespType::Array;
             reply.elements = {map};
         } else if (args.value(0) == QByteArrayLiteral("XINFO")
@@ -138,7 +140,9 @@ public:
             RespValue idle;
             idle.type = RespType::Integer;
             idle.integer = 120;
-            map.pairs = {{nameKey, name}, {pendingKey, pending}, {idleKey, idle}};
+            map.mapKeys = {QByteArrayLiteral("name"), QByteArrayLiteral("pending"),
+                           QByteArrayLiteral("idle")};
+            map.mapValues = {name, pending, idle};
             reply.type = RespType::Array;
             reply.elements = {map};
         } else if (args.value(0) == QByteArrayLiteral("XRANGE")) {

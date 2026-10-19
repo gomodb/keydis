@@ -82,7 +82,7 @@ void TestRedisIntegration::realServerRoundTrip()
     reply = command(connection, {QByteArrayLiteral("HGETALL"), hashKey}, &error);
     QVERIFY2(error.isEmpty(), qPrintable(error));
     QVERIFY(reply.type == RespType::Map);
-    QCOMPARE(reply.pairs.size(), size_t(2));
+    QCOMPARE(reply.mapValues.size(), size_t(2));
 
     command(connection, {QByteArrayLiteral("RPUSH"), listKey, QByteArrayLiteral("a"),
                          QByteArrayLiteral("b"), QByteArrayLiteral("c")}, &error);

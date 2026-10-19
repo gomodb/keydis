@@ -119,9 +119,10 @@ QString RespValue::toDisplayString(int indent) const
     case RespType::Attribute: {
         QStringList lines;
         lines << prefix + QStringLiteral("{%1}").arg(typeName());
-        for (const auto &[key, value] : pairs) {
-            lines << key.toDisplayString(indent + 1) + QStringLiteral(" => ")
-                    + value.toDisplayString(indent + 1).trimmed();
+        for (size_t index = 0; index < mapValues.size(); ++index) {
+            lines << QString(indent + 1, QLatin1Char(' '))
+                    + QString::fromUtf8(mapKeys[index]) + QStringLiteral(" => ")
+                    + mapValues[index].toDisplayString(indent + 1).trimmed();
         }
         return lines.join(QLatin1Char('\n'));
     }

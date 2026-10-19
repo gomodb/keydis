@@ -33,7 +33,7 @@ jobs:
             qt6-base qt6-tools \
             kconfig kconfigwidgets kcolorscheme kcoreaddons kdbusaddons \
             ki18n kwallet kxmlgui krunner \
-            hiredis zlib zstd brotli msgpack-c curl \
+            hiredis zlib zstd brotli msgpack-c curl hicolor-icon-theme \
             redis appstream desktop-file-utils
 
       - name: Configure
@@ -225,7 +225,7 @@ jobs:
             qt6-base qt6-tools \
             kconfig kconfigwidgets kcolorscheme kcoreaddons kdbusaddons \
             ki18n kwallet kxmlgui krunner \
-            hiredis zlib zstd brotli msgpack-c curl \
+            hiredis zlib zstd brotli msgpack-c curl hicolor-icon-theme \
             redis appstream desktop-file-utils
 
       - name: Configure
@@ -332,7 +332,7 @@ jobs:
             qt6-base qt6-tools \
             kconfig kconfigwidgets kcolorscheme kcoreaddons kdbusaddons \
             ki18n kwallet kxmlgui krunner \
-            hiredis zlib zstd brotli msgpack-c curl \
+            hiredis zlib zstd brotli msgpack-c curl hicolor-icon-theme \
             appstream desktop-file-utils namcap
 
       - name: Verify tag matches PKGBUILD version

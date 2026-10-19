@@ -51,6 +51,8 @@ public:
     void setUnixSocketPath(const QString &path);
     void connectNow();
     void showTab(const QString &name);
+    void setConnectionsDockVisible(bool visible);
+    [[nodiscard]] bool connectionsDockVisible() const;
 
 public slots:
     void newWindow();
@@ -64,6 +66,7 @@ signals:
     void sessionTitleChanged(const QString &title);
     void newSessionRequested();
     void newSessionWithProfileRequested(const QString &profileId);
+    void connectionsDockVisibilityChanged(bool visible);
 
 private:
     void buildUi();
@@ -113,6 +116,7 @@ private:
     quint16 m_effectivePort = 0;
     QTabWidget *m_tabs = nullptr;
     QTreeWidget *m_profileList = nullptr;
+    QDockWidget *m_connectionsDock = nullptr;
     QSet<QString> m_collapsedGroups;
     QVector<ConnectionProfile> m_profiles;
     QString m_activeProfileId;

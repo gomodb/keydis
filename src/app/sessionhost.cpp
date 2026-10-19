@@ -12,6 +12,7 @@
 #include <QMenuBar>
 #include <QSplitter>
 #include <QTabWidget>
+#include <QToolBar>
 #include <QToolButton>
 
 namespace KeyDis {
@@ -22,7 +23,10 @@ SessionHost::SessionHost(QWidget *parent)
     setWindowTitle(QStringLiteral("KeyDis"));
 
     m_splitter = new QSplitter(Qt::Horizontal, this);
+    m_splitter->setObjectName(QStringLiteral("sessionSplitter"));
     m_splitter->setChildrenCollapsible(false);
+    m_splitter->setHandleWidth(8);
+    m_splitter->setOpaqueResize(true);
     setCentralWidget(m_splitter);
 
     m_primaryTabs = createTabs();
@@ -57,6 +61,20 @@ SessionHost::SessionHost(QWidget *parent)
     auto *closeSplitAction = viewMenu->addAction(tr("Close Split"));
     closeSplitAction->setObjectName(QStringLiteral("closeSplitAction"));
     connect(closeSplitAction, &QAction::triggered, this, &SessionHost::closeSplit);
+
+    viewMenu->addSeparator();
+    m_connectionsAction = viewMenu->addAction(tr("Connections Dock"));
+    m_connectionsAction->setObjectName(QStringLiteral("connectionsDockAction"));
+    m_connectionsAction->setCheckable(true);
+    m_connectionsAction->setShortcut(QKeySequence(QStringLiteral("Ctrl+B")));
+    connect(m_connectionsAction, &QAction::triggered, this, [this](bool checked) {
+        if (auto *session = qobject_cast<MainWindow *>(targetTabs()->currentWidget()))
+            session->setConnectionsDockVisible(checked);
+        updateConnectionsAction();
+    });
+    auto *viewToolBar = addToolBar(tr("View"));
+    viewToolBar->setObjectName(QStringLiteral("viewToolBar"));
+    viewToolBar->addAction(m_connectionsAction);
 }
 
 QTabWidget *SessionHost::createTabs()
@@ -78,7 +96,10 @@ QTabWidget *SessionHost::createTabs()
     connect(tabs, &QTabWidget::tabCloseRequested, this,
             [this, tabs](int index) { closeSession(tabs, index); });
     connect(tabs, &QTabWidget::currentChanged, this,
-            [this, tabs](int) { updateActiveTabs(tabs); });
+            [this, tabs](int) {
+                updateActiveTabs(tabs);
+                updateConnectionsAction();
+            });
     return tabs;
 }
 
@@ -115,6 +136,11 @@ MainWindow *SessionHost::addSession(const QString &profileId, QTabWidget *tabs)
             [this, tabs] { addSession({}, tabs); });
     connect(session, &MainWindow::newSessionWithProfileRequested, this,
             [this, tabs](const QString &id) { addSession(id, tabs); });
+    connect(session, &MainWindow::connectionsDockVisibilityChanged, this,
+            [this, session](bool) {
+        if (qobject_cast<MainWindow *>(targetTabs()->currentWidget()) == session)
+            updateConnectionsAction();
+    });
 
     if (!profileId.isEmpty())
         session->connectProfileById(profileId);
@@ -183,6 +209,14 @@ void SessionHost::updateActiveTabs(QTabWidget *tabs)
 {
     if (tabs && (tabs == m_primaryTabs || tabs == m_secondaryTabs))
         m_activeTabs = tabs;
+}
+
+void SessionHost::updateConnectionsAction()
+{
+    if (!m_connectionsAction)
+        return;
+    auto *session = qobject_cast<MainWindow *>(targetTabs()->currentWidget());
+    m_connectionsAction->setChecked(session && session->connectionsDockVisible());
 }
 
 void SessionHost::closeSession(QTabWidget *tabs, int index)

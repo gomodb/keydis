@@ -173,6 +173,23 @@ void MainWindow::showTab(const QString &name)
         m_tabs->setCurrentIndex(0);
 }
 
+void MainWindow::setConnectionsDockVisible(bool visible)
+{
+    if (!m_connectionsDock)
+        return;
+    if (visible) {
+        m_connectionsDock->show();
+        m_connectionsDock->raise();
+    } else {
+        m_connectionsDock->hide();
+    }
+}
+
+bool MainWindow::connectionsDockVisible() const
+{
+    return m_connectionsDock && !m_connectionsDock->isHidden();
+}
+
 void MainWindow::buildUi()
 {
     auto *central = new QWidget(this);
@@ -301,6 +318,8 @@ void MainWindow::buildUi()
     browserLayout->addWidget(m_scanStatus);
 
     auto *splitter = new QSplitter(Qt::Horizontal, browser);
+    splitter->setHandleWidth(8);
+    splitter->setOpaqueResize(true);
     auto *keyPane = new QWidget(splitter);
     keyPane->setMinimumWidth(380);
     auto *keyLayout = new QVBoxLayout(keyPane);
@@ -392,7 +411,8 @@ void MainWindow::buildUi()
     layout->addWidget(m_tabs, 1);
     setCentralWidget(central);
 
-    auto *connectionsDock = new QDockWidget(tr("Connections"), this);
+    m_connectionsDock = new QDockWidget(tr("Connections"), this);
+    QDockWidget *connectionsDock = m_connectionsDock;
     connectionsDock->setObjectName(QStringLiteral("connectionsDock"));
     auto *connectionsPanel = new QWidget(connectionsDock);
     auto *connectionsLayout = new QVBoxLayout(connectionsPanel);
@@ -438,6 +458,8 @@ void MainWindow::buildUi()
     connectionsLayout->addWidget(m_readOnlyDock);
     connectionsDock->setWidget(connectionsPanel);
     addDockWidget(Qt::LeftDockWidgetArea, connectionsDock);
+    connect(connectionsDock, &QDockWidget::visibilityChanged, this,
+            [this](bool visible) { emit connectionsDockVisibilityChanged(visible); });
 
     m_hostEdit->setAccessibleName(tr("Host"));
     m_portSpin->setAccessibleName(tr("Port"));

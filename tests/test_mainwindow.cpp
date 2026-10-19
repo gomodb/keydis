@@ -20,10 +20,13 @@
 #include <QPlainTextEdit>
 #include <QApplication>
 #include <QCheckBox>
+#include <QAction>
 #include <QDialog>
+#include <QDockWidget>
 #include <QComboBox>
 #include <QPushButton>
 #include <QSpinBox>
+#include <QSplitter>
 #include <QStackedWidget>
 #include <QTableView>
 #include <QTreeView>
@@ -423,6 +426,19 @@ void TestMainWindow::hostsMultipleSessionTabs()
     auto *tabs = host.findChild<QTabWidget *>(QStringLiteral("sessionTabs"));
     QVERIFY(tabs);
     QCOMPARE(tabs->count(), 2);
+    auto *splitter = host.findChild<QSplitter *>(QStringLiteral("sessionSplitter"));
+    QVERIFY(splitter);
+    QCOMPARE(splitter->handleWidth(), 8);
+    tabs->setCurrentWidget(first);
+    auto *dock = first->findChild<QDockWidget *>(QStringLiteral("connectionsDock"));
+    auto *dockAction = host.findChild<QAction *>(QStringLiteral("connectionsDockAction"));
+    QVERIFY(dock);
+    QVERIFY(dockAction);
+    QVERIFY(!dock->isHidden());
+    dock->close();
+    QVERIFY(dock->isHidden());
+    dockAction->trigger();
+    QVERIFY(!dock->isHidden());
 
     QVERIFY(QMetaObject::invokeMethod(first, "newWindow", Qt::DirectConnection));
     QTRY_COMPARE_WITH_TIMEOUT(host.sessionCount(), 3, 5000);

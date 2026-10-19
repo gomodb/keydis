@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.36）
+# KeyDis 使用说明（0.4.37）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -61,6 +61,8 @@ Unix Socket 使用 `QLocalSocket`，不需要 TLS；当前不支持 SSH/Sentinel
 - **View → Split Right**（`Ctrl+Shift+T`）打开右侧分屏，左右各有一个独立标签栏；
 - 新建标签会进入当前活动的分屏侧；
 - **View → Close Split** 关闭右侧分屏及其会话；
+- 左右分屏之间的分隔条可拖动调整宽度；
+- 左侧 Connections 面板关闭后，可通过 **View → Connections Dock**、工具栏按钮或 `Ctrl+B` 重新打开；
 - 分屏布局本身不持久化，重启后恢复单侧标签页。
 
 连接失败时状态栏旁显示 **Retry**；若错误为 `NOAUTH`/`WRONGPASS`，会弹出一次密码输入框，输入后自动重试并写入 KWallet。

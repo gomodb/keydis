@@ -6,7 +6,11 @@
 #include "core/resp/commandencoder.h"
 #include "core/resp/hiredisreader.h"
 
+#include <QFile>
+#include <QSslCertificate>
+#include <QSslConfiguration>
 #include <QSslError>
+#include <QSslKey>
 #include <QSslSocket>
 #include <QTcpSocket>
 
@@ -22,6 +26,11 @@ RedisConnection::RedisConnection(QObject *parent)
 RedisConnection::~RedisConnection()
 {
     clearSocket();
+}
+
+void RedisConnection::setTlsConfig(const TlsConfig &config)
+{
+    m_tlsConfig = config;
 }
 
 void RedisConnection::connectToHost(const QString &host, quint16 port, bool tls,
@@ -42,21 +51,65 @@ void RedisConnection::connectToHost(const QString &host, quint16 port, bool tls,
     m_pending.clear();
     m_reader.reset();
 
-    createSocket(tls);
     setStage(Stage::Connecting, QStringLiteral("Connecting to %1:%2...").arg(host).arg(port));
+    createSocket(tls);
+    if (!m_socket)
+        return;
     m_socket->connectToHost(host, port);
 }
 
 void RedisConnection::createSocket(bool tls)
 {
     if (tls) {
+        QSslConfiguration config = QSslConfiguration::defaultConfiguration();
+        if (!m_tlsConfig.caFile.isEmpty()) {
+            const QList<QSslCertificate> certificates = QSslCertificate::fromPath(m_tlsConfig.caFile);
+            if (certificates.isEmpty()) {
+                fail(QStringLiteral("Could not load TLS CA certificate: %1").arg(m_tlsConfig.caFile));
+                return;
+            }
+            config.setCaCertificates(certificates);
+        }
+        if (!m_tlsConfig.certFile.isEmpty()) {
+            const QList<QSslCertificate> certificates =
+                QSslCertificate::fromPath(m_tlsConfig.certFile);
+            if (certificates.isEmpty()) {
+                fail(QStringLiteral("Could not load TLS client certificate: %1")
+                         .arg(m_tlsConfig.certFile));
+                return;
+            }
+            config.setLocalCertificate(certificates.first());
+        }
+        if (!m_tlsConfig.keyFile.isEmpty()) {
+            QFile keyFile(m_tlsConfig.keyFile);
+            if (!keyFile.open(QIODevice::ReadOnly)) {
+                fail(QStringLiteral("Could not open TLS client key: %1").arg(m_tlsConfig.keyFile));
+                return;
+            }
+            QSslKey key(keyFile.readAll(), QSsl::Rsa, QSsl::Pem);
+            if (key.isNull())
+                key = QSslKey(keyFile.readAll(), QSsl::Ec);
+            if (key.isNull()) {
+                fail(QStringLiteral("Could not load TLS client key: %1").arg(m_tlsConfig.keyFile));
+                return;
+            }
+            config.setPrivateKey(key);
+        }
+        if (!m_tlsConfig.verifyPeer)
+            config.setPeerVerifyMode(QSslSocket::VerifyNone);
         auto *socket = new QSslSocket(this);
-        socket->setPeerVerifyMode(QSslSocket::VerifyPeer);
+        socket->setSslConfiguration(config);
+        socket->setPeerVerifyMode(m_tlsConfig.verifyPeer ? QSslSocket::VerifyPeer
+                                                         : QSslSocket::VerifyNone);
         socket->setPeerVerifyName(m_host);
         connect(socket, &QSslSocket::encrypted, this, &RedisConnection::onTransportReady);
-        connect(socket, &QSslSocket::sslErrors, this, [this](const QList<QSslError> &errors) {
+        connect(socket, &QSslSocket::sslErrors, this, [this, socket](const QList<QSslError> &errors) {
             if (m_stage == Stage::Idle)
                 return;
+            if (!m_tlsConfig.verifyPeer) {
+                socket->ignoreSslErrors(errors);
+                return;
+            }
             const QString detail =
                 errors.isEmpty() ? QStringLiteral("unknown TLS error") : errors.first().errorString();
             fail(QStringLiteral("TLS verification failed: %1").arg(detail));

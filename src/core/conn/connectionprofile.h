@@ -16,6 +16,10 @@ struct ConnectionProfile {
     QString host = QStringLiteral("127.0.0.1");
     quint16 port = 6379;
     bool tls = false;
+    QString tlsCaFile;
+    QString tlsCertFile;
+    QString tlsKeyFile;
+    bool tlsVerifyPeer = true;
     QString username;
     // Transient only: never serialized to connections.json. The dialog may
     // populate it for the current session; KWallet is the durable store.

@@ -14,6 +14,7 @@ class TestRedisConnection : public QObject
 private slots:
     void handshakeSelectAndPing();
     void fallsBackToResp2();
+    void rejectsMissingTlsFiles();
 };
 
 } // namespace KeyDis::Test

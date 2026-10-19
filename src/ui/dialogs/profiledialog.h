@@ -35,6 +35,10 @@ private:
     QLineEdit *m_hostEdit = nullptr;
     QSpinBox *m_portSpin = nullptr;
     QCheckBox *m_tlsCheck = nullptr;
+    QLineEdit *m_tlsCaEdit = nullptr;
+    QLineEdit *m_tlsCertEdit = nullptr;
+    QLineEdit *m_tlsKeyEdit = nullptr;
+    QCheckBox *m_tlsVerifyCheck = nullptr;
     QLineEdit *m_usernameEdit = nullptr;
     QLineEdit *m_passwordEdit = nullptr;
     QSpinBox *m_dbSpin = nullptr;

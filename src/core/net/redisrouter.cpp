@@ -42,6 +42,12 @@ void RedisRouter::connectToHost(const QString &host, quint16 port, bool tls,
         emit errorOccurred(tr("No connection backend"));
 }
 
+void RedisRouter::setTlsConfig(const TlsConfig &config)
+{
+    if (m_backend)
+        m_backend->setTlsConfig(config);
+}
+
 void RedisRouter::disconnectFromHost()
 {
     if (m_backend)

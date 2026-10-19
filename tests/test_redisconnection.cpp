@@ -90,4 +90,19 @@ void TestRedisConnection::fallsBackToResp2()
     QCOMPARE(reply.scalar, QByteArray("PONG"));
 }
 
+void TestRedisConnection::rejectsMissingTlsFiles()
+{
+    RedisConnection connection;
+    TlsConfig config;
+    config.enabled = true;
+    config.caFile = QStringLiteral("/nonexistent/keydis-ca.pem");
+    connection.setTlsConfig(config);
+    QString error;
+    connect(&connection, &RedisConnection::errorOccurred, &connection,
+            [&](const QString &message) { error = message; });
+    connection.connectToHost(QStringLiteral("127.0.0.1"), 1, true, {}, {}, 0);
+    QTRY_VERIFY_WITH_TIMEOUT(!error.isEmpty(), 5000);
+    QVERIFY(error.contains(QStringLiteral("TLS CA")));
+}
+
 } // namespace KeyDis::Test

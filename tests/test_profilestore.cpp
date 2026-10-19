@@ -34,6 +34,10 @@ void TestProfileStore::roundTripsProfiles()
     first.host = QStringLiteral("127.0.0.1");
     first.port = 6380;
     first.tls = true;
+    first.tlsCaFile = QStringLiteral("/etc/keydis/ca.pem");
+    first.tlsCertFile = QStringLiteral("/etc/keydis/client.pem");
+    first.tlsKeyFile = QStringLiteral("/etc/keydis/client.key");
+    first.tlsVerifyPeer = false;
     first.username = QStringLiteral("dev");
     first.db = 3;
     first.readOnly = true;
@@ -64,6 +68,10 @@ void TestProfileStore::roundTripsProfiles()
     QCOMPARE(loaded[0].host, first.host);
     QCOMPARE(loaded[0].port, first.port);
     QCOMPARE(loaded[0].tls, true);
+    QCOMPARE(loaded[0].tlsCaFile, first.tlsCaFile);
+    QCOMPARE(loaded[0].tlsCertFile, first.tlsCertFile);
+    QCOMPARE(loaded[0].tlsKeyFile, first.tlsKeyFile);
+    QCOMPARE(loaded[0].tlsVerifyPeer, false);
     QCOMPARE(loaded[0].username, first.username);
     QCOMPARE(loaded[0].db, first.db);
     QCOMPARE(loaded[0].readOnly, true);

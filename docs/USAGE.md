@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.26）
+# KeyDis 使用说明（0.4.27）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -14,13 +14,24 @@ cmake --build build -j2
 
 Profile 对话框分为 **Connection** / **Advanced** 两页；底部 **Test connection** 可对直连 Host/Port 做一次真实握手测试（SSH/Sentinel 模式不支持测试按钮）。
 
+TLS 相关字段位于 **Advanced** 页：
+
+| 字段 | 说明 |
+|---|---|
+| TLS CA | 自定义 CA 证书路径（PEM） |
+| TLS cert | 客户端证书路径（PEM） |
+| TLS key | 客户端私钥路径（PEM，RSA/EC） |
+| Verify TLS certificate | 默认开启；关闭后接受自签名/不匹配证书，仅用于测试环境 |
+
+配置会随 Profile 保存，密码仍由 KWallet 管理。
+
 Profile 字段：
 
 | 字段 | 说明 |
 |---|---|
 | Host | Redis/Valkey 主机，默认 `127.0.0.1` |
 | Port | 默认 `6379` |
-| TLS | 使用 `QSslSocket`，默认校验证书与主机名 |
+| TLS | 使用 `QSslSocket`；Advanced 页可配置 CA、客户端证书、客户端私钥，并可关闭证书校验 |
 | ACL user | Redis 6+ 用户名；为空时使用 `default` |
 | Password | Profile 对话框中输入；写入 KWallet，留空则读取 KWallet |
 | DB | standalone 数据库编号；Cluster 固定 0 |

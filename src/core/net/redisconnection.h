@@ -28,6 +28,7 @@ public:
 
     void connectToHost(const QString &host, quint16 port, bool tls, const QString &username,
                        const QString &password, int db) override;
+    void setTlsConfig(const TlsConfig &config) override;
     void disconnectFromHost() override;
 
     [[nodiscard]] bool isReady() const override;
@@ -80,6 +81,7 @@ private:
     QString m_password;
     int m_db = 0;
     bool m_tls = false;
+    TlsConfig m_tlsConfig;
     bool m_userDisconnect = false;
     bool m_authWithUsername = true;
     bool m_resp2 = false;

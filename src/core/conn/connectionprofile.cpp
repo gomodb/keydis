@@ -17,6 +17,10 @@ QJsonObject ConnectionProfile::toJson() const
     object.insert(QStringLiteral("host"), host);
     object.insert(QStringLiteral("port"), port);
     object.insert(QStringLiteral("tls"), tls);
+    object.insert(QStringLiteral("tlsCaFile"), tlsCaFile);
+    object.insert(QStringLiteral("tlsCertFile"), tlsCertFile);
+    object.insert(QStringLiteral("tlsKeyFile"), tlsKeyFile);
+    object.insert(QStringLiteral("tlsVerifyPeer"), tlsVerifyPeer);
     object.insert(QStringLiteral("username"), username);
     object.insert(QStringLiteral("db"), db);
     object.insert(QStringLiteral("readOnly"), readOnly);
@@ -47,6 +51,10 @@ ConnectionProfile ConnectionProfile::fromJson(const QJsonObject &object)
     const int port = object.value(QStringLiteral("port")).toInt(profile.port);
     profile.port = static_cast<quint16>(qBound(1, port, 65535));
     profile.tls = object.value(QStringLiteral("tls")).toBool(false);
+    profile.tlsCaFile = object.value(QStringLiteral("tlsCaFile")).toString();
+    profile.tlsCertFile = object.value(QStringLiteral("tlsCertFile")).toString();
+    profile.tlsKeyFile = object.value(QStringLiteral("tlsKeyFile")).toString();
+    profile.tlsVerifyPeer = object.value(QStringLiteral("tlsVerifyPeer")).toBool(true);
     profile.username = object.value(QStringLiteral("username")).toString();
     profile.db = qBound(0, object.value(QStringLiteral("db")).toInt(0), 15);
     profile.readOnly = object.value(QStringLiteral("readOnly")).toBool(false);

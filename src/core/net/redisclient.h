@@ -14,6 +14,14 @@
 
 namespace KeyDis {
 
+struct TlsConfig {
+    bool enabled = false;
+    QString caFile;
+    QString certFile;
+    QString keyFile;
+    bool verifyPeer = true;
+};
+
 class RedisClient : public QObject
 {
     Q_OBJECT
@@ -29,6 +37,7 @@ public:
 
     virtual void connectToHost(const QString &host, quint16 port, bool tls,
                                const QString &username, const QString &password, int db) = 0;
+    virtual void setTlsConfig(const TlsConfig &config) { Q_UNUSED(config) }
     virtual void disconnectFromHost() = 0;
     [[nodiscard]] virtual bool isReady() const = 0;
     virtual void sendCommand(const QList<QByteArray> &args, ReplyCallback callback = {}) = 0;

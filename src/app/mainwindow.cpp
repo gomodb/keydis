@@ -64,6 +64,21 @@
 
 namespace KeyDis {
 
+namespace {
+
+TlsConfig tlsConfigForProfile(const ConnectionProfile &profile)
+{
+    TlsConfig config;
+    config.enabled = profile.tls;
+    config.caFile = profile.tlsCaFile;
+    config.certFile = profile.tlsCertFile;
+    config.keyFile = profile.tlsKeyFile;
+    config.verifyPeer = profile.tlsVerifyPeer;
+    return config;
+}
+
+} // namespace
+
 MainWindow::MainWindow(QWidget *parent)
     : KXmlGuiWindow(parent)
 {
@@ -1102,6 +1117,7 @@ void MainWindow::connectOrDisconnect(bool retryAuth)
     } else {
         m_router.setBackend(std::make_unique<RedisConnection>());
     }
+    m_router.setTlsConfig(tlsConfigForProfile(profile));
 
     m_output->clear();
     m_model->clear();
@@ -1784,6 +1800,7 @@ void MainWindow::copyKeyToProfile(const KeyInfo &info)
         });
     });
     m_scanStatus->setText(tr("Copying key..."));
+    target->setTlsConfig(tlsConfigForProfile(targetProfile));
     target->connectToHost(targetProfile.host, targetProfile.port, targetProfile.tls,
                           targetProfile.username, password, targetProfile.db);
 }

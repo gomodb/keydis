@@ -22,6 +22,7 @@ public:
 
     void connectToHost(const QString &host, quint16 port, bool tls, const QString &username,
                        const QString &password, int db) override;
+    void setTlsConfig(const TlsConfig &config) override;
     void disconnectFromHost() override;
     [[nodiscard]] bool isReady() const override;
     void sendCommand(const QList<QByteArray> &args, ReplyCallback callback = {}) override;

@@ -99,6 +99,11 @@ void ClusterClient::connectToHost(const QString &host, quint16 port, bool tls,
     connectToCluster({QStringLiteral("%1:%2").arg(host).arg(port)}, tls, username, password);
 }
 
+void ClusterClient::setTlsConfig(const TlsConfig &config)
+{
+    m_tlsConfig = config;
+}
+
 void ClusterClient::connectToCluster(const QStringList &seeds, bool tls,
                                      const QString &username, const QString &password)
 {
@@ -135,6 +140,7 @@ void ClusterClient::connectSeed()
     }
 
     m_seed = std::make_unique<RedisConnection>();
+    m_seed->setTlsConfig(m_tlsConfig);
     m_topologyRequested = false;
     const int generation = static_cast<int>(m_generation);
     connect(m_seed.get(), &RedisClient::stateChanged, this,
@@ -229,6 +235,7 @@ void ClusterClient::createNode(const QString &host, quint16 port, const QString 
     node->id = id;
     node->index = static_cast<int>(m_nodes.size());
     node->connection = std::make_unique<RedisConnection>();
+    node->connection->setTlsConfig(m_tlsConfig);
     Node *raw = node.get();
     m_nodes.push_back(std::move(node));
 

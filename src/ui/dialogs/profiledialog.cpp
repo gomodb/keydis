@@ -84,6 +84,18 @@ ProfileDialog::ProfileDialog(const ConnectionProfile &profile, QWidget *parent)
     m_sentinelTlsCheck = new QCheckBox(tr("Sentinel TLS"), advancedTab);
     m_sentinelTlsCheck->setChecked(profile.sentinelTls);
     advancedForm->addRow(QString(), m_sentinelTlsCheck);
+    m_tlsCaEdit = new QLineEdit(profile.tlsCaFile, advancedTab);
+    m_tlsCaEdit->setPlaceholderText(tr("Optional CA certificate path"));
+    advancedForm->addRow(tr("TLS CA"), m_tlsCaEdit);
+    m_tlsCertEdit = new QLineEdit(profile.tlsCertFile, advancedTab);
+    m_tlsCertEdit->setPlaceholderText(tr("Optional client certificate path"));
+    advancedForm->addRow(tr("TLS cert"), m_tlsCertEdit);
+    m_tlsKeyEdit = new QLineEdit(profile.tlsKeyFile, advancedTab);
+    m_tlsKeyEdit->setPlaceholderText(tr("Optional client private key path"));
+    advancedForm->addRow(tr("TLS key"), m_tlsKeyEdit);
+    m_tlsVerifyCheck = new QCheckBox(tr("Verify TLS certificate"), advancedTab);
+    m_tlsVerifyCheck->setChecked(profile.tlsVerifyPeer);
+    advancedForm->addRow(QString(), m_tlsVerifyCheck);
     m_sshCheck = new QCheckBox(tr("Use SSH tunnel"), advancedTab);
     m_sshCheck->setChecked(profile.sshTunnel);
     advancedForm->addRow(QString(), m_sshCheck);
@@ -179,6 +191,13 @@ void ProfileDialog::testConnection()
         guard->m_testStatus->setText(error);
         connectionGuard->deleteLater();
     });
+    TlsConfig tlsConfig;
+    tlsConfig.enabled = m_tlsCheck->isChecked();
+    tlsConfig.caFile = m_tlsCaEdit->text().trimmed();
+    tlsConfig.certFile = m_tlsCertEdit->text().trimmed();
+    tlsConfig.keyFile = m_tlsKeyEdit->text().trimmed();
+    tlsConfig.verifyPeer = m_tlsVerifyCheck->isChecked();
+    connection->setTlsConfig(tlsConfig);
     connection->connectToHost(m_hostEdit->text().trimmed(),
                               static_cast<quint16>(m_portSpin->value()),
                               m_tlsCheck->isChecked(), m_usernameEdit->text(),
@@ -203,6 +222,10 @@ void ProfileDialog::accept()
     m_profile.host = m_hostEdit->text().trimmed();
     m_profile.port = static_cast<quint16>(m_portSpin->value());
     m_profile.tls = m_tlsCheck->isChecked();
+    m_profile.tlsCaFile = m_tlsCaEdit->text().trimmed();
+    m_profile.tlsCertFile = m_tlsCertEdit->text().trimmed();
+    m_profile.tlsKeyFile = m_tlsKeyEdit->text().trimmed();
+    m_profile.tlsVerifyPeer = m_tlsVerifyCheck->isChecked();
     m_profile.username = m_usernameEdit->text();
     m_profile.password = m_passwordEdit->text();
     m_profile.db = m_dbSpin->value();

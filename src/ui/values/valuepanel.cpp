@@ -346,19 +346,23 @@ QWidget *ValuePanel::buildStringPage()
 
 QWidget *ValuePanel::buildHashPage()
 {
-    m_hashTable = makeTable({tr("Field"), tr("Value")}, this);
+    m_hashTable = makeTable({tr("Field"), tr("Value"), tr("TTL")}, this);
     m_hashTable->setObjectName(QStringLiteral("hashTable"));
     m_valueTables << m_hashTable;
     auto *addButton = new QPushButton(tr("Add field"), this);
     auto *editButton = new QPushButton(tr("Edit selected..."), this);
     editButton->setObjectName(QStringLiteral("hashBatchEditButton"));
     auto *deleteButton = new QPushButton(tr("Delete fields"), this);
+    m_hashTtlButton = new QPushButton(tr("Field TTL..."), this);
+    m_hashTtlButton->setObjectName(QStringLiteral("hashTtlButton"));
+    m_hashTtlButton->setToolTip(tr("Set TTL for selected hash fields"));
     auto *reloadButton = new QPushButton(tr("Reload"), this);
     m_hashMoreButton = new QPushButton(tr("Load more"), this);
     m_hashMoreButton->setObjectName(QStringLiteral("hashMoreButton"));
     m_hashMoreButton->setEnabled(false);
-    m_writeWidgets << addButton << editButton << deleteButton;
+    m_writeWidgets << addButton << editButton << deleteButton << m_hashTtlButton;
     connect(editButton, &QPushButton::clicked, this, &ValuePanel::editHashSelected);
+    connect(m_hashTtlButton, &QPushButton::clicked, this, &ValuePanel::editHashFieldTtl);
     connect(m_hashMoreButton, &QPushButton::clicked, this,
             [this] { loadHashPage(m_hashCursor, true); });
     connect(addButton, &QPushButton::clicked, this, &ValuePanel::addHashField);
@@ -706,6 +710,9 @@ void ValuePanel::loadKey(const KeyInfo &info)
     }
     m_ttlMs = info.ttlMs;
     m_hashCursor = QByteArrayLiteral("0");
+    m_hashTtlSupported = true;
+    if (m_hashTtlButton)
+        m_hashTtlButton->setEnabled(!m_readOnly);
     m_setCursor = QByteArrayLiteral("0");
     m_zsetCursor = QByteArrayLiteral("0");
     m_listOffset = 0;
@@ -767,6 +774,7 @@ void ValuePanel::clearKey()
     m_ttlLabel->clear();
     m_statusLabel->clear();
     m_hashCursor = QByteArrayLiteral("0");
+    m_hashTtlSupported = true;
     m_setCursor = QByteArrayLiteral("0");
     m_zsetCursor = QByteArrayLiteral("0");
     m_listOffset = 0;
@@ -911,10 +919,12 @@ void ValuePanel::loadHashPage(const QByteArray &cursor, bool append)
                        m_hashTable->insertRow(row);
                        m_hashTable->setItem(row, 0, readOnlyItem(field));
                        m_hashTable->setItem(row, 1, new QTableWidgetItem(value));
+                       m_hashTable->setItem(row, 2, readOnlyItem(QStringLiteral("-")));
                    }
                    if (m_valueFilter)
                        filterValueRows(m_valueFilter->text());
                    m_loading = false;
+                   refreshHashFieldTtl();
                    m_hashCursor = reply.elements[0].scalar;
                    m_hashMoreButton->setEnabled(m_hashCursor != QByteArrayLiteral("0"));
                    setStatus(tr("%1 fields loaded%2")
@@ -923,6 +933,118 @@ void ValuePanel::loadHashPage(const QByteArray &cursor, bool append)
                                           ? QString()
                                           : tr("; more available")));
                });
+}
+
+void ValuePanel::refreshHashFieldTtl()
+{
+    if (!m_hashTtlSupported || m_hashTable->rowCount() == 0)
+        return;
+    QList<QByteArray> fields;
+    fields.reserve(m_hashTable->rowCount());
+    for (int row = 0; row < m_hashTable->rowCount(); ++row) {
+        if (QTableWidgetItem *item = m_hashTable->item(row, 0))
+            fields.append(item->text().toUtf8());
+    }
+    if (fields.isEmpty())
+        return;
+    QList<QByteArray> command{QByteArrayLiteral("HTTL"), m_key, QByteArrayLiteral("FIELDS"),
+                              QByteArray::number(fields.size())};
+    command.append(fields);
+    const quint64 generation = m_generation;
+    QPointer<ValuePanel> guard(this);
+    runCommand(command, [guard, generation, fields](const RespValue &reply, const QString &error) {
+        if (!guard || generation != guard->m_generation)
+            return;
+        const bool unsupported =
+            (!error.isEmpty()
+             && error.contains(QStringLiteral("unknown command"), Qt::CaseInsensitive))
+            || (reply.isError()
+                && QString::fromUtf8(reply.scalar)
+                       .contains(QStringLiteral("unknown command"), Qt::CaseInsensitive));
+        if (!error.isEmpty() || reply.isError()) {
+            if (unsupported) {
+                guard->m_hashTtlSupported = false;
+                if (guard->m_hashTtlButton)
+                    guard->m_hashTtlButton->setEnabled(false);
+            }
+            for (int row = 0; row < guard->m_hashTable->rowCount(); ++row)
+                if (QTableWidgetItem *item = guard->m_hashTable->item(row, 2))
+                    item->setText(QStringLiteral("—"));
+            return;
+        }
+        QVector<qint64> values;
+        if (reply.type == RespType::Integer && fields.size() == 1) {
+            values.append(reply.integer);
+        } else if (reply.type == RespType::Array
+                   && reply.elements.size() == static_cast<size_t>(fields.size())) {
+            for (const RespValue &ttl : reply.elements) {
+                if (ttl.type == RespType::Integer)
+                    values.append(ttl.integer);
+                else
+                    values.append(-2);
+            }
+        } else {
+            return;
+        }
+        for (int index = 0; index < values.size(); ++index) {
+            const qint64 ttl = values.at(index);
+            const qint64 ms = ttl < 0 ? ttl : ttl * 1000;
+            const QString text = ttl == -1 ? tr("persistent")
+                : ttl == -2 ? QStringLiteral("—")
+                            : formatTtl(ms);
+            for (int row = 0; row < guard->m_hashTable->rowCount(); ++row) {
+                if (guard->m_hashTable->item(row, 0)->text().toUtf8() == fields.at(index)) {
+                    if (QTableWidgetItem *item = guard->m_hashTable->item(row, 2))
+                        item->setText(text);
+                    break;
+                }
+            }
+        }
+    });
+}
+
+void ValuePanel::editHashFieldTtl()
+{
+    if (m_readOnly || m_hashTable->rowCount() == 0)
+        return;
+    if (!m_pendingCommands.isEmpty()) {
+        setStatus(tr("Apply or discard pending changes first"));
+        return;
+    }
+    const auto rows = selectedPairs(m_hashTable);
+    if (rows.isEmpty()) {
+        setStatus(tr("Select at least one field"));
+        return;
+    }
+    bool ok = false;
+    const int seconds = QInputDialog::getInt(
+        this, tr("Hash field TTL"), tr("TTL in seconds (-1 = persist):"), -1, -1,
+        2147483647, 1, &ok);
+    if (!ok)
+        return;
+    QList<QByteArray> command;
+    if (seconds < 0) {
+        command = {QByteArrayLiteral("HPERSIST"), m_key, QByteArrayLiteral("FIELDS"),
+                   QByteArray::number(rows.size())};
+    } else {
+        command = {QByteArrayLiteral("HEXPIRE"), m_key, QByteArray::number(seconds),
+                   QByteArrayLiteral("FIELDS"), QByteArray::number(rows.size())};
+    }
+    for (const auto &[field, value] : rows) {
+        Q_UNUSED(value)
+        command.append(field.toUtf8());
+    }
+    QPointer<ValuePanel> guard(this);
+    runCommand(command, [guard, this](const RespValue &reply, const QString &error) {
+        if (!guard)
+            return;
+        if (!error.isEmpty() || reply.isError()) {
+            showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
+            return;
+        }
+        setStatus(tr("Hash field TTL updated"));
+        loadHash();
+    });
 }
 
 void ValuePanel::loadList()

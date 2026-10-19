@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.25）
+# KeyDis 使用说明（0.4.26）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -94,7 +94,7 @@ Dashboard 只执行一次 `INFO`，不会逐 Key 发命令；适合作为连接�
 | 类型 | 读取 | 编辑 |
 |---|---|---|
 | String | `GET` | 文本框 + `SET ... KEEPTTL`；**Replace range** 使用 `SETRANGE`；**Edit bytes** 支持 Hex/Base64 原始字节编辑 |
-| Hash | `HSCAN` 分页，500/页 | 单元格 `HSET`；**Edit selected** 多字段 `HSET`，旧服务器回退 `HMSET`；添加/删除字段 |
+| Hash | `HSCAN` 分页，500/页；`HTTL` 字段 TTL | 单元格 `HSET`；**Edit selected** 多字段 `HSET`，旧服务器回退 `HMSET`；添加/删除字段；**Field TTL** 使用 `HEXPIRE`/`HPERSIST` |
 | List | `LRANGE` 分页，500/页 | 单元格 `LSET`；**Edit selected** 批量 `LSET`；头/尾插入；按值删除 |
 | Set | `SSCAN` 分页，500/页 | 添加 `SADD`；删除 `SREM`；**Edit selected** 重命名成员（`SREM`+`SADD`） |
 | ZSet | `ZSCAN` 分页，500/页 | 单元格/批量 `ZADD` 改分数；删除 `ZREM` |
@@ -117,6 +117,15 @@ Hash/List/Set/ZSet 每次加载最多 500 个元素；点击 **Load more** 继�
 - **Delete node**：删除选中的非根节点（`JSON.DEL`），根节点不允许直接删除；
 - **Rename JSON key**：对象属性重命名，使用 `JSON.GET` 读取旧值后原子执行 `JSON.SET` + `JSON.DEL`；同名属性覆盖前确认；
 - 复杂结构仍可用 raw 编辑或 CLI。
+
+### Hash 字段 TTL
+
+- Hash 表新增 **TTL** 列，加载后通过 `HTTL key FIELDS n field...` 查询；
+- 选中一个或多个字段，点击 **Field TTL...**：
+  - 输入秒数：`HEXPIRE key seconds FIELDS n field...`；
+  - 输入 `-1`：`HPERSIST key FIELDS n field...`；
+- 需要 Redis 7.4+；旧服务器会显示 `—`，且不会影响普通 Hash 编辑；
+- 字段 TTL 修改是立即写入，不进入 Apply 会话。
 
 ### 部分编辑
 

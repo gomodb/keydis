@@ -112,6 +112,9 @@ void TestMainWindow::browsesAndShowsValues()
         command(seed, {QByteArrayLiteral("SET"), stringKey, QByteArrayLiteral("hello")}, &error);
         command(seed, {QByteArrayLiteral("HSET"), hashKey, QByteArrayLiteral("field"),
                        QByteArrayLiteral("value")}, &error);
+        command(seed, {QByteArrayLiteral("HEXPIRE"), hashKey, QByteArrayLiteral("120"),
+                       QByteArrayLiteral("FIELDS"), QByteArrayLiteral("1"),
+                       QByteArrayLiteral("field")}, &error);
         QList<QByteArray> bigHash{QByteArrayLiteral("HSET"), bigHashKey};
         for (int index = 0; index < 600; ++index) {
             bigHash.append(QByteArrayLiteral("field-") + QByteArray::number(index));
@@ -237,6 +240,7 @@ void TestMainWindow::browsesAndShowsValues()
     QTRY_VERIFY_WITH_TIMEOUT(hashTable->rowCount() == 1, 5000);
     QCOMPARE(hashTable->item(0, 0)->text(), QStringLiteral("field"));
     QCOMPARE(hashTable->item(0, 1)->text(), QStringLiteral("value"));
+    QTRY_VERIFY_WITH_TIMEOUT(hashTable->item(0, 2)->text() != QStringLiteral("-"), 5000);
     QVERIFY(keyLabel->text().contains(QString::fromUtf8(hashKey)));
 
     const QString dashboardCapture = qEnvironmentVariable("KEYDIS_CAPTURE_DASHBOARD");

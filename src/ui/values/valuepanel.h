@@ -72,6 +72,8 @@ private:
     void loadString();
     void loadHash();
     void loadHashPage(const QByteArray &cursor, bool append);
+    void refreshHashFieldTtl();
+    void editHashFieldTtl();
     void loadList();
     void loadListPage(int offset, bool append);
     void loadSet();
@@ -200,6 +202,8 @@ private:
     QList<QList<QByteArray>> m_pendingRedo;
     QString m_pendingLabel;
     QPushButton *m_hashMoreButton = nullptr;
+    QPushButton *m_hashTtlButton = nullptr;
+    bool m_hashTtlSupported = true;
     QPushButton *m_listMoreButton = nullptr;
     QPushButton *m_setMoreButton = nullptr;
     QPushButton *m_zsetMoreButton = nullptr;

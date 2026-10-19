@@ -3,6 +3,7 @@
 
 #include "test_clusterclient.h"
 #include "test_byteformat.h"
+#include "test_compression.h"
 #include "test_commandsafety.h"
 #include "test_commandencoder.h"
 #include "test_keyscanner.h"
@@ -35,6 +36,9 @@ int main(int argc, char *argv[])
 
     KeyDis::Test::TestByteFormat byteFormat;
     status |= QTest::qExec(&byteFormat, argc, argv);
+
+    KeyDis::Test::TestCompression compression;
+    status |= QTest::qExec(&compression, argc, argv);
 
     KeyDis::Test::TestClusterClient cluster;
     status |= QTest::qExec(&cluster, argc, argv);

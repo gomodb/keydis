@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 3.28)
 
 project(KeyDis
-    VERSION 0.4.23
+    VERSION 0.4.24
     DESCRIPTION "Native Redis/Valkey client for KDE"
     HOMEPAGE_URL "https://github.com/gomodb/keydis"
     LANGUAGES C CXX
@@ -41,6 +41,11 @@ find_package(KF6I18n REQUIRED)
 find_package(KF6Wallet REQUIRED)
 find_package(KF6XmlGui REQUIRED)
 find_package(KF6Runner QUIET)
+find_package(ZLIB REQUIRED)
+find_path(ZSTD_INCLUDE_DIR NAMES zstd.h REQUIRED)
+find_library(ZSTD_LIBRARY NAMES zstd REQUIRED)
+find_path(BROTLI_INCLUDE_DIR NAMES brotli/decode.h REQUIRED)
+find_library(BROTLIDEC_LIBRARY NAMES brotlidec REQUIRED)
 
 # hiredis is used only through its public reader API. Pin the upstream stable
 # release so parser behaviour does not drift between developer machines.
@@ -118,6 +123,8 @@ add_library(keydis_core STATIC
     src/core/safety/commandsafety.h
     src/core/format/byteformat.cpp
     src/core/format/byteformat.h
+    src/core/format/compressioncodec.cpp
+    src/core/format/compressioncodec.h
 )
 
 qt_add_library(keydis_ui_models STATIC
@@ -134,9 +141,11 @@ if(NOT KEYDIS_USE_SYSTEM_HIREDIS)
     target_include_directories(keydis_core PRIVATE ${hiredis_SOURCE_DIR})
 endif()
 
+target_include_directories(keydis_core PRIVATE ${ZSTD_INCLUDE_DIR} ${BROTLI_INCLUDE_DIR})
 target_link_libraries(keydis_core
     PUBLIC Qt6::Core Qt6::Network
     PRIVATE KF6::ConfigCore KF6::I18n KF6::Wallet ${KEYDIS_HIREDIS_TARGET}
+            ZLIB::ZLIB ${ZSTD_LIBRARY} ${BROTLIDEC_LIBRARY}
 )
 
 target_compile_definitions(keydis_core PUBLIC
@@ -156,6 +165,8 @@ add_library(keydis_ui STATIC
     src/ui/dialogs/profiledialog.h
     src/ui/dialogs/binaryeditdialog.cpp
     src/ui/dialogs/binaryeditdialog.h
+    src/ui/dialogs/compressionviewdialog.cpp
+    src/ui/dialogs/compressionviewdialog.h
     src/ui/tools/servertools.cpp
     src/ui/tools/servertools.h
     src/ui/values/valuepanel.cpp
@@ -243,6 +254,8 @@ if(BUILD_TESTING)
         tests/test_commandsafety.h
         tests/test_byteformat.cpp
         tests/test_byteformat.h
+        tests/test_compression.cpp
+        tests/test_compression.h
         tests/test_commandencoder.cpp
         tests/test_commandencoder.h
         tests/test_keyscanner.cpp

@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.23）
+# KeyDis 使用说明（0.4.24）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -154,6 +154,13 @@ Hash/List/Set/ZSet 每次加载最多 500 个元素；点击 **Load more** 继�
 - 对话框实时显示字节数和 ASCII 预览；
 - 确认后只修改本地缓冲，仍需点击 **Save string** 才发送 `SET`；
 - Text 模式仍是 UTF-8 文本预览，二进制数据请使用 Edit bytes 或 Hex view。
+
+**Decode...** 打开压缩值查看器：
+
+- 支持 gzip、zlib、zstd、Brotli；
+- **Auto detect** 通过 magic 识别 gzip/zlib/zstd；Brotli 无统一 magic，需要手动选择；
+- 解码结果只读显示，最大输出 64 MiB，防止压缩炸弹；
+- 状态栏显示压缩格式、压缩后/解码后字节数。
 
 ### Key 右键菜单
 

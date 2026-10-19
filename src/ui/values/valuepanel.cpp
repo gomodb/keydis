@@ -7,6 +7,7 @@
 #include "core/resp/respvalue.h"
 #include "ui/dialogs/batcheditdialog.h"
 #include "ui/dialogs/binaryeditdialog.h"
+#include "ui/dialogs/compressionviewdialog.h"
 
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -314,6 +315,8 @@ QWidget *ValuePanel::buildStringPage()
     hexButton->setObjectName(QStringLiteral("hexViewButton"));
     auto *bytesButton = new QPushButton(tr("Edit bytes..."), page);
     bytesButton->setObjectName(QStringLiteral("editBytesButton"));
+    auto *decodeButton = new QPushButton(tr("Decode..."), page);
+    decodeButton->setObjectName(QStringLiteral("decodeButton"));
     m_stringDiscardButton = new QPushButton(tr("Discard"), page);
     m_stringDiscardButton->setObjectName(QStringLiteral("discardStringButton"));
     m_stringDiscardButton->setEnabled(false);
@@ -322,6 +325,7 @@ QWidget *ValuePanel::buildStringPage()
     row->addWidget(rangeButton);
     row->addWidget(hexButton);
     row->addWidget(bytesButton);
+    row->addWidget(decodeButton);
     m_writeWidgets << saveButton << m_stringDiscardButton << rangeButton << bytesButton;
     row->addStretch();
     layout->addLayout(row);
@@ -329,6 +333,7 @@ QWidget *ValuePanel::buildStringPage()
     connect(rangeButton, &QPushButton::clicked, this, &ValuePanel::partialStringEdit);
     connect(hexButton, &QPushButton::clicked, this, &ValuePanel::showHexView);
     connect(bytesButton, &QPushButton::clicked, this, &ValuePanel::editStringBytes);
+    connect(decodeButton, &QPushButton::clicked, this, &ValuePanel::showDecodedValue);
     connect(m_stringDiscardButton, &QPushButton::clicked, this, &ValuePanel::discardString);
     connect(m_stringEdit, &QPlainTextEdit::textChanged, this, &ValuePanel::stringTextChanged);
     return page;
@@ -1516,6 +1521,14 @@ void ValuePanel::updateJsonButtons()
     m_jsonAddButton->setEnabled(!m_readOnly && container);
     m_jsonDeleteButton->setEnabled(!m_readOnly && item && !root);
     m_jsonRenameButton->setEnabled(!m_readOnly && item && !root && objectChild);
+}
+
+void ValuePanel::showDecodedValue()
+{
+    if (m_key.isEmpty())
+        return;
+    CompressionViewDialog dialog(tr("Decoded value: %1").arg(displayKey(m_key)), m_stringRaw, this);
+    dialog.exec();
 }
 
 void ValuePanel::editStringBytes()

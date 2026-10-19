@@ -93,6 +93,7 @@ private:
     void handleJsonTreeEdited(QTreeWidgetItem *item, int column);
     void formatJson();
     void showHexView();
+    void showDecodedValue();
     void editStringBytes();
     void stringTextChanged();
     void addJsonChild();

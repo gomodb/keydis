@@ -71,7 +71,7 @@ jobs:
 
       - name: Upload test log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: arch-test-log
           path: build/Testing/Temporary/LastTest.log
@@ -162,7 +162,7 @@ jobs:
           appstreamcli validate --no-net /usr/share/metainfo/io.github.keydis.KeyDis.metainfo.xml
 
       - name: Upload package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: keydis-arch-package
           path: packaging/arch/keydis-[0-9]*.pkg.tar.zst

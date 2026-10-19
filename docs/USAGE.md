@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.8）
+# KeyDis 使用说明（0.4.9）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -145,7 +145,7 @@ Key 列表或命名空间树中的 Key 支持：
 - **Pub/Sub**：独立连接，支持 `SUBSCRIBE`/`UNSUBSCRIBE` 与 `PUBLISH`；
 - **Monitor**：独立连接，Start/Stop `MONITOR`；
 - **Analysis**：按 pattern/type 扫描，使用 `MEMORY USAGE`/`PTTL`，按大小排序输出 Top 500；
-- **Cluster**：`CLUSTER NODES` 节点表（ID、地址、角色、槽位、链路）；仅显示单次拓扑快照，不做 resharding。
+- **Cluster**：`CLUSTER NODES` 节点表（ID、地址、角色、槽位、链路），并为每个 master 补充 Memory、Clients、Keys；仅显示单次拓扑快照，不做 resharding。
 - **Transfer**：见下一节。
 
 Pub/Sub 与 Monitor 不占用主浏览器连接。

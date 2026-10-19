@@ -63,6 +63,24 @@ QString formatTtl(qint64 ttlMs)
     return QObject::tr("%1 s").arg(ttlMs / 1000);
 }
 
+bool parseNodeAddress(const QString &address, QString *host, quint16 *port)
+{
+    QString value = address.section(QLatin1Char('@'), 0, 0);
+    const int colon = value.lastIndexOf(QLatin1Char(':'));
+    if (colon <= 0 || colon == value.size() - 1)
+        return false;
+    QString candidate = value.left(colon);
+    if (candidate.startsWith(QLatin1Char('[')) && candidate.endsWith(QLatin1Char(']')))
+        candidate = candidate.mid(1, candidate.size() - 2);
+    bool ok = false;
+    const int parsed = value.mid(colon + 1).toInt(&ok);
+    if (!ok || parsed <= 0 || parsed > 65535)
+        return false;
+    *host = candidate;
+    *port = static_cast<quint16>(parsed);
+    return true;
+}
+
 QTableWidget *makeTable(const QStringList &headers, QWidget *parent)
 {
     auto *table = new QTableWidget(0, headers.size(), parent);
@@ -122,7 +140,8 @@ ServerToolsPage::ServerToolsPage(RedisClient *connection, QWidget *parent)
     clusterBar->addWidget(clusterRefresh);
     clusterLayout->addLayout(clusterBar);
     m_clusterTable = makeTable({tr("ID"), tr("Address"), tr("Flags"), tr("Master"),
-                                tr("Slots"), tr("Link")}, cluster);
+                                tr("Slots"), tr("Link"), tr("Memory"), tr("Clients"),
+                                tr("Keys")}, cluster);
     m_clusterTable->setObjectName(QStringLiteral("clusterTable"));
     clusterLayout->addWidget(m_clusterTable, 1);
     connect(clusterRefresh, &QPushButton::clicked, this, &ServerToolsPage::refreshCluster);
@@ -377,6 +396,7 @@ void ServerToolsPage::refreshCluster()
         const QStringList lines = QString::fromUtf8(reply.scalar)
                                       .split(QLatin1Char('\n'), Qt::SkipEmptyParts);
         guard->m_clusterTable->setRowCount(0);
+        QVector<QPair<int, QString>> masters;
         for (const QString &line : lines) {
             const QStringList fields = line.split(QLatin1Char(' '), Qt::SkipEmptyParts);
             if (fields.size() < 8)
@@ -390,9 +410,74 @@ void ServerToolsPage::refreshCluster()
             guard->m_clusterTable->setItem(
                 row, 4, item(QStringList(fields.mid(8)).join(QLatin1Char(' '))));
             guard->m_clusterTable->setItem(row, 5, item(fields.at(7)));
+            guard->m_clusterTable->setItem(row, 6, item(QStringLiteral("-")));
+            guard->m_clusterTable->setItem(row, 7, item(QStringLiteral("-")));
+            guard->m_clusterTable->setItem(row, 8, item(QStringLiteral("-")));
+            const QString flags = fields.at(2);
+            if (flags.contains(QLatin1String("master")) && !flags.contains(QLatin1String("fail")))
+                masters.append({row, fields.at(1)});
         }
         guard->m_clusterTable->resizeColumnsToContents();
         guard->m_clusterTable->horizontalHeader()->setStretchLastSection(true);
+
+        for (const auto &[row, address] : masters) {
+            QString host;
+            quint16 port = 0;
+            if (!parseNodeAddress(address, &host, &port))
+                continue;
+            auto *node = new RedisConnection(guard.data());
+            QPointer<RedisConnection> nodeGuard(node);
+            QObject::connect(node, &RedisClient::stateChanged, guard.data(),
+                             [guard, nodeGuard, generation, row](const QString &state) {
+                if (!guard || !nodeGuard || guard->m_generation != generation)
+                    return;
+                if (state != QLatin1String("Ready") && state != QLatin1String("Ready (RESP2)"))
+                    return;
+                nodeGuard->sendCommand(
+                    {QByteArrayLiteral("INFO")},
+                    [guard, nodeGuard, generation, row](const RespValue &info,
+                                                        const QString &infoError) {
+                    if (!guard || !nodeGuard || guard->m_generation != generation)
+                        return;
+                    if (infoError.isEmpty() && !info.isError()) {
+                        QString memory = QStringLiteral("-");
+                        QString clients = QStringLiteral("-");
+                        QString keys = QStringLiteral("-");
+                        const QStringList lines =
+                            QString::fromUtf8(info.scalar).split(QLatin1Char('\n'));
+                        for (const QString &raw : lines) {
+                            const QString line = raw.trimmed();
+                            if (line.startsWith(QLatin1String("used_memory_human:")))
+                                memory = line.section(QLatin1Char(':'), 1);
+                            else if (line.startsWith(QLatin1String("connected_clients:")))
+                                clients = line.section(QLatin1Char(':'), 1);
+                            else if (line.startsWith(QLatin1String("db0:keys=")))
+                                keys = line.section(QLatin1Char(':'), 1)
+                                           .section(QLatin1Char(','), 0, 0)
+                                           .section(QLatin1Char('='), 1);
+                        }
+                        if (auto *cell = guard->m_clusterTable->item(row, 6))
+                            cell->setText(memory);
+                        if (auto *cell = guard->m_clusterTable->item(row, 7))
+                            cell->setText(clients);
+                        if (auto *cell = guard->m_clusterTable->item(row, 8))
+                            cell->setText(keys);
+                        guard->m_clusterTable->resizeColumnsToContents();
+                    }
+                    nodeGuard->disconnectFromHost();
+                    nodeGuard->deleteLater();
+                });
+            });
+            QObject::connect(node, &RedisClient::errorOccurred, guard.data(),
+                             [nodeGuard](const QString &) {
+                if (nodeGuard) {
+                    nodeGuard->disconnectFromHost();
+                    nodeGuard->deleteLater();
+                }
+            });
+            node->connectToHost(host, port, guard->m_tls, guard->m_username,
+                                guard->m_password, 0);
+        }
     });
 }
 

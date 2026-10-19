@@ -362,6 +362,16 @@ void TestMainWindow::browsesCluster()
     QVERIFY(rowForKey(table->model(), keyB) >= 0);
     QVERIFY(rowForKey(table->model(), keyC) >= 0);
     QTRY_VERIFY_WITH_TIMEOUT(clusterTable->rowCount() >= 3, 5000);
+    QTRY_VERIFY_WITH_TIMEOUT(
+        [clusterTable] {
+            for (int row = 0; row < clusterTable->rowCount(); ++row) {
+                if (clusterTable->item(row, 6)
+                    && clusterTable->item(row, 6)->text() != QStringLiteral("-"))
+                    return true;
+            }
+            return false;
+        }(),
+        10000);
 
     table->selectRow(rowForKey(table->model(), keyA));
     auto *stringEdit = window.findChild<QPlainTextEdit *>(QStringLiteral("stringEdit"));

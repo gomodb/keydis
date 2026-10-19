@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.34）
+# KeyDis 使用说明（0.4.35）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -173,6 +173,16 @@ ZSet 页的 **Geo...** 打开地理搜索：
   - 输入 `-1`：`HPERSIST key FIELDS n field...`；
 - 需要 Redis 7.4+；旧服务器会显示 `—`，且不会影响普通 Hash 编辑；
 - 字段 TTL 修改是立即写入，不进入 Apply 会话。
+
+### Stream 消费者
+
+Stream → Groups 下新增 **Consumers** 页：
+
+- 选中 Group 后通过 `XINFO CONSUMERS key group` 加载消费者；
+- 显示消费者名、pending 数、idle；
+- **Delete consumer**：`XGROUP DELCONSUMER key group consumer`；
+- **Auto claim...**：输入 consumer 与最小 idle 毫秒数，执行 `XAUTOCLAIM key group consumer min-idle 0-0 COUNT 100`；
+- 操作完成后刷新 Pending 与 Consumers。
 
 ### 部分编辑
 
@@ -354,7 +364,7 @@ redis 127.0.0.1
 - Sentinel 认证复用主连接用户名/密码，暂不支持独立 Sentinel ACL；
 - 只读模式是 UI 层保护，不是服务端 ACL；生产环境仍建议使用只读 ACL 用户；
 - 精确命名空间计数需要 `Index all`，大库会占用较多内存；
-- Stream 组/Pending 支持查看与 claim/ack，但更完整的 consumer 管理/自动 claim 未实现；RedisJSON 树支持标量编辑、对象/数组添加与节点删除；对象键重命名等复杂重排仍建议 raw 编辑；
+- Stream 组/Pending/消费者支持查看、claim/ack、删除消费者与 XAUTOCLAIM；RedisJSON 树支持标量编辑、对象/数组添加与节点删除；对象键重命名等复杂重排仍建议 raw 编辑；
 - Key 批量操作目前只覆盖删除与 TTL；批量重命名/移动/复制到其他 DB 尚未实现；
 - 值过滤只作用于已加载行；String 的普通文本编辑仍是 UTF-8，二进制数据应使用 **Edit bytes**；Hex view 保持只读；
 - Hash/List/Set/ZSet 支持 Apply/Discard；添加/删除字段、成员、列表元素仍是立即写入，尚未纳入同一待提交会话；

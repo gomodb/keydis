@@ -2031,7 +2031,7 @@ Execute?</source>
     <message>
       <location filename="../src/ui/values/valuepanel.cpp" line="247" />
       <location filename="../src/ui/values/valuepanel.cpp" line="341" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="674" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="699" />
       <source>Discard</source>
       <translation>放弃</translation>
     </message>
@@ -2082,16 +2082,16 @@ Execute?</source>
     </message>
     <message>
       <location filename="../src/ui/values/valuepanel.cpp" line="379" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2360" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2493" />
       <source>Field</source>
       <translation>字段</translation>
     </message>
     <message>
       <location filename="../src/ui/values/valuepanel.cpp" line="379" />
       <location filename="../src/ui/values/valuepanel.cpp" line="424" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="645" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2360" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2400" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="670" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2493" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2533" />
       <source>Value</source>
       <translation>值</translation>
     </message>
@@ -2134,7 +2134,8 @@ Execute?</source>
       <location filename="../src/ui/values/valuepanel.cpp" line="480" />
       <location filename="../src/ui/values/valuepanel.cpp" line="503" />
       <location filename="../src/ui/values/valuepanel.cpp" line="571" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="713" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="620" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="738" />
       <source>Reload</source>
       <translation>重新加载</translation>
     </message>
@@ -2179,7 +2180,7 @@ Execute?</source>
     <message>
       <location filename="../src/ui/values/valuepanel.cpp" line="473" />
       <location filename="../src/ui/values/valuepanel.cpp" line="496" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2477" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2610" />
       <source>Member</source>
       <translation>成员</translation>
     </message>
@@ -2197,7 +2198,7 @@ Execute?</source>
     </message>
     <message>
       <location filename="../src/ui/values/valuepanel.cpp" line="496" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2477" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2610" />
       <source>Score</source>
       <translation>分数</translation>
     </message>
@@ -2208,8 +2209,8 @@ Execute?</source>
     </message>
     <message>
       <location filename="../src/ui/values/valuepanel.cpp" line="534" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2486" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2757" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2619" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2890" />
       <source>Score must be a number</source>
       <translation>分数必须是数字</translation>
     </message>
@@ -2251,11 +2252,13 @@ Execute?</source>
     </message>
     <message>
       <location filename="../src/ui/values/valuepanel.cpp" line="582" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="626" />
       <source>Consumers</source>
       <translation>消费者</translation>
     </message>
     <message>
       <location filename="../src/ui/values/valuepanel.cpp" line="582" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="612" />
       <source>Pending</source>
       <translation>待处理</translation>
     </message>
@@ -2296,11 +2299,13 @@ Execute?</source>
     </message>
     <message>
       <location filename="../src/ui/values/valuepanel.cpp" line="602" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="612" />
       <source>Consumer</source>
       <translation>消费者</translation>
     </message>
     <message>
       <location filename="../src/ui/values/valuepanel.cpp" line="602" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="612" />
       <source>Idle</source>
       <translation>空闲</translation>
     </message>
@@ -2315,388 +2320,430 @@ Execute?</source>
       <translation>组</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="632" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="618" />
+      <source>Delete consumer</source>
+      <translation>删除消费者</translation>
+    </message>
+    <message>
+      <location filename="../src/ui/values/valuepanel.cpp" line="619" />
+      <source>Auto claim...</source>
+      <translation>自动 claim…</translation>
+    </message>
+    <message>
+      <location filename="../src/ui/values/valuepanel.cpp" line="657" />
       <source>JSON path</source>
       <translation>JSON 路径</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="635" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="660" />
       <source>RedisJSON path, e.g. $ or $.user</source>
       <translation>RedisJSON 路径，例如 $ 或 $.user</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="637" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="662" />
       <source>Load path</source>
       <translation>加载路径</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="645" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="670" />
       <source>Path</source>
       <translation>路径</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="661" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="686" />
       <source>Refresh tree</source>
       <translation>刷新树</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="662" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="687" />
       <source>Add child</source>
       <translation>添加子节点</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="665" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="690" />
       <source>Delete node</source>
       <translation>删除节点</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="668" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2087" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2096" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="693" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2220" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2229" />
       <source>Rename JSON key</source>
       <translation>重命名 JSON 键</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="671" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="696" />
       <source>Format JSON</source>
       <translation>格式化 JSON</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="672" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="697" />
       <source>Save JSON</source>
       <translation>保存 JSON</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="818" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="843" />
       <source>No key selected</source>
       <translation>未选择 Key</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="843" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="868" />
       <source>Search all values</source>
       <translation>搜索全部值</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="844" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="869" />
       <source>Load all elements of this key into memory? Large collections may block the connection and use significant memory.</source>
       <translation>加载此 Key 的全部元素到内存？大集合可能阻塞连接并占用大量内存。</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="863" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="888" />
       <source>Loading all values...</source>
       <translation>正在加载全部值…</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="947" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="972" />
       <source>%1 entries loaded (full key)</source>
       <translation>已加载 %1 项（完整 Key）</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1017" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1042" />
       <source>type: -</source>
       <translation>类型：-</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1017" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1042" />
       <source>type: %1</source>
       <translation>类型：%1</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1019" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1044" />
       <source>TTL: %1</source>
       <translation>TTL：%1</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1073" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1098" />
       <source>Load full string</source>
       <translation>加载完整 String</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1074" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1099" />
       <source>Load the complete value (%1 bytes) into memory?</source>
       <translation>将完整值（%1 字节）加载到内存？</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1081" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1106" />
       <source>Loading full string...</source>
       <translation>正在加载完整 String…</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1110" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1135" />
       <source>Large value (%1 bytes); showing first %2 KiB. Use Load full.</source>
       <translation>大值（%1 字节）；显示前 %2 KiB。使用“加载完整值”。</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1114" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1139" />
       <source>String loaded</source>
       <translation>字符串已加载</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1156" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1181" />
       <source>Unexpected HSCAN reply</source>
       <translation>意外的 HSCAN 响应</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1181" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1206" />
       <source>%1 fields loaded%2</source>
       <translation>已加载 %1 个字段%2</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1185" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="1348" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="1395" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="1448" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1210" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1373" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1420" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1473" />
       <source>; more available</source>
       <translation>; 还有更多</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1243" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1268" />
       <source>persistent</source>
       <translation>永久</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1272" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1297" />
       <source>Hash field TTL</source>
       <translation>Hash 字段 TTL</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1296" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1321" />
       <source>Hash field TTL updated</source>
       <translation>Hash 字段 TTL 已更新</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1324" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1349" />
       <source>Unexpected LRANGE reply</source>
       <translation>意外的 LRANGE 响应</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1346" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1371" />
       <source>%1 elements loaded%2</source>
       <translation>已加载 %1 个元素%2</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1375" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1400" />
       <source>Unexpected SSCAN reply</source>
       <translation>意外的 SSCAN 响应</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1391" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="1444" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1416" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1469" />
       <source>%1 members loaded%2</source>
       <translation>已加载 %1 个成员%2</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1421" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1446" />
       <source>Unexpected ZSCAN reply</source>
       <translation>意外的 ZSCAN 响应</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1454" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1479" />
       <source>Type "%1" is not editable in this build. Use the CLI tab for raw commands.</source>
       <translation>类型“%1”在当前版本中不可编辑。请使用 CLI 执行原始命令。</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1471" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1496" />
       <source>First 100 stream entries loaded</source>
       <translation>已加载前 100 个流条目</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1489" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1514" />
       <source>Unexpected XRANGE reply</source>
       <translation>意外的 XRANGE 响应</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1513" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1538" />
       <source>%1 stream entries loaded</source>
       <translation>已加载 %1 个流条目</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1560" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1631" />
+      <source>Delete stream consumer</source>
+      <translation>删除 Stream 消费者</translation>
+    </message>
+    <message>
+      <location filename="../src/ui/values/valuepanel.cpp" line="1632" />
+      <source>Delete consumer "%1" from group "%2"?</source>
+      <translation>从组 "%2" 删除消费者 "%1"？</translation>
+    </message>
+    <message>
+      <location filename="../src/ui/values/valuepanel.cpp" line="1646" />
+      <source>Consumer deleted</source>
+      <translation>消费者已删除</translation>
+    </message>
+    <message>
+      <location filename="../src/ui/values/valuepanel.cpp" line="1663" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1668" />
+      <source>Auto claim</source>
+      <translation>自动 claim</translation>
+    </message>
+    <message>
+      <location filename="../src/ui/values/valuepanel.cpp" line="1668" />
+      <source>Minimum idle time (ms):</source>
+      <translation>最小空闲时间（毫秒）：</translation>
+    </message>
+    <message>
+      <location filename="../src/ui/values/valuepanel.cpp" line="1682" />
+      <source>Auto-claimed pending entries</source>
+      <translation>已自动 claim 待处理条目</translation>
+    </message>
+    <message>
+      <location filename="../src/ui/values/valuepanel.cpp" line="1693" />
       <source>Create stream group</source>
       <translation>创建流组</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1561" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1694" />
       <source>Group name:</source>
       <translation>组名称：</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1586" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1719" />
       <source>Delete stream group</source>
       <translation>删除流组</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1587" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1720" />
       <source>Delete group "%1"?</source>
       <translation>删除组“%1”？</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1658" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1791" />
       <source>Claim pending entries</source>
       <translation>认领待处理条目</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1659" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1663" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1792" />
       <source>Consumer name:</source>
       <translation>消费者名称：</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1715" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1848" />
       <source>Add stream entry</source>
       <translation>添加流条目</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1715" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1848" />
       <source>Fields, one field=value per line:</source>
       <translation>字段，每行一个 field=value：</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1722" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1855" />
       <source>Invalid field line: %1</source>
       <translation>无效字段行：%1</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1729" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1862" />
       <source>At least one field is required</source>
       <translation>至少需要一个字段</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1757" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1890" />
       <source>Delete stream entries</source>
       <translation>删除流条目</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1758" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1891" />
       <source>Delete %1 selected entries?</source>
       <translation>删除选中的 %1 个条目？</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1805" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="1834" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1938" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1967" />
       <source>{…}</source>
       <translation>{…}</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1812" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="1841" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1945" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1974" />
       <source>[…]</source>
       <translation>[…]</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1867" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2015" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2000" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2148" />
       <source>Invalid JSON value</source>
       <translation>无效的 JSON 值</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1883" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2016" />
       <source>JSON path updated</source>
       <translation>JSON 路径已更新</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1908" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2041" />
       <source>Decoded value: %1</source>
       <translation>解码值：%1</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1916" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2049" />
       <source>Bitmap: %1</source>
       <translation>位图：%1</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1932" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2065" />
       <source>Protobuf: %1</source>
       <translation>Protobuf：%1</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1940" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2073" />
       <source>MessagePack value: %1</source>
       <translation>MessagePack 值：%1</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1948" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2081" />
       <source>Edit bytes: %1</source>
       <translation>编辑字节：%1</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1956" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2089" />
       <source>Bytes modified; click Save string</source>
       <translation>字节已修改；点击“保存 String”</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1970" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2103" />
       <source>Hex view: %1</source>
       <translation>十六进制视图：%1</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1994" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2127" />
       <source>Select an object or array node</source>
       <translation>请选择对象或数组节点</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2001" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2007" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2134" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2140" />
       <source>Add JSON child</source>
       <translation>添加 JSON 子节点</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2001" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2134" />
       <source>Key name:</source>
       <translation>键名：</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2007" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2140" />
       <source>JSON value:</source>
       <translation>JSON 值：</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2037" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2170" />
       <source>JSON child added</source>
       <translation>JSON 子节点已添加</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2052" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2185" />
       <source>Delete JSON node</source>
       <translation>删除 JSON 节点</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2053" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2186" />
       <source>Delete JSON node %1?</source>
       <translation>删除 JSON 节点 %1？</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2066" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2199" />
       <source>JSON node deleted</source>
       <translation>JSON 节点已删除</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2087" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2220" />
       <source>New key name:</source>
       <translation>新键名：</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2097" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2230" />
       <source>A property with this name already exists and will be overwritten. Continue?</source>
       <translation>同名属性已存在，将被覆盖。继续？</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2120" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2253" />
       <source>JSON key renamed</source>
       <translation>JSON 键已重命名</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2137" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2270" />
       <source>JSON formatted</source>
       <translation>JSON 已格式化</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2163" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2296" />
       <source>JSON loaded</source>
       <translation>JSON 已加载</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2132" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2173" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2265" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2306" />
       <source>Invalid JSON document</source>
       <translation>无效的 JSON 文档</translation>
     </message>
@@ -2706,280 +2753,280 @@ Execute?</source>
       <translation>应用</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2192" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2325" />
       <source>JSON saved</source>
       <translation>JSON 已保存</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2220" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2353" />
       <source>String saved</source>
       <translation>字符串已保存</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1262" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2232" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2268" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2542" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2574" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2611" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2638" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2677" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2704" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2740" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2778" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1287" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2365" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2401" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2675" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2707" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2744" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2771" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2810" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2837" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2873" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2911" />
       <source>Apply or discard pending changes first</source>
       <translation>请先应用或放弃待提交修改</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2237" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2370" />
       <source>Set TTL</source>
       <translation>设置 TTL</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1272" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2238" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1297" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2371" />
       <source>TTL in seconds (-1 = persist):</source>
       <translation>TTL 秒数（-1 = 持久化）：</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2257" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2390" />
       <source>TTL removed</source>
       <translation>TTL 已移除</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2257" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2390" />
       <source>TTL updated</source>
       <translation>TTL 已更新</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2271" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2404" />
       <source>Delete key</source>
       <translation>删除 Key</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2272" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2405" />
       <source>Delete key "%1"?</source>
       <translation>删除 Key“%1”？</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2315" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2448" />
       <source>Replace string range</source>
       <translation>替换字符串区间</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2325" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2458" />
       <source>Byte offset</source>
       <translation>字节偏移</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2328" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2461" />
       <source>Replacement</source>
       <translation>替换内容</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="1267" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2357" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="1292" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2490" />
       <source>Select at least one field</source>
       <translation>请至少选择一个字段</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2360" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2493" />
       <source>Edit hash fields</source>
       <translation>编辑哈希字段</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2377" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2510" />
       <source>hash fields</source>
       <translation>哈希字段</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2397" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2530" />
       <source>Select at least one element</source>
       <translation>请至少选择一个元素</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2400" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2533" />
       <source>Edit list elements</source>
       <translation>编辑列表元素</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2400" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2533" />
       <source>Index</source>
       <translation>索引</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2415" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2548" />
       <source>list elements</source>
       <translation>列表元素</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2436" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2474" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2569" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2607" />
       <source>Select at least one member</source>
       <translation>请至少选择一个成员</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2439" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2572" />
       <source>Edit set members</source>
       <translation>编辑集合成员</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2439" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2572" />
       <source>Old member</source>
       <translation>旧成员</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2439" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2572" />
       <source>New member</source>
       <translation>新成员</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2455" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2588" />
       <source>set members</source>
       <translation>集合成员</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2477" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2610" />
       <source>Edit sorted-set scores</source>
       <translation>编辑有序集合分数</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2498" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2631" />
       <source>scores</source>
       <translation>分数</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2527" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2660" />
       <source>Transaction aborted</source>
       <translation>事务已中止</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2548" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2552" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2681" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2685" />
       <source>Add hash field</source>
       <translation>添加哈希字段</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2548" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2681" />
       <source>Field:</source>
       <translation>字段：</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2552" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2615" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2685" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2748" />
       <source>Value:</source>
       <translation>值：</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2587" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2720" />
       <source>Delete hash fields</source>
       <translation>删除哈希字段</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2588" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2721" />
       <source>Delete %1 selected field(s)?</source>
       <translation>删除选中的 %1 个字段？</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2615" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2748" />
       <source>Add list value</source>
       <translation>添加列表值</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2651" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2784" />
       <source>Delete list values</source>
       <translation>删除列表值</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2652" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2785" />
       <source>Delete %1 selected value(s)?</source>
       <translation>删除选中的 %1 个值？</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2683" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2816" />
       <source>Add set member</source>
       <translation>添加集合成员</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2683" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2747" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2816" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2880" />
       <source>Member:</source>
       <translation>成员：</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2717" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2850" />
       <source>Delete set members</source>
       <translation>删除集合成员</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2718" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2792" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2851" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2925" />
       <source>Delete %1 selected member(s)?</source>
       <translation>删除选中的 %1 个成员？</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2746" />
-      <location filename="../src/ui/values/valuepanel.cpp" line="2750" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2879" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2883" />
       <source>Add sorted-set member</source>
       <translation>添加有序集合成员</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2750" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2883" />
       <source>Score:</source>
       <translation>分数：</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2791" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2924" />
       <source>Delete sorted-set members</source>
       <translation>删除有序集合成员</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2840" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="2973" />
       <source>Undone: %1</source>
       <translation>已撤销：%1</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2870" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="3003" />
       <source>Redone: %1</source>
       <translation>已重做：%1</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2912" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="3045" />
       <source>Pending changes; click Apply</source>
       <translation>有未提交修改；点击“应用”</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2937" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="3070" />
       <source>Changes applied</source>
       <translation>修改已应用</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2954" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="3087" />
       <source>Pending changes discarded</source>
       <translation>已放弃待提交修改</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="2988" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="3121" />
       <source>● Modified</source>
       <translation>● 已修改</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="3007" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="3140" />
       <source>String changes discarded</source>
       <translation>已放弃 String 修改</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="3018" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="3151" />
       <source>JSON changes discarded</source>
       <translation>已放弃 JSON 修改</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="3035" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="3168" />
       <source>The server rejected this write (ACL or server read-only mode).</source>
       <translation>服务器拒绝了此写入（ACL 或服务端只读模式）。</translation>
     </message>
     <message>
-      <location filename="../src/ui/values/valuepanel.cpp" line="3046" />
+      <location filename="../src/ui/values/valuepanel.cpp" line="3179" />
       <source>Not connected</source>
       <translation>未连接</translation>
     </message>

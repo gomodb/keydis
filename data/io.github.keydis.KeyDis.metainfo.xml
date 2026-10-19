@@ -18,6 +18,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.35" date="2026-10-19">
+      <description>
+        <p>Stream consumer management: XINFO CONSUMERS, XGROUP DELCONSUMER and XAUTOCLAIM.</p>
+      </description>
+    </release>
     <release version="0.4.34" date="2026-10-19">
       <description>
         <p>Schema-less Protobuf wire inspector with nested-message heuristics and size/depth guards.</p>

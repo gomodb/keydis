@@ -606,8 +606,27 @@ QWidget *ValuePanel::buildStreamPage()
     groupsLayout->addWidget(m_streamPendingTable, 1);
     tabs->addTab(groupsPage, tr("Groups"));
 
+    auto *consumersPage = new QWidget(tabs);
+    auto *consumersLayout = new QVBoxLayout(consumersPage);
+    consumersLayout->setContentsMargins(0, 0, 0, 0);
+    m_streamConsumersTable = makeTable({tr("Consumer"), tr("Pending"), tr("Idle")},
+                                       consumersPage);
+    m_streamConsumersTable->setObjectName(QStringLiteral("streamConsumersTable"));
+    m_valueTables << m_streamConsumersTable;
+    consumersLayout->addWidget(m_streamConsumersTable, 1);
+    auto *consumersBar = new QHBoxLayout;
+    auto *deleteConsumerButton = new QPushButton(tr("Delete consumer"), consumersPage);
+    auto *autoClaimButton = new QPushButton(tr("Auto claim..."), consumersPage);
+    auto *reloadConsumersButton = new QPushButton(tr("Reload"), consumersPage);
+    consumersBar->addWidget(deleteConsumerButton);
+    consumersBar->addWidget(autoClaimButton);
+    consumersBar->addWidget(reloadConsumersButton);
+    consumersBar->addStretch();
+    consumersLayout->addLayout(consumersBar);
+    tabs->addTab(consumersPage, tr("Consumers"));
+
     m_writeWidgets << addButton << deleteButton << createGroupButton << deleteGroupButton
-                   << claimButton << ackButton;
+                   << claimButton << ackButton << deleteConsumerButton << autoClaimButton;
     connect(addButton, &QPushButton::clicked, this, &ValuePanel::addStreamEntry);
     connect(deleteButton, &QPushButton::clicked, this, &ValuePanel::deleteStreamEntries);
     connect(reloadButton, &QPushButton::clicked, this, &ValuePanel::loadStream);
@@ -616,8 +635,14 @@ QWidget *ValuePanel::buildStreamPage()
     connect(pendingButton, &QPushButton::clicked, this, &ValuePanel::loadPending);
     connect(claimButton, &QPushButton::clicked, this, &ValuePanel::claimStreamEntries);
     connect(ackButton, &QPushButton::clicked, this, &ValuePanel::ackStreamEntries);
-    connect(m_streamGroupsTable, &QTableWidget::itemSelectionChanged, this,
-            &ValuePanel::loadPending);
+    connect(deleteConsumerButton, &QPushButton::clicked, this,
+            &ValuePanel::deleteStreamConsumer);
+    connect(autoClaimButton, &QPushButton::clicked, this, &ValuePanel::autoClaimStreamEntries);
+    connect(reloadConsumersButton, &QPushButton::clicked, this, &ValuePanel::loadConsumers);
+    connect(m_streamGroupsTable, &QTableWidget::itemSelectionChanged, this, [this] {
+        loadPending();
+        loadConsumers();
+    });
 
     layout->addWidget(tabs);
     return page;
@@ -1549,6 +1574,114 @@ void ValuePanel::loadStreamGroups()
                    }
                    m_loading = false;
                    m_streamGroupsTable->resizeColumnsToContents();
+               });
+}
+
+void ValuePanel::loadConsumers()
+{
+    if (!m_streamConsumersTable || m_loading)
+        return;
+    const auto rows = m_streamGroupsTable->selectionModel()->selectedRows();
+    if (rows.isEmpty()) {
+        m_streamConsumersTable->setRowCount(0);
+        return;
+    }
+    const QString group = m_streamGroupsTable->item(rows.first().row(), 0)->text();
+    if (group.isEmpty())
+        return;
+    const quint64 generation = m_generation;
+    QPointer<ValuePanel> guard(this);
+    runCommand({QByteArrayLiteral("XINFO"), QByteArrayLiteral("CONSUMERS"), m_key,
+                group.toUtf8()},
+               [guard, generation, this](const RespValue &reply, const QString &error) {
+                   if (!guard || generation != m_generation)
+                       return;
+                   if (!error.isEmpty() || reply.isError()) {
+                       m_streamConsumersTable->setRowCount(0);
+                       return;
+                   }
+                   m_streamConsumersTable->setRowCount(0);
+                   if (reply.type != RespType::Array)
+                       return;
+                   for (const RespValue &entry : reply.elements) {
+                       const QHash<QString, QString> fields = responseMap(entry);
+                       const int row = m_streamConsumersTable->rowCount();
+                       m_streamConsumersTable->insertRow(row);
+                       m_streamConsumersTable->setItem(
+                           row, 0, readOnlyItem(fields.value(QStringLiteral("name"))));
+                       m_streamConsumersTable->setItem(
+                           row, 1, readOnlyItem(fields.value(QStringLiteral("pending"))));
+                       m_streamConsumersTable->setItem(
+                           row, 2, readOnlyItem(fields.value(QStringLiteral("idle"))));
+                   }
+                   m_streamConsumersTable->resizeColumnsToContents();
+               });
+}
+
+void ValuePanel::deleteStreamConsumer()
+{
+    if (m_readOnly || !m_streamConsumersTable)
+        return;
+    const auto consumerRows = m_streamConsumersTable->selectionModel()->selectedRows();
+    const auto groupRows = m_streamGroupsTable->selectionModel()->selectedRows();
+    if (consumerRows.isEmpty() || groupRows.isEmpty())
+        return;
+    const QString consumer = m_streamConsumersTable->item(consumerRows.first().row(), 0)->text();
+    const QString group = m_streamGroupsTable->item(groupRows.first().row(), 0)->text();
+    if (QMessageBox::question(this, tr("Delete stream consumer"),
+                              tr("Delete consumer \"%1\" from group \"%2\"?")
+                                  .arg(consumer, group))
+        != QMessageBox::Yes) {
+        return;
+    }
+    QPointer<ValuePanel> guard(this);
+    runCommand({QByteArrayLiteral("XGROUP"), QByteArrayLiteral("DELCONSUMER"), m_key,
+                group.toUtf8(), consumer.toUtf8()},
+               [guard, this](const RespValue &reply, const QString &error) {
+                   if (!guard)
+                       return;
+                   if (!error.isEmpty() || reply.isError())
+                       showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
+                   else {
+                       setStatus(tr("Consumer deleted"));
+                       loadConsumers();
+                       loadPending();
+                   }
+               });
+}
+
+void ValuePanel::autoClaimStreamEntries()
+{
+    if (m_readOnly)
+        return;
+    const auto groupRows = m_streamGroupsTable->selectionModel()->selectedRows();
+    if (groupRows.isEmpty())
+        return;
+    const QString group = m_streamGroupsTable->item(groupRows.first().row(), 0)->text();
+    bool ok = false;
+    const QString consumer = QInputDialog::getText(
+        this, tr("Auto claim"), tr("Consumer name:"), QLineEdit::Normal,
+        QStringLiteral("worker"), &ok);
+    if (!ok || consumer.trimmed().isEmpty())
+        return;
+    const int minIdle = QInputDialog::getInt(
+        this, tr("Auto claim"), tr("Minimum idle time (ms):"), 60000, 0, 2147483647, 1000, &ok);
+    if (!ok)
+        return;
+    QPointer<ValuePanel> guard(this);
+    runCommand({QByteArrayLiteral("XAUTOCLAIM"), m_key, group.toUtf8(),
+                consumer.trimmed().toUtf8(), QByteArray::number(minIdle),
+                QByteArrayLiteral("0-0"), QByteArrayLiteral("COUNT"), QByteArrayLiteral("100")},
+               [guard, this](const RespValue &reply, const QString &error) {
+                   if (!guard)
+                       return;
+                   if (!error.isEmpty() || reply.isError()) {
+                       showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
+                       return;
+                   }
+                   setStatus(tr("Auto-claimed pending entries"));
+                   loadPending();
+                   loadConsumers();
                });
 }
 

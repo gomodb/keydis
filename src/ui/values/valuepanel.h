@@ -85,6 +85,9 @@ private:
     void loadZSetPage(const QByteArray &cursor, bool append);
     void loadStream();
     void loadStreamGroups();
+    void loadConsumers();
+    void deleteStreamConsumer();
+    void autoClaimStreamEntries();
     void createStreamGroup();
     void deleteStreamGroup();
     void loadPending();
@@ -200,6 +203,7 @@ private:
     QTableWidget *m_streamTable = nullptr;
     QTableWidget *m_streamGroupsTable = nullptr;
     QTableWidget *m_streamPendingTable = nullptr;
+    QTableWidget *m_streamConsumersTable = nullptr;
     QPushButton *m_undoButton = nullptr;
     QPushButton *m_redoButton = nullptr;
     QPushButton *m_applyButton = nullptr;

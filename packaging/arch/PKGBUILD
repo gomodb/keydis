@@ -1,7 +1,7 @@
 # Maintainer: KeyDis contributors
 pkgname=keydis
 pkgver=0.4.16
-pkgrel=1
+pkgrel=2
 pkgdesc="Native Redis/Valkey client for KDE"
 arch=('x86_64' 'aarch64')
 url="https://github.com/gomodb/keydis"
@@ -28,7 +28,7 @@ makedepends=(
 optdepends=('kwalletmanager: KWallet management UI' 'openssh: SSH tunnel support')
 install="$pkgname.install"
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('2511394ab3484ad8a530a2be28d9f5a73e5162cdd589fd755ddd473a762795c4')
 
 build() {
   cmake -S "$pkgname-$pkgver" -B build \

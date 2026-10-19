@@ -219,6 +219,8 @@ void MainWindow::renameSelectedKey()
 
 MainWindow::~MainWindow()
 {
+    if (m_connectionsDock)
+        disconnect(m_connectionsDock, &QDockWidget::visibilityChanged, this, nullptr);
     if (m_sshTunnel)
         m_sshTunnel->stop();
     if (m_sentinelWatcher)

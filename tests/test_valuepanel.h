@@ -13,6 +13,7 @@ class TestValuePanel : public QObject
 
 private slots:
     void buildsAndEditsJsonTree();
+    void buildsProtobufView();
 };
 
 } // namespace KeyDis::Test

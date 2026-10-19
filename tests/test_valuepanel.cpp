@@ -6,6 +6,7 @@
 #include "core/net/redisclient.h"
 #include "core/keyspace/keyinfo.h"
 #include "ui/values/valuepanel.h"
+#include "ui/dialogs/protobufviewdialog.h"
 
 #include <QLabel>
 #include <QPlainTextEdit>
@@ -121,6 +122,16 @@ void TestValuePanel::buildsAndEditsJsonTree()
         }
     }
     QVERIFY(foundSet);
+}
+
+void TestValuePanel::buildsProtobufView()
+{
+    ProtobufViewDialog dialog(QStringLiteral("protobuf"),
+                              QByteArray::fromHex("082a12026869"));
+    auto *view = dialog.findChild<QPlainTextEdit *>(QStringLiteral("protobufView"));
+    QVERIFY(view);
+    QVERIFY(view->toPlainText().contains(QStringLiteral("1 (varint): 42")));
+    QVERIFY(view->toPlainText().contains(QStringLiteral("2 (length-delimited): \"hi\"")));
 }
 
 } // namespace KeyDis::Test

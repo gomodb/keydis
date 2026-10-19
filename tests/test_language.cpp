@@ -42,8 +42,10 @@ void TestLanguage::loadsChineseCatalog()
 {
     QTranslator applicationTranslator;
     QTranslator qtTranslator;
-    QVERIFY(Language::installTranslator(*qApp, QStringLiteral("zh_CN"), &applicationTranslator,
-                                        &qtTranslator));
+    auto *application = QCoreApplication::instance();
+    QVERIFY(application != nullptr);
+    QVERIFY(Language::installTranslator(*application, QStringLiteral("zh_CN"),
+                                        &applicationTranslator, &qtTranslator));
     QCOMPARE(QCoreApplication::translate("KeyDis::DashboardPage", "Overview"),
              QString::fromUtf8("概览"));
     QCOMPARE(QCoreApplication::translate("KeyDis::MainWindow", "Scan"),

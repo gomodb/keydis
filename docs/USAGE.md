@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.7）
+# KeyDis 使用说明（0.4.8）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -39,7 +39,7 @@ Profile 字段：
 - Browser 的 `SCAN` 会并发扫描所有 master 并合并结果；
 - GET/SET 等单 Key 命令按 CRC16 slot 路由，处理 `MOVED`/`ASK` 重定向；
 - 跨 slot 的多 Key 命令（如不同 slot 的 `MGET`）返回 `CROSSSLOT`；
-- 当前 Dashboard/INFO、Slowlog、Clients 只显示一个节点；DB 选择固定 0；
+- Dashboard/INFO 的 Memory/Stats/Keyspace 会聚合所有 master；Slowlog/Clients 仍只显示一个节点；DB 选择固定 0；
 - 不提供 resharding、节点拓扑编辑或持续 failover 监控。
 
 ## 2. Dashboard

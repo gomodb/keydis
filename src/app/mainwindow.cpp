@@ -641,8 +641,8 @@ void MainWindow::buildUi()
             m_retryButton->hide();
             m_authPromptTried = false;
             if (m_clusterCheck->isChecked())
-                appendOutput(tr("[cluster] Browser scans all masters; Dashboard/INFO and "
-                                "server tools show one node."));
+                appendOutput(tr("[cluster] Browser and Dashboard aggregate all masters; "
+                                "server tools still inspect one node."));
             startScan();
         } else if (state == QLatin1String("Disconnected")) {
             if (m_sshTunnel)

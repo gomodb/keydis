@@ -5,6 +5,7 @@
 
 #include "core/net/redisconnection.h"
 
+#include <QMap>
 #include <QSet>
 #include <QTimer>
 #include <QUuid>
@@ -329,6 +330,10 @@ void ClusterClient::sendCommand(const QList<QByteArray> &args, ReplyCallback cal
         sendClusterScan(args, std::move(callback));
         return;
     }
+    if (command == QByteArrayLiteral("INFO")) {
+        sendClusterInfo(args, std::move(callback));
+        return;
+    }
 
     const QVector<int> indexes = keyIndexes(command, args);
     if (indexes.isEmpty()) {
@@ -554,6 +559,156 @@ void ClusterClient::sendToNode(Node *node, const QList<QByteArray> &args,
         if (callback)
             callback(reply, error);
     });
+}
+
+void ClusterClient::sendClusterInfo(const QList<QByteArray> &args, ReplyCallback callback)
+{
+    if (m_nodes.empty()) {
+        if (callback)
+            callback(RespValue{}, tr("No cluster node available"));
+        return;
+    }
+    struct State {
+        int remaining = 0;
+        QStringList texts;
+        QString error;
+    };
+    auto state = std::make_shared<State>();
+    state->remaining = static_cast<int>(m_nodes.size());
+    state->texts.resize(static_cast<int>(m_nodes.size()));
+    QPointer<ClusterClient> guard(this);
+    for (int index = 0; index < static_cast<int>(m_nodes.size()); ++index) {
+        m_nodes.at(index)->connection->sendCommand(
+            args, [guard, state, index, callback](const RespValue &reply, const QString &error) {
+            if (!guard)
+                return;
+            if (!error.isEmpty() || reply.isError()) {
+                if (state->error.isEmpty())
+                    state->error = error.isEmpty() ? QString::fromUtf8(reply.scalar) : error;
+            } else {
+                state->texts[index] = QString::fromUtf8(reply.scalar);
+            }
+            if (--state->remaining == 0) {
+                if (!state->error.isEmpty()) {
+                    if (callback)
+                        callback(RespValue{}, state->error);
+                    return;
+                }
+                const QSet<QString> additive{
+                    QStringLiteral("used_memory"), QStringLiteral("used_memory_rss"),
+                    QStringLiteral("used_memory_peak"), QStringLiteral("used_memory_lua"),
+                    QStringLiteral("used_memory_scripts"), QStringLiteral("used_memory_dataset"),
+                    QStringLiteral("used_memory_startup"), QStringLiteral("used_memory_overhead"),
+                    QStringLiteral("connected_clients"), QStringLiteral("cluster_connections"),
+                    QStringLiteral("total_connections_received"),
+                    QStringLiteral("total_commands_processed"),
+                    QStringLiteral("instantaneous_ops_per_sec"),
+                    QStringLiteral("rejected_connections"), QStringLiteral("expired_keys"),
+                    QStringLiteral("evicted_keys"), QStringLiteral("keyspace_hits"),
+                    QStringLiteral("keyspace_misses"), QStringLiteral("total_net_input_bytes"),
+                    QStringLiteral("total_net_output_bytes"), QStringLiteral("used_cpu_sys"),
+                    QStringLiteral("used_cpu_user"),
+                };
+                QMap<QString, qint64> totals;
+                struct DbInfo {
+                    qint64 keys = 0;
+                    qint64 expires = 0;
+                    qint64 avgTtl = 0;
+                    bool seen = false;
+                };
+                QMap<QString, DbInfo> dbInfo;
+                QStringList firstLines;
+                for (int node = 0; node < state->texts.size(); ++node) {
+                    const QStringList lines = state->texts.at(node).split(QLatin1Char('\n'));
+                    for (const QString &raw : lines) {
+                        const QString line = raw.trimmed();
+                        if (line.isEmpty())
+                            continue;
+                        if (node == 0)
+                            firstLines.append(line);
+                        if (line.startsWith(QLatin1String("db")) && line.contains(QLatin1String(":keys="))) {
+                            const int colon = line.indexOf(QLatin1Char(':'));
+                            if (colon <= 0)
+                                continue;
+                            DbInfo info = dbInfo.value(line.left(colon));
+                            QString statsText = line.mid(colon + 1);
+                            statsText.replace(QLatin1Char(';'), QLatin1Char(','));
+                            const QStringList parts = statsText.split(QLatin1Char(','));
+                            for (const QString &part : parts) {
+                                const int equals = part.indexOf(QLatin1Char('='));
+                                if (equals <= 0)
+                                    continue;
+                                bool ok = false;
+                                const qint64 value = part.mid(equals + 1).toLongLong(&ok);
+                                if (!ok)
+                                    continue;
+                                if (part.startsWith(QLatin1String("keys=")))
+                                    info.keys += value;
+                                else if (part.startsWith(QLatin1String("expires=")))
+                                    info.expires += value;
+                                else if (part.startsWith(QLatin1String("avg_ttl=")))
+                                    info.avgTtl = qMax(info.avgTtl, value);
+                            }
+                            info.seen = true;
+                            dbInfo.insert(line.left(colon), info);
+                            continue;
+                        }
+                        const int colon = line.indexOf(QLatin1Char(':'));
+                        if (colon <= 0)
+                            continue;
+                        const QString key = line.left(colon);
+                        if (!additive.contains(key))
+                            continue;
+                        bool ok = false;
+                        const qint64 value = line.mid(colon + 1).toLongLong(&ok);
+                        if (ok && value >= 0)
+                            totals[key] += value;
+                    }
+                }
+
+                QStringList output;
+                bool keyspaceHeader = false;
+                for (const QString &line : std::as_const(firstLines)) {
+                    if (line.startsWith(QLatin1String("db")) && line.contains(QLatin1String(":keys=")))
+                        continue;
+                    const int colon = line.indexOf(QLatin1Char(':'));
+                    if (colon > 0) {
+                        const QString key = line.left(colon);
+                        if (totals.contains(key)) {
+                            output.append(key + QLatin1Char(':') + QString::number(totals.value(key)));
+                            continue;
+                        }
+                    }
+                    output.append(line);
+                    if (line.startsWith(QLatin1String("# Keyspace"))) {
+                        keyspaceHeader = true;
+                        for (auto it = dbInfo.constBegin(); it != dbInfo.constEnd(); ++it) {
+                            output.append(QStringLiteral("%1:keys=%2,expires=%3,avg_ttl=%4")
+                                              .arg(it.key())
+                                              .arg(it.value().keys)
+                                              .arg(it.value().expires)
+                                              .arg(it.value().avgTtl));
+                        }
+                    }
+                }
+                if (!keyspaceHeader && !dbInfo.isEmpty()) {
+                    output.append(QStringLiteral("# Keyspace"));
+                    for (auto it = dbInfo.constBegin(); it != dbInfo.constEnd(); ++it) {
+                        output.append(QStringLiteral("%1:keys=%2,expires=%3,avg_ttl=%4")
+                                          .arg(it.key())
+                                          .arg(it.value().keys)
+                                          .arg(it.value().expires)
+                                          .arg(it.value().avgTtl));
+                    }
+                }
+                RespValue result;
+                result.type = RespType::BulkString;
+                result.scalar = output.join(QLatin1Char('\n')).toUtf8() + '\n';
+                if (callback)
+                    callback(result, {});
+            }
+        });
+    }
 }
 
 void ClusterClient::sendClusterScan(const QList<QByteArray> &args, ReplyCallback callback)

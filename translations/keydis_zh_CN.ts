@@ -3,86 +3,87 @@
   <context>
     <name>KeyDis::ClusterClient</name>
     <message>
-      <location filename="../src/core/net/clusterclient.cpp" line="115" />
+      <location filename="../src/core/net/clusterclient.cpp" line="116" />
       <source>No cluster seed provided</source>
       <translation>未提供 Cluster seed</translation>
     </message>
     <message>
-      <location filename="../src/core/net/clusterclient.cpp" line="118" />
+      <location filename="../src/core/net/clusterclient.cpp" line="119" />
       <source>Connecting to cluster...</source>
       <translation>正在连接 Cluster...</translation>
     </message>
     <message>
-      <location filename="../src/core/net/clusterclient.cpp" line="125" />
+      <location filename="../src/core/net/clusterclient.cpp" line="126" />
       <source>Could not connect to any cluster seed</source>
       <translation>无法连接任何 Cluster seed</translation>
     </message>
     <message>
-      <location filename="../src/core/net/clusterclient.cpp" line="164" />
+      <location filename="../src/core/net/clusterclient.cpp" line="165" />
       <source>Reading cluster topology...</source>
       <translation>正在读取 Cluster 拓扑...</translation>
     </message>
     <message>
-      <location filename="../src/core/net/clusterclient.cpp" line="213" />
+      <location filename="../src/core/net/clusterclient.cpp" line="214" />
       <source>Cluster returned an empty slot map</source>
       <translation>Cluster 返回了空 slot 映射</translation>
     </message>
     <message>
-      <location filename="../src/core/net/clusterclient.cpp" line="217" />
+      <location filename="../src/core/net/clusterclient.cpp" line="218" />
       <source>Connecting to %1 cluster nodes...</source>
       <translation>正在连接 %1 个 Cluster 节点...</translation>
     </message>
     <message>
-      <location filename="../src/core/net/clusterclient.cpp" line="278" />
+      <location filename="../src/core/net/clusterclient.cpp" line="279" />
       <source>Ready</source>
       <translation>就绪</translation>
     </message>
     <message>
-      <location filename="../src/core/net/clusterclient.cpp" line="298" />
-      <location filename="../src/core/net/clusterclient.cpp" line="304" />
-      <location filename="../src/core/net/clusterclient.cpp" line="712" />
+      <location filename="../src/core/net/clusterclient.cpp" line="299" />
+      <location filename="../src/core/net/clusterclient.cpp" line="305" />
+      <location filename="../src/core/net/clusterclient.cpp" line="867" />
       <source>Disconnected</source>
       <translation>已断开</translation>
     </message>
     <message>
-      <location filename="../src/core/net/clusterclient.cpp" line="316" />
+      <location filename="../src/core/net/clusterclient.cpp" line="317" />
       <source>Empty command</source>
       <translation>空命令</translation>
     </message>
     <message>
-      <location filename="../src/core/net/clusterclient.cpp" line="323" />
+      <location filename="../src/core/net/clusterclient.cpp" line="324" />
       <source>Cluster is not connected</source>
       <translation>Cluster 未连接</translation>
     </message>
     <message>
-      <location filename="../src/core/net/clusterclient.cpp" line="338" />
-      <location filename="../src/core/net/clusterclient.cpp" line="364" />
-      <location filename="../src/core/net/clusterclient.cpp" line="578" />
+      <location filename="../src/core/net/clusterclient.cpp" line="343" />
+      <location filename="../src/core/net/clusterclient.cpp" line="369" />
+      <location filename="../src/core/net/clusterclient.cpp" line="568" />
+      <location filename="../src/core/net/clusterclient.cpp" line="733" />
       <source>No cluster node available</source>
       <translation>没有可用的 Cluster 节点</translation>
     </message>
     <message>
-      <location filename="../src/core/net/clusterclient.cpp" line="371" />
+      <location filename="../src/core/net/clusterclient.cpp" line="376" />
       <source>No node owns slot %1</source>
       <translation>没有节点拥有 slot %1</translation>
     </message>
     <message>
-      <location filename="../src/core/net/clusterclient.cpp" line="497" />
+      <location filename="../src/core/net/clusterclient.cpp" line="502" />
       <source>Cluster node is unavailable</source>
       <translation>Cluster 节点不可用</translation>
     </message>
     <message>
-      <location filename="../src/core/net/clusterclient.cpp" line="506" />
+      <location filename="../src/core/net/clusterclient.cpp" line="511" />
       <source>Too many cluster redirections</source>
       <translation>Cluster 重定向次数过多</translation>
     </message>
     <message>
-      <location filename="../src/core/net/clusterclient.cpp" line="563" />
+      <location filename="../src/core/net/clusterclient.cpp" line="718" />
       <source>Invalid cluster SCAN</source>
       <translation>无效的 Cluster SCAN</translation>
     </message>
     <message>
-      <location filename="../src/core/net/clusterclient.cpp" line="611" />
+      <location filename="../src/core/net/clusterclient.cpp" line="766" />
       <source>Invalid cluster SCAN cursor</source>
       <translation>无效的 Cluster SCAN 游标</translation>
     </message>
@@ -579,8 +580,8 @@ Continue?</source>
     </message>
     <message>
       <location filename="../src/app/mainwindow.cpp" line="644" />
-      <source>[cluster] Browser scans all masters; Dashboard/INFO and server tools show one node.</source>
-      <translation>[cluster] Browser 扫描所有 master；Dashboard/INFO 和服务器工具只显示一个节点。</translation>
+      <source>[cluster] Browser and Dashboard aggregate all masters; server tools still inspect one node.</source>
+      <translation>[cluster] Browser 和 Dashboard 聚合所有 master；服务器工具仍只检查一个节点。</translation>
     </message>
     <message>
       <location filename="../src/app/mainwindow.cpp" line="656" />

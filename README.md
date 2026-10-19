@@ -10,7 +10,7 @@ KeyDis 是一个使用 **C++20、Qt 6 Widgets 和 KDE Frameworks 6** 构建的�
 
 ## 当前状态
 
-**可用版本 0.4.7。** 已具备一个可构建、可安装的 Qt 6 + KF6 客户端：连接 Redis/Valkey、SCAN 浏览 Key、Dashboard、命名空间树、核心类型编辑、Stream/JSON、服务器工具、DUMP/RESTORE 导入导出、多连接配置与 KWallet。Sentinel、SSH key/agent 隧道与 **Cluster 基础支持** 已接入；更完整的 Cluster 运维视图仍在后续。
+**可用版本 0.4.8。** 已具备一个可构建、可安装的 Qt 6 + KF6 客户端：连接 Redis/Valkey、SCAN 浏览 Key、Dashboard、命名空间树、核心类型编辑、Stream/JSON、服务器工具、DUMP/RESTORE 导入导出、多连接配置与 KWallet。Sentinel、SSH key/agent 隧道与 **Cluster 基础支持** 已接入；更完整的 Cluster 运维视图仍在后续。
 
 当前已落地：
 
@@ -97,7 +97,7 @@ KEYDIS_REDIS_PORT=6399 ./build/keydis_ui_tests
 
 已完成 **v0.4 工作台**（standalone + Sentinel + SSH key/agent + Cluster 基础）。尚未实现：
 
-- 完整 Cluster 运维视图（resharding、节点详情、跨节点 Dashboard 聚合）；
+- 完整 Cluster 运维视图（resharding、节点详情）；
 - 精确全库命名空间统计默认关闭（可用 `Index all` 显式触发）；
 - Flatpak（明确不做）；
 - RedisJSON 树形控件、Cluster 运维视图。

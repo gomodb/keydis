@@ -82,6 +82,7 @@ private:
     void sendToNode(Node *node, const QList<QByteArray> &args, ReplyCallback callback,
                     int attempt, bool asking);
     void sendClusterScan(const QList<QByteArray> &args, ReplyCallback callback);
+    void sendClusterInfo(const QList<QByteArray> &args, ReplyCallback callback);
     void finishScan(const QByteArray &token, const std::shared_ptr<ScanState> &state,
                     ReplyCallback callback);
     [[nodiscard]] Node *findNode(const QString &host, quint16 port) const;

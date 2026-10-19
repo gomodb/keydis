@@ -73,6 +73,14 @@ void TestClusterClient::routesKeysAndScans()
     QCOMPARE(command(client, {QByteArrayLiteral("GET"), keyC}, &error).scalar,
              QByteArray("three"));
 
+    const RespValue info = command(client, {QByteArrayLiteral("INFO")}, &error);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    QVERIFY(info.scalar.contains("db0:keys="));
+    const int keysPos = info.scalar.indexOf("db0:keys=");
+    const int keysEnd = info.scalar.indexOf(',', keysPos);
+    const int aggregatedKeys = info.scalar.mid(keysPos + 9, keysEnd - keysPos - 9).toInt();
+    QVERIFY(aggregatedKeys >= 3);
+
     const RespValue crossSlot =
         command(client, {QByteArrayLiteral("MGET"), keyA, keyB, keyC}, &error);
     Q_UNUSED(crossSlot)

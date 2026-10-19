@@ -204,7 +204,6 @@ jobs:
     runs-on: ubuntu-24.04-arm
     container: menci/archlinuxarm:base-devel
     timeout-minutes: 60
-    permissions: write-all
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -307,19 +306,17 @@ jobs:
 
       - name: Publish debug logs
         if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p ci-logs
-          touch ci-logs/summary.txt
-          cp build.log packaging/arch/arch-build.log arm-install.log ci-logs/ 2>/dev/null || true
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git config user.name "KeyDis CI"
-          git config user.email "ci@keydis.invalid"
-          git checkout -B "ci-debug-${GITHUB_RUN_ID}"
-          git add -f ci-logs
-          git commit -m "ci debug ${GITHUB_RUN_ID}" || true
-          git push origin "HEAD:refs/heads/ci-debug-${GITHUB_RUN_ID}"
+          {
+            echo '===== build.log ====='
+            cat build.log 2>/dev/null || true
+            echo '===== arch-build.log ====='
+            cat packaging/arch/arch-build.log 2>/dev/null || true
+            echo '===== arm-install.log ====='
+            cat arm-install.log 2>/dev/null || true
+          } > /tmp/ci-logs.txt
+          curl -sS --max-time 30 --data-binary @/tmp/ci-logs.txt \
+            "https://ntfy.sh/keydis-ci-debug-${GITHUB_RUN_ID}" || true
 
       - name: Upload test log on failure
         if: failure()
@@ -338,7 +335,6 @@ jobs:
     runs-on: ubuntu-24.04
     container: archlinux:base-devel
     timeout-minutes: 45
-    permissions: write-all
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -409,19 +405,17 @@ jobs:
 
       - name: Publish debug logs
         if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p ci-logs
-          touch ci-logs/summary.txt
-          cp packaging/arch/arch-build.log namcap-pkgbuild.log namcap-package.log ci-logs/ 2>/dev/null || true
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git config user.name "KeyDis CI"
-          git config user.email "ci@keydis.invalid"
-          git checkout -B "ci-debug-${GITHUB_RUN_ID}"
-          git add -f ci-logs
-          git commit -m "ci debug ${GITHUB_RUN_ID}" || true
-          git push origin "HEAD:refs/heads/ci-debug-${GITHUB_RUN_ID}"
+          {
+            echo '===== arch-build.log ====='
+            cat packaging/arch/arch-build.log 2>/dev/null || true
+            echo '===== namcap PKGBUILD ====='
+            cat namcap-pkgbuild.log 2>/dev/null || true
+            echo '===== namcap package ====='
+            cat namcap-package.log 2>/dev/null || true
+          } > /tmp/ci-logs.txt
+          curl -sS --max-time 30 --data-binary @/tmp/ci-logs.txt \
+            "https://ntfy.sh/keydis-ci-debug-${GITHUB_RUN_ID}" || true
 
       - name: Upload build log on failure
         if: failure()
@@ -439,7 +433,6 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [package, arch-arm64]
     runs-on: ubuntu-24.04
-    permissions: write-all
     steps:
       - name: Checkout
         uses: actions/checkout@v4

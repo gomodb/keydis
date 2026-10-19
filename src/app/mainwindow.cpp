@@ -30,6 +30,8 @@
 #include <QDir>
 #include <QFile>
 #include <QFontDatabase>
+#include <QIcon>
+#include <QPixmap>
 #include <QGroupBox>
 #include <QGuiApplication>
 #include <QHBoxLayout>
@@ -38,7 +40,7 @@
 #include <QItemSelectionModel>
 #include <QLabel>
 #include <QLineEdit>
-#include <QListWidget>
+#include <QTreeWidget>
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPushButton>
@@ -366,9 +368,14 @@ void MainWindow::buildUi()
     m_profileEmptyLabel->setWordWrap(true);
     m_profileEmptyLabel->setObjectName(QStringLiteral("profileEmptyLabel"));
     connectionsLayout->addWidget(m_profileEmptyLabel);
-    m_profileList = new QListWidget(connectionsPanel);
+    m_profileList = new QTreeWidget(connectionsPanel);
     m_profileList->setObjectName(QStringLiteral("profileList"));
+    m_profileList->setHeaderHidden(true);
+    m_profileList->setRootIsDecorated(true);
+    m_profileList->setIndentation(14);
     m_profileList->setAlternatingRowColors(true);
+    m_profileList->setSelectionMode(QAbstractItemView::SingleSelection);
+    m_profileList->setSelectionBehavior(QAbstractItemView::SelectRows);
     connectionsLayout->addWidget(m_profileList, 1);
     auto *profileButtons = new QHBoxLayout;
     auto *newProfileButton = new QPushButton(tr("New"), connectionsPanel);
@@ -438,14 +445,16 @@ void MainWindow::buildUi()
             m_statusLabel->setText(readOnly ? tr("Read-only mode") : tr("Ready"));
         }
     });
-    connect(m_profileList, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem *) {
-        connectProfile();
+    connect(m_profileList, &QTreeWidget::itemDoubleClicked, this,
+            [this](QTreeWidgetItem *item, int) {
+        if (item && !item->data(0, Qt::UserRole).toString().isEmpty())
+            connectProfile();
     });
-    connect(m_profileList, &QListWidget::currentItemChanged, this,
-            [this](QListWidgetItem *current, QListWidgetItem *) {
+    connect(m_profileList, &QTreeWidget::currentItemChanged, this,
+            [this](QTreeWidgetItem *current, QTreeWidgetItem *) {
                 if (!current)
                     return;
-                const QString id = current->data(Qt::UserRole).toString();
+                const QString id = current->data(0, Qt::UserRole).toString();
                 if (id.isEmpty())
                     return;
                 for (const ConnectionProfile &profile : std::as_const(m_profiles)) {
@@ -456,6 +465,14 @@ void MainWindow::buildUi()
                 }
                 updateProfileButtons();
             });
+    connect(m_profileList, &QTreeWidget::itemCollapsed, this, [this](QTreeWidgetItem *item) {
+        if (item && item->data(0, Qt::UserRole).toString().isEmpty())
+            m_collapsedGroups.insert(item->text(0));
+    });
+    connect(m_profileList, &QTreeWidget::itemExpanded, this, [this](QTreeWidgetItem *item) {
+        if (item && item->data(0, Qt::UserRole).toString().isEmpty())
+            m_collapsedGroups.remove(item->text(0));
+    });
     connect(m_connectButton, &QPushButton::clicked, this, &MainWindow::connectOrDisconnect);
     connect(m_sendButton, &QPushButton::clicked, this, &MainWindow::sendCommand);
     connect(m_commandEdit, &QLineEdit::returnPressed, this, &MainWindow::sendCommand);
@@ -733,20 +750,32 @@ void MainWindow::rebuildProfileList()
               });
 
     QString currentGroup;
-    QListWidgetItem *activeItem = nullptr;
+    QTreeWidgetItem *groupItem = nullptr;
+    QTreeWidgetItem *activeItem = nullptr;
     for (const ConnectionProfile &profile : std::as_const(sorted)) {
         if (profile.group != currentGroup) {
             currentGroup = profile.group;
-            auto *groupItem = new QListWidgetItem(currentGroup, m_profileList);
-            groupItem->setFlags(Qt::NoItemFlags);
-            QFont font = groupItem->font();
+            groupItem = new QTreeWidgetItem(m_profileList);
+            groupItem->setText(0, currentGroup);
+            groupItem->setData(0, Qt::UserRole, QString());
+            groupItem->setFlags(Qt::ItemIsEnabled);
+            QFont font = groupItem->font(0);
             font.setBold(true);
-            groupItem->setFont(font);
+            groupItem->setFont(0, font);
+            groupItem->setExpanded(!m_collapsedGroups.contains(currentGroup));
         }
-        auto *item = new QListWidgetItem(QIcon::fromTheme(QStringLiteral("network-server")),
-                                         profile.name, m_profileList);
-        item->setData(Qt::UserRole, profile.id);
-        item->setToolTip(QStringLiteral("%1:%2").arg(profile.host).arg(profile.port));
+        auto *item = new QTreeWidgetItem(groupItem);
+        item->setText(0, profile.name);
+        item->setData(0, Qt::UserRole, profile.id);
+        item->setToolTip(0, QStringLiteral("%1:%2").arg(profile.host).arg(profile.port));
+        const QColor color(profile.color);
+        if (color.isValid()) {
+            QPixmap pixmap(12, 12);
+            pixmap.fill(color);
+            item->setIcon(0, QIcon(pixmap));
+        } else {
+            item->setIcon(0, QIcon::fromTheme(QStringLiteral("network-server")));
+        }
         if (profile.id == m_activeProfileId)
             activeItem = item;
     }
@@ -764,7 +793,7 @@ void MainWindow::applyProfile(const ConnectionProfile &profile)
     m_portSpin->setValue(profile.port);
     m_tlsCheck->setChecked(profile.tls);
     m_usernameEdit->setText(profile.username);
-    m_passwordEdit->clear();
+    m_passwordEdit->setText(profile.password);
     m_dbSpin->setValue(profile.db);
     m_readOnlyCheck->setChecked(profile.readOnly);
     if (m_readOnlyDock) {
@@ -904,10 +933,10 @@ ConnectionProfile *MainWindow::selectedProfile()
 {
     if (!m_profileList)
         return nullptr;
-    QListWidgetItem *item = m_profileList->currentItem();
+    QTreeWidgetItem *item = m_profileList->currentItem();
     if (!item)
         return nullptr;
-    const QString id = item->data(Qt::UserRole).toString();
+    const QString id = item->data(0, Qt::UserRole).toString();
     if (id.isEmpty())
         return nullptr;
     for (ConnectionProfile &profile : m_profiles) {

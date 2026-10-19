@@ -15,6 +15,7 @@ private slots:
     void initTestCase();
     void browsesAndShowsValues();
     void browsesCluster();
+    void showsGroupedProfiles();
 };
 
 } // namespace KeyDis::Test

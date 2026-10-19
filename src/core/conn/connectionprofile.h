@@ -12,6 +12,7 @@ struct ConnectionProfile {
     QString id;
     QString name = QStringLiteral("default");
     QString group = QStringLiteral("Default");
+    QString color;
     QString host = QStringLiteral("127.0.0.1");
     quint16 port = 6379;
     bool tls = false;

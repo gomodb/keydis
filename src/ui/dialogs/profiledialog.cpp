@@ -6,6 +6,7 @@
 #include "core/net/redisconnection.h"
 
 #include <QCheckBox>
+#include <QColor>
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QLabel>
@@ -36,6 +37,9 @@ ProfileDialog::ProfileDialog(const ConnectionProfile &profile, QWidget *parent)
     form->addRow(tr("Name"), m_nameEdit);
     m_groupEdit = new QLineEdit(profile.group, connectionTab);
     form->addRow(tr("Group"), m_groupEdit);
+    m_colorEdit = new QLineEdit(profile.color, connectionTab);
+    m_colorEdit->setPlaceholderText(tr("Optional color, e.g. #3daee9"));
+    form->addRow(tr("Color"), m_colorEdit);
     m_hostEdit = new QLineEdit(profile.host, connectionTab);
     form->addRow(tr("Host"), m_hostEdit);
     m_portSpin = new QSpinBox(connectionTab);
@@ -186,6 +190,12 @@ void ProfileDialog::accept()
     }
     m_profile.name = m_nameEdit->text().trimmed();
     m_profile.group = m_groupEdit->text().trimmed().isEmpty() ? tr("Default") : m_groupEdit->text().trimmed();
+    m_profile.color = m_colorEdit->text().trimmed();
+    if (!m_profile.color.isEmpty() && !QColor(m_profile.color).isValid()) {
+        QMessageBox::warning(this, tr("Invalid connection"),
+                             tr("Color must be a valid color name or hex value."));
+        return;
+    }
     m_profile.host = m_hostEdit->text().trimmed();
     m_profile.port = static_cast<quint16>(m_portSpin->value());
     m_profile.tls = m_tlsCheck->isChecked();

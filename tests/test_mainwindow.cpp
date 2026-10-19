@@ -5,6 +5,7 @@
 
 #include "app/mainwindow.h"
 #include "core/app_paths.h"
+#include "core/conn/profilestore.h"
 #include "core/net/clusterclient.h"
 #include "core/net/redisconnection.h"
 #include "ui/models/keytablemodel.h"
@@ -13,7 +14,6 @@
 #include <QFile>
 #include <QLabel>
 #include <QLineEdit>
-#include <QListWidget>
 #include <QPlainTextEdit>
 #include <QApplication>
 #include <QCheckBox>
@@ -24,6 +24,7 @@
 #include <QStackedWidget>
 #include <QTableView>
 #include <QTreeView>
+#include <QTreeWidget>
 #include <QTableWidget>
 #include <QTest>
 #include <QTimer>
@@ -127,7 +128,7 @@ void TestMainWindow::browsesAndShowsValues()
     auto *keyLabel = window.findChild<QLabel *>(QStringLiteral("keyLabel"));
     auto *saveButton = window.findChild<QPushButton *>(QStringLiteral("saveStringButton"));
     auto *readOnlyCheck = window.findChild<QCheckBox *>(QStringLiteral("readOnlyCheck"));
-    auto *profileList = window.findChild<QListWidget *>(QStringLiteral("profileList"));
+    auto *profileList = window.findChild<QTreeWidget *>(QStringLiteral("profileList"));
     auto *profileConnect = window.findChild<QPushButton *>(QStringLiteral("profileConnectButton"));
     auto *profileEmpty = window.findChild<QLabel *>(QStringLiteral("profileEmptyLabel"));
 
@@ -159,7 +160,7 @@ void TestMainWindow::browsesAndShowsValues()
     connectButton->click();
 
     QTRY_VERIFY_WITH_TIMEOUT(table->model()->rowCount() >= 3, 10000);
-    QCOMPARE(profileList->count(), 0);
+    QCOMPARE(profileList->topLevelItemCount(), 0);
     QTRY_VERIFY_WITH_TIMEOUT(tree->model()->rowCount() > 0, 5000);
     QCOMPARE(dbCombo->currentData().toInt(), 0);
     viewMode->setCurrentIndex(1);
@@ -251,6 +252,44 @@ void TestMainWindow::browsesAndShowsValues()
         command(cleanup, {QByteArrayLiteral("SELECT"), QByteArrayLiteral("0")}, &error);
         QVERIFY2(error.isEmpty(), qPrintable(error));
     }
+}
+
+void TestMainWindow::showsGroupedProfiles()
+{
+    QFile::remove(KeyDis::AppPaths::configFile());
+    QVector<ConnectionProfile> profiles;
+    ConnectionProfile first;
+    first.id = QStringLiteral("alpha");
+    first.name = QStringLiteral("Alpha");
+    first.group = QStringLiteral("Group A");
+    first.color = QStringLiteral("#ff0000");
+    first.host = QStringLiteral("127.0.0.1");
+    profiles.append(first);
+    ConnectionProfile second;
+    second.id = QStringLiteral("beta");
+    second.name = QStringLiteral("Beta");
+    second.group = QStringLiteral("Group B");
+    second.host = QStringLiteral("127.0.0.1");
+    profiles.append(second);
+    ProfileStore store;
+    QString error;
+    QVERIFY2(store.save(profiles, &error), qPrintable(error));
+
+    MainWindow window;
+    window.setAttribute(Qt::WA_DeleteOnClose, false);
+    auto *tree = window.findChild<QTreeWidget *>(QStringLiteral("profileList"));
+    QVERIFY(tree);
+    QCOMPARE(tree->topLevelItemCount(), 2);
+    QTreeWidgetItem *groupA = tree->topLevelItem(0);
+    QTreeWidgetItem *groupB = tree->topLevelItem(1);
+    QCOMPARE(groupA->text(0), QStringLiteral("Group A"));
+    QCOMPARE(groupB->text(0), QStringLiteral("Group B"));
+    QCOMPARE(groupA->childCount(), 1);
+    QCOMPARE(groupA->child(0)->text(0), QStringLiteral("Alpha"));
+    QVERIFY(!groupA->child(0)->icon(0).isNull());
+    groupA->setExpanded(false);
+    QVERIFY(!groupA->isExpanded());
+    QFile::remove(KeyDis::AppPaths::configFile());
 }
 
 void TestMainWindow::browsesCluster()

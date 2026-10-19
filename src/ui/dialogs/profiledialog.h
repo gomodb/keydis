@@ -31,6 +31,7 @@ private:
     ConnectionProfile m_profile;
     QLineEdit *m_nameEdit = nullptr;
     QLineEdit *m_groupEdit = nullptr;
+    QLineEdit *m_colorEdit = nullptr;
     QLineEdit *m_hostEdit = nullptr;
     QSpinBox *m_portSpin = nullptr;
     QCheckBox *m_tlsCheck = nullptr;

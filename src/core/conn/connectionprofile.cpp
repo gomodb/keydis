@@ -13,6 +13,7 @@ QJsonObject ConnectionProfile::toJson() const
     object.insert(QStringLiteral("id"), id);
     object.insert(QStringLiteral("name"), name);
     object.insert(QStringLiteral("group"), group);
+    object.insert(QStringLiteral("color"), color);
     object.insert(QStringLiteral("host"), host);
     object.insert(QStringLiteral("port"), port);
     object.insert(QStringLiteral("tls"), tls);
@@ -41,6 +42,7 @@ ConnectionProfile ConnectionProfile::fromJson(const QJsonObject &object)
         profile.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
     profile.name = object.value(QStringLiteral("name")).toString(profile.name);
     profile.group = object.value(QStringLiteral("group")).toString(profile.group);
+    profile.color = object.value(QStringLiteral("color")).toString();
     profile.host = object.value(QStringLiteral("host")).toString(profile.host);
     const int port = object.value(QStringLiteral("port")).toInt(profile.port);
     profile.port = static_cast<quint16>(qBound(1, port, 65535));

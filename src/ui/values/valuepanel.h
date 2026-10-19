@@ -94,6 +94,7 @@ private:
     void addJsonChild();
     void deleteJsonNode();
     void updateJsonButtons();
+    void renameJsonKey();
     void loadRaw(const QString &type);
 
     void updateHeader();
@@ -143,6 +144,7 @@ private:
     QTreeWidget *m_jsonTree = nullptr;
     QPushButton *m_jsonAddButton = nullptr;
     QPushButton *m_jsonDeleteButton = nullptr;
+    QPushButton *m_jsonRenameButton = nullptr;
     bool m_jsonTreeUpdating = false;
     QPlainTextEdit *m_rawView = nullptr;
     QTableWidget *m_hashTable = nullptr;

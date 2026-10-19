@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.15）
+# KeyDis 使用说明（0.4.16）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -99,6 +99,7 @@ Hash/List/Set/ZSet 每次加载最多 500 个元素；点击 **Load more** 继�
 - JSON path 输入框可用于加载子树（例如 `$.user`），raw 编辑仍支持完整文档；
 - **Add child**：对象添加键值，数组追加元素（`JSON.SET` / `JSON.ARRAPPEND`）；
 - **Delete node**：删除选中的非根节点（`JSON.DEL`），根节点不允许直接删除；
+- **Rename JSON key**：对象属性重命名，使用 `JSON.GET` 读取旧值后原子执行 `JSON.SET` + `JSON.DEL`；同名属性覆盖前确认；
 - 复杂结构仍可用 raw 编辑或 CLI。
 
 ### 部分编辑

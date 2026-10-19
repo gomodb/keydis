@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.19）
+# KeyDis 使用说明（0.4.20）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -120,7 +120,8 @@ Hash/List/Set/ZSet 每次加载最多 500 个元素；点击 **Load more** 继�
 - **Set**：选中多行 → 输入新成员名，按 `SREM old` + `SADD new` 重命名；
 - **ZSet**：选中多行 → 批量改分数；
 - **String**：**Replace range...** 使用 `SETRANGE key <byte-offset> <replacement>`，只改指定字节区间；
-- **Undo / Redo**：Hash/List/Set/ZSet 的批量编辑与 Hash 单字段、List 单元素、ZSet 单分数修改都进入 Undo/Redo 历史（各最多 20 步）；新的编辑会清空 Redo；
+- **Apply / Discard**：Hash/List/Set/ZSet 的单单元格或多行编辑先进入本地待提交状态；**Apply** 用事务一次提交，**Discard** 丢弃并重新加载；待提交期间 Undo/Redo、添加/删除、TTL 与 Key 删除会提示先处理；
+- **Undo / Redo**：Apply 成功后进入 Undo/Redo 历史（各最多 20 步）；新的编辑会清空 Redo；
 - **事务**：多命令批量编辑/撤销通过 `MULTI/EXEC` 原子提交；Cluster 模式要求所有命令位于同一 slot，跨 slot 会拒绝；
 - Stream 条目不可原地修改，使用删除/新增或 CLI。
 
@@ -245,7 +246,7 @@ redis 127.0.0.1
 - Stream 组/Pending 支持查看与 claim/ack，但更完整的 consumer 管理/自动 claim 未实现；RedisJSON 树支持标量编辑、对象/数组添加与节点删除；对象键重命名等复杂重排仍建议 raw 编辑；
 - Key 批量操作目前只覆盖删除与 TTL；批量重命名/移动/复制到其他 DB 尚未实现；
 - 值过滤只作用于已加载行；String 的 Hex 视图为只读，二进制编辑尚未实现；
-- Hash/List/Set/ZSet 仍为即时写入 + Undo/Redo；统一的 Apply/Discard 编辑会话尚未覆盖集合类型；
+- Hash/List/Set/ZSet 支持 Apply/Discard；添加/删除字段、成员、列表元素仍是立即写入，尚未纳入同一待提交会话；
 - 切换 Key 时未保存的 String/JSON 修改会被丢弃，尚未弹出确认；
 - CLI 的阻塞命令会占用主连接；Pub/Sub/Monitor 请用 Tools；
 - 中文翻译已内置（`zh_CN`），其他语言尚未提供；

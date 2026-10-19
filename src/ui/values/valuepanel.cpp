@@ -234,16 +234,27 @@ void ValuePanel::buildUi()
     m_redoButton = new QPushButton(tr("Redo"), this);
     m_redoButton->setObjectName(QStringLiteral("redoButton"));
     m_redoButton->setEnabled(false);
+    m_applyButton = new QPushButton(tr("Apply"), this);
+    m_applyButton->setObjectName(QStringLiteral("applyButton"));
+    m_applyButton->setEnabled(false);
+    m_discardButton = new QPushButton(tr("Discard"), this);
+    m_discardButton->setObjectName(QStringLiteral("discardPendingButton"));
+    m_discardButton->setEnabled(false);
     auto *ttlButton = new QPushButton(tr("TTL..."), this);
     auto *deleteButton = new QPushButton(tr("Delete"), this);
     header->addWidget(refreshButton);
     header->addWidget(m_undoButton);
     header->addWidget(m_redoButton);
+    header->addWidget(m_applyButton);
+    header->addWidget(m_discardButton);
     header->addWidget(ttlButton);
     header->addWidget(deleteButton);
-    m_writeWidgets << m_undoButton << m_redoButton << ttlButton << deleteButton;
+    m_writeWidgets << m_undoButton << m_redoButton << m_applyButton << m_discardButton
+                   << ttlButton << deleteButton;
     connect(m_undoButton, &QPushButton::clicked, this, &ValuePanel::undoLast);
     connect(m_redoButton, &QPushButton::clicked, this, &ValuePanel::redoLast);
+    connect(m_applyButton, &QPushButton::clicked, this, &ValuePanel::applyPending);
+    connect(m_discardButton, &QPushButton::clicked, this, &ValuePanel::discardPending);
     layout->addLayout(header);
 
     m_valueFilter = new QLineEdit(this);
@@ -347,33 +358,14 @@ QWidget *ValuePanel::buildHashPage()
         const QString field = fieldItem->text();
         const QString oldValue = m_hashOriginal.value(field);
         const QString newValue = item->text();
-        const quint64 generation = m_generation;
-        const QByteArray key = m_key;
-        runCommand({QByteArrayLiteral("HSET"), key, field.toUtf8(), newValue.toUtf8()},
-                   [this, generation, key, field, oldValue, newValue](const RespValue &reply,
-                                                                      const QString &error) {
-            if (generation != m_generation)
-                return;
-            if (!error.isEmpty() || reply.isError()) {
-                showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
-                m_loading = true;
-                for (int row = 0; row < m_hashTable->rowCount(); ++row) {
-                    if (m_hashTable->item(row, 0)->text() == field) {
-                        m_hashTable->item(row, 1)->setText(oldValue);
-                        break;
-                    }
-                }
-                m_loading = false;
-                return;
-            }
-            QList<QList<QByteArray>> undo;
-            undo.append({QByteArrayLiteral("HSET"), key, field.toUtf8(), oldValue.toUtf8()});
-            QList<QList<QByteArray>> redo;
-            redo.append({QByteArrayLiteral("HSET"), key, field.toUtf8(), newValue.toUtf8()});
-            pushUndo(tr("hash field"), undo, redo);
-            m_hashOriginal.insert(field, newValue);
-            setStatus(tr("Field updated"));
-        });
+        QList<QList<QByteArray>> commands;
+        commands.append({QByteArrayLiteral("HSET"), m_key, field.toUtf8(), newValue.toUtf8()});
+        QList<QList<QByteArray>> undo;
+        undo.append({QByteArrayLiteral("HSET"), m_key, field.toUtf8(), oldValue.toUtf8()});
+        QList<QList<QByteArray>> redo;
+        redo.append({QByteArrayLiteral("HSET"), m_key, field.toUtf8(), newValue.toUtf8()});
+        stageCommands(tr("hash field"), commands, undo, redo);
+        m_hashOriginal.insert(field, newValue);
     });
     return tablePage(m_hashTable, {addButton, editButton, deleteButton, reloadButton, m_hashMoreButton}, this);
 }
@@ -412,36 +404,17 @@ QWidget *ValuePanel::buildListPage()
             return;
         const QString oldValue = m_listOriginal.value(index);
         const QString newValue = item->text();
-        const quint64 generation = m_generation;
-        const QByteArray key = m_key;
-        runCommand({QByteArrayLiteral("LSET"), key, QByteArray::number(index),
-                    newValue.toUtf8()},
-                   [this, generation, key, index, oldValue, newValue](const RespValue &reply,
-                                                                       const QString &error) {
-            if (generation != m_generation)
-                return;
-            if (!error.isEmpty() || reply.isError()) {
-                showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
-                m_loading = true;
-                for (int row = 0; row < m_listTable->rowCount(); ++row) {
-                    if (m_listTable->item(row, 0)->text().toInt() == index) {
-                        m_listTable->item(row, 1)->setText(oldValue);
-                        break;
-                    }
-                }
-                m_loading = false;
-                return;
-            }
-            QList<QList<QByteArray>> undo;
-            undo.append({QByteArrayLiteral("LSET"), key, QByteArray::number(index),
-                         oldValue.toUtf8()});
-            QList<QList<QByteArray>> redo;
-            redo.append({QByteArrayLiteral("LSET"), key, QByteArray::number(index),
+        QList<QList<QByteArray>> commands;
+        commands.append({QByteArrayLiteral("LSET"), m_key, QByteArray::number(index),
                          newValue.toUtf8()});
-            pushUndo(tr("list element"), undo, redo);
-            m_listOriginal.insert(index, newValue);
-            setStatus(tr("List element updated"));
-        });
+        QList<QList<QByteArray>> undo;
+        undo.append({QByteArrayLiteral("LSET"), m_key, QByteArray::number(index),
+                     oldValue.toUtf8()});
+        QList<QList<QByteArray>> redo;
+        redo.append({QByteArrayLiteral("LSET"), m_key, QByteArray::number(index),
+                     newValue.toUtf8()});
+        stageCommands(tr("list element"), commands, undo, redo);
+        m_listOriginal.insert(index, newValue);
     });
     return tablePage(m_listTable, {headButton, tailButton, editButton, deleteButton, reloadButton, m_listMoreButton}, this);
 }
@@ -507,33 +480,14 @@ QWidget *ValuePanel::buildZSetPage()
             m_loading = false;
             return;
         }
-        const quint64 generation = m_generation;
-        const QByteArray key = m_key;
-        runCommand({QByteArrayLiteral("ZADD"), key, newScore.toUtf8(), member.toUtf8()},
-                   [this, generation, key, member, oldScore, newScore](const RespValue &reply,
-                                                                        const QString &error) {
-            if (generation != m_generation)
-                return;
-            if (!error.isEmpty() || reply.isError()) {
-                showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
-                m_loading = true;
-                for (int row = 0; row < m_zsetTable->rowCount(); ++row) {
-                    if (m_zsetTable->item(row, 0)->text() == member) {
-                        m_zsetTable->item(row, 1)->setText(oldScore);
-                        break;
-                    }
-                }
-                m_loading = false;
-                return;
-            }
-            QList<QList<QByteArray>> undo;
-            undo.append({QByteArrayLiteral("ZADD"), key, oldScore.toUtf8(), member.toUtf8()});
-            QList<QList<QByteArray>> redo;
-            redo.append({QByteArrayLiteral("ZADD"), key, newScore.toUtf8(), member.toUtf8()});
-            pushUndo(tr("zset score"), undo, redo);
-            m_zsetOriginal.insert(member, newScore);
-            setStatus(tr("Score updated"));
-        });
+        QList<QList<QByteArray>> commands;
+        commands.append({QByteArrayLiteral("ZADD"), m_key, newScore.toUtf8(), member.toUtf8()});
+        QList<QList<QByteArray>> undo;
+        undo.append({QByteArrayLiteral("ZADD"), m_key, oldScore.toUtf8(), member.toUtf8()});
+        QList<QList<QByteArray>> redo;
+        redo.append({QByteArrayLiteral("ZADD"), m_key, newScore.toUtf8(), member.toUtf8()});
+        stageCommands(tr("zset score"), commands, undo, redo);
+        m_zsetOriginal.insert(member, newScore);
     });
     return tablePage(m_zsetTable, {addButton, editButton, deleteButton, reloadButton, m_zsetMoreButton}, this);
 }
@@ -719,6 +673,7 @@ void ValuePanel::loadKey(const KeyInfo &info)
     }
     ++m_generation;
     clearUndo();
+    clearPending();
     m_stringDirty = false;
     m_jsonDirty = false;
     if (m_valueFilter) {
@@ -777,6 +732,7 @@ void ValuePanel::clearKey()
 {
     ++m_generation;
     clearUndo();
+    clearPending();
     if (m_valueFilter) {
         m_valueFilter->clear();
         m_valueFilter->setVisible(false);
@@ -853,6 +809,7 @@ void ValuePanel::setReadOnly(bool readOnly)
     }
     updateJsonButtons();
     updateDirtyLabel();
+    updatePendingButtons();
     updateUndoButton();
 }
 
@@ -1814,6 +1771,10 @@ void ValuePanel::editTtl()
         return;
     if (m_key.isEmpty())
         return;
+    if (!m_pendingCommands.isEmpty()) {
+        setStatus(tr("Apply or discard pending changes first"));
+        return;
+    }
     const qint64 current = m_ttlMs > 0 ? m_ttlMs / 1000 : -1;
     bool ok = false;
     const int seconds = QInputDialog::getInt(this, tr("Set TTL"),
@@ -1846,6 +1807,10 @@ void ValuePanel::deleteKey()
         return;
     if (m_key.isEmpty())
         return;
+    if (!m_pendingCommands.isEmpty()) {
+        setStatus(tr("Apply or discard pending changes first"));
+        return;
+    }
     if (QMessageBox::question(this, tr("Delete key"),
                               tr("Delete key \"%1\"?").arg(displayKey(m_key)))
         != QMessageBox::Yes) {
@@ -1939,60 +1904,31 @@ void ValuePanel::editHashSelected()
     if (dialog.exec() != QDialog::Accepted)
         return;
     const auto values = dialog.values();
-    QList<QByteArray> args{QByteArrayLiteral("HSET"), m_key};
+    QList<QByteArray> forward{QByteArrayLiteral("HSET"), m_key};
+    QList<QByteArray> inverse{QByteArrayLiteral("HSET"), m_key};
     for (const auto &[field, value] : values) {
-        args.append(field.toUtf8());
-        args.append(value.toUtf8());
+        forward.append(field.toUtf8());
+        forward.append(value.toUtf8());
+        inverse.append(field.toUtf8());
+        for (const auto &[oldField, oldValue] : rows) {
+            if (oldField == field)
+                inverse.append(oldValue.toUtf8());
+        }
     }
-    if (args.size() <= 3)
+    if (forward.size() <= 3)
         return;
-    const QList<QByteArray> hsetArgs = args;
-    QPointer<ValuePanel> guard(this);
-    auto complete = [guard, this, rows, hsetArgs] {
-        if (!guard)
-            return;
-        setStatus(tr("Hash fields updated"));
-        QList<QByteArray> inverse{QByteArrayLiteral("HSET"), m_key};
-        for (const auto &[field, oldValue] : rows) {
-            inverse.append(field.toUtf8());
-            inverse.append(oldValue.toUtf8());
-        }
-        if (inverse.size() > 3) {
-            QList<QList<QByteArray>> undoCommands;
-            undoCommands.append(inverse);
-            QList<QList<QByteArray>> redoCommands;
-            redoCommands.append(hsetArgs);
-            pushUndo(tr("hash fields"), undoCommands, redoCommands);
-        }
-        loadHash();
-    };
-    runCommand(args, [guard, this, hsetArgs, complete](const RespValue &reply,
-                                                       const QString &error) {
-        if (!guard)
-            return;
-        if (!error.isEmpty() || reply.isError()) {
-            // Redis < 4 only supports the multi-field HMSET form.
-            if (hsetArgs.size() > 4) {
-                QList<QByteArray> hmsetArgs = hsetArgs;
-                hmsetArgs[0] = QByteArrayLiteral("HMSET");
-                runCommand(hmsetArgs, [guard, this, complete](const RespValue &fallback,
-                                                              const QString &fallbackError) {
-                    if (!guard)
-                        return;
-                    if (!fallbackError.isEmpty() || fallback.isError())
-                        showError(fallbackError.isEmpty()
-                                      ? QString::fromUtf8(fallback.scalar)
-                                      : fallbackError);
-                    else
-                        complete();
-                });
-                return;
+    stageCommands(tr("hash fields"), {forward}, {inverse}, {forward});
+    m_loading = true;
+    for (const auto &[field, value] : values) {
+        for (int row = 0; row < m_hashTable->rowCount(); ++row) {
+            if (m_hashTable->item(row, 0)->text() == field) {
+                m_hashTable->item(row, 1)->setText(value);
+                break;
             }
-            showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
-            return;
         }
-        complete();
-    });
+        m_hashOriginal.insert(field, value);
+    }
+    m_loading = false;
 }
 
 void ValuePanel::editListSelected()
@@ -2008,18 +1944,30 @@ void ValuePanel::editListSelected()
     if (dialog.exec() != QDialog::Accepted)
         return;
     QList<QList<QByteArray>> commands;
-    for (const auto &[index, value] : dialog.values())
+    QList<QList<QByteArray>> inverse;
+    for (const auto &[index, value] : dialog.values()) {
         commands.append({QByteArrayLiteral("LSET"), m_key, index.toUtf8(), value.toUtf8()});
-    runCommands(commands, [this, rows, commands](bool success) {
-        if (!success)
-            return;
-        setStatus(tr("List elements updated"));
-        QList<QList<QByteArray>> inverse;
-        for (const auto &[index, oldValue] : rows)
-            inverse.append({QByteArrayLiteral("LSET"), m_key, index.toUtf8(), oldValue.toUtf8()});
-        pushUndo(tr("list elements"), inverse, commands);
-        loadList();
-    });
+        for (const auto &[oldIndex, oldValue] : rows) {
+            if (oldIndex == index)
+                inverse.append({QByteArrayLiteral("LSET"), m_key, index.toUtf8(),
+                                oldValue.toUtf8()});
+        }
+    }
+    if (commands.isEmpty())
+        return;
+    stageCommands(tr("list elements"), commands, inverse, commands);
+    m_loading = true;
+    for (const auto &[index, value] : dialog.values()) {
+        const int itemIndex = index.toInt();
+        for (int row = 0; row < m_listTable->rowCount(); ++row) {
+            if (m_listTable->item(row, 0)->text().toInt() == itemIndex) {
+                m_listTable->item(row, 1)->setText(value);
+                break;
+            }
+        }
+        m_listOriginal.insert(itemIndex, value);
+    }
+    m_loading = false;
 }
 
 void ValuePanel::editSetSelected()
@@ -2036,28 +1984,28 @@ void ValuePanel::editSetSelected()
     if (dialog.exec() != QDialog::Accepted)
         return;
     QList<QList<QByteArray>> commands;
+    QList<QList<QByteArray>> inverse;
     for (const auto &[oldMember, newMember] : dialog.values()) {
         if (oldMember == newMember)
             continue;
         commands.append({QByteArrayLiteral("SREM"), m_key, oldMember.toUtf8()});
         commands.append({QByteArrayLiteral("SADD"), m_key, newMember.toUtf8()});
+        inverse.prepend({QByteArrayLiteral("SADD"), m_key, oldMember.toUtf8()});
+        inverse.prepend({QByteArrayLiteral("SREM"), m_key, newMember.toUtf8()});
     }
     if (commands.isEmpty())
         return;
-    runCommands(commands, [this, rows, commands](bool success) {
-        if (!success)
-            return;
-        setStatus(tr("Set members updated"));
-        QList<QList<QByteArray>> inverse;
-        for (const auto &[oldMember, newMember] : rows) {
-            if (oldMember == newMember)
-                continue;
-            inverse.append({QByteArrayLiteral("SREM"), m_key, newMember.toUtf8()});
-            inverse.append({QByteArrayLiteral("SADD"), m_key, oldMember.toUtf8()});
+    stageCommands(tr("set members"), commands, inverse, commands);
+    m_loading = true;
+    for (const auto &[oldMember, newMember] : dialog.values()) {
+        for (int row = 0; row < m_setTable->rowCount(); ++row) {
+            if (m_setTable->item(row, 0)->text() == oldMember) {
+                m_setTable->item(row, 0)->setText(newMember);
+                break;
+            }
         }
-        pushUndo(tr("set members"), inverse, commands);
-        loadSet();
-    });
+    }
+    m_loading = false;
 }
 
 void ValuePanel::editZSetSelected()
@@ -2073,6 +2021,7 @@ void ValuePanel::editZSetSelected()
     if (dialog.exec() != QDialog::Accepted)
         return;
     QList<QList<QByteArray>> commands;
+    QList<QList<QByteArray>> inverse;
     for (const auto &[member, score] : dialog.values()) {
         bool ok = false;
         score.toDouble(&ok);
@@ -2081,17 +2030,26 @@ void ValuePanel::editZSetSelected()
             return;
         }
         commands.append({QByteArrayLiteral("ZADD"), m_key, score.toUtf8(), member.toUtf8()});
+        for (const auto &[oldMember, oldScore] : rows) {
+            if (oldMember == member)
+                inverse.append({QByteArrayLiteral("ZADD"), m_key, oldScore.toUtf8(),
+                                member.toUtf8()});
+        }
     }
-    runCommands(commands, [this, rows, commands](bool success) {
-        if (!success)
-            return;
-        setStatus(tr("Scores updated"));
-        QList<QList<QByteArray>> inverse;
-        for (const auto &[member, oldScore] : rows)
-            inverse.append({QByteArrayLiteral("ZADD"), m_key, oldScore.toUtf8(), member.toUtf8()});
-        pushUndo(tr("scores"), inverse, commands);
-        loadZSet();
-    });
+    if (commands.isEmpty())
+        return;
+    stageCommands(tr("scores"), commands, inverse, commands);
+    m_loading = true;
+    for (const auto &[member, score] : dialog.values()) {
+        for (int row = 0; row < m_zsetTable->rowCount(); ++row) {
+            if (m_zsetTable->item(row, 0)->text() == member) {
+                m_zsetTable->item(row, 1)->setText(score);
+                break;
+            }
+        }
+        m_zsetOriginal.insert(member, score);
+    }
+    m_loading = false;
 }
 
 void ValuePanel::runCommands(const QList<QList<QByteArray>> &commands,
@@ -2123,6 +2081,10 @@ void ValuePanel::addHashField()
 {
     if (m_readOnly)
         return;
+    if (!m_pendingCommands.isEmpty()) {
+        setStatus(tr("Apply or discard pending changes first"));
+        return;
+    }
     if (m_key.isEmpty())
         return;
     bool ok = false;
@@ -2151,6 +2113,10 @@ void ValuePanel::deleteHashFields()
 {
     if (m_readOnly)
         return;
+    if (!m_pendingCommands.isEmpty()) {
+        setStatus(tr("Apply or discard pending changes first"));
+        return;
+    }
     const auto rows = m_hashTable->selectionModel()->selectedRows();
     if (rows.isEmpty())
         return;
@@ -2182,8 +2148,12 @@ void ValuePanel::deleteHashFields()
 
 void ValuePanel::addListValue(bool head)
 {
-    if (m_key.isEmpty())
+    if (m_readOnly || m_key.isEmpty())
         return;
+    if (!m_pendingCommands.isEmpty()) {
+        setStatus(tr("Apply or discard pending changes first"));
+        return;
+    }
     bool ok = false;
     const QString value = QInputDialog::getText(this, tr("Add list value"), tr("Value:"),
                                                 QLineEdit::Normal, {}, &ok);
@@ -2207,6 +2177,10 @@ void ValuePanel::deleteListValues()
 {
     if (m_readOnly)
         return;
+    if (!m_pendingCommands.isEmpty()) {
+        setStatus(tr("Apply or discard pending changes first"));
+        return;
+    }
     const auto rows = m_listTable->selectionModel()->selectedRows();
     if (rows.isEmpty())
         return;
@@ -2242,6 +2216,10 @@ void ValuePanel::addSetMember()
 {
     if (m_readOnly)
         return;
+    if (!m_pendingCommands.isEmpty()) {
+        setStatus(tr("Apply or discard pending changes first"));
+        return;
+    }
     if (m_key.isEmpty())
         return;
     bool ok = false;
@@ -2265,6 +2243,10 @@ void ValuePanel::deleteSetMembers()
 {
     if (m_readOnly)
         return;
+    if (!m_pendingCommands.isEmpty()) {
+        setStatus(tr("Apply or discard pending changes first"));
+        return;
+    }
     const auto rows = m_setTable->selectionModel()->selectedRows();
     if (rows.isEmpty())
         return;
@@ -2297,6 +2279,10 @@ void ValuePanel::addZSetMember()
 {
     if (m_readOnly)
         return;
+    if (!m_pendingCommands.isEmpty()) {
+        setStatus(tr("Apply or discard pending changes first"));
+        return;
+    }
     if (m_key.isEmpty())
         return;
     bool ok = false;
@@ -2331,6 +2317,10 @@ void ValuePanel::deleteZSetMembers()
 {
     if (m_readOnly)
         return;
+    if (!m_pendingCommands.isEmpty()) {
+        setStatus(tr("Apply or discard pending changes first"));
+        return;
+    }
     const auto rows = m_zsetTable->selectionModel()->selectedRows();
     if (rows.isEmpty())
         return;
@@ -2442,10 +2432,88 @@ void ValuePanel::clearUndo()
 
 void ValuePanel::updateUndoButton()
 {
+    const bool pending = !m_pendingCommands.isEmpty();
     if (m_undoButton)
-        m_undoButton->setEnabled(!m_readOnly && !m_undoActions.isEmpty());
+        m_undoButton->setEnabled(!m_readOnly && !pending && !m_undoActions.isEmpty());
     if (m_redoButton)
-        m_redoButton->setEnabled(!m_readOnly && !m_redoActions.isEmpty());
+        m_redoButton->setEnabled(!m_readOnly && !pending && !m_redoActions.isEmpty());
+}
+
+void ValuePanel::stageCommands(const QString &label,
+                               const QList<QList<QByteArray>> &commands,
+                               const QList<QList<QByteArray>> &undoCommands,
+                               const QList<QList<QByteArray>> &redoCommands)
+{
+    if (commands.isEmpty())
+        return;
+    m_pendingCommands += commands;
+    m_pendingUndo = undoCommands + m_pendingUndo;
+    m_pendingRedo += redoCommands;
+    m_pendingLabel = label;
+    updatePendingButtons();
+    updateDirtyLabel();
+    setStatus(tr("Pending changes; click Apply"));
+}
+
+void ValuePanel::applyPending()
+{
+    if (m_readOnly || m_pendingCommands.isEmpty())
+        return;
+    const QList<QList<QByteArray>> commands = m_pendingCommands;
+    const QList<QList<QByteArray>> undoCommands = m_pendingUndo;
+    const QList<QList<QByteArray>> redoCommands = m_pendingRedo;
+    const QString label = m_pendingLabel;
+    QPointer<ValuePanel> guard(this);
+    runCommands(commands, [guard, this, label, undoCommands, redoCommands](bool success) {
+        if (!guard || !success)
+            return;
+        clearPending();
+        pushUndo(label, undoCommands, redoCommands);
+        if (m_type == QLatin1String("hash"))
+            loadHash();
+        else if (m_type == QLatin1String("list"))
+            loadList();
+        else if (m_type == QLatin1String("set"))
+            loadSet();
+        else if (m_type == QLatin1String("zset"))
+            loadZSet();
+        setStatus(tr("Changes applied"));
+    });
+}
+
+void ValuePanel::discardPending()
+{
+    if (m_readOnly || m_pendingCommands.isEmpty())
+        return;
+    clearPending();
+    if (m_type == QLatin1String("hash"))
+        loadHash();
+    else if (m_type == QLatin1String("list"))
+        loadList();
+    else if (m_type == QLatin1String("set"))
+        loadSet();
+    else if (m_type == QLatin1String("zset"))
+        loadZSet();
+    setStatus(tr("Pending changes discarded"));
+}
+
+void ValuePanel::updatePendingButtons()
+{
+    const bool pending = !m_pendingCommands.isEmpty();
+    if (m_applyButton)
+        m_applyButton->setEnabled(!m_readOnly && pending);
+    if (m_discardButton)
+        m_discardButton->setEnabled(!m_readOnly && pending);
+}
+
+void ValuePanel::clearPending()
+{
+    m_pendingCommands.clear();
+    m_pendingUndo.clear();
+    m_pendingRedo.clear();
+    m_pendingLabel.clear();
+    updatePendingButtons();
+    updateDirtyLabel();
 }
 
 void ValuePanel::updateDirtyLabel()
@@ -2456,7 +2524,8 @@ void ValuePanel::updateDirtyLabel()
                && m_jsonEdit) {
         m_jsonDirty = m_jsonEdit->toPlainText() != m_jsonLoaded;
     }
-    const bool dirty = (m_type == QLatin1String("string") && m_stringDirty)
+    const bool dirty = !m_pendingCommands.isEmpty()
+        || (m_type == QLatin1String("string") && m_stringDirty)
         || ((m_type == QLatin1String("ReJSON-RL") || m_type == QLatin1String("json")) && m_jsonDirty);
     if (m_dirtyLabel) {
         m_dirtyLabel->setText(tr("● Modified"));

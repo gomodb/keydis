@@ -134,6 +134,9 @@ void TestMainWindow::browsesAndShowsValues()
     auto *hashBatchButton = window.findChild<QPushButton *>(QStringLiteral("hashBatchEditButton"));
     auto *undoButton = window.findChild<QPushButton *>(QStringLiteral("undoButton"));
     auto *redoButton = window.findChild<QPushButton *>(QStringLiteral("redoButton"));
+    auto *applyButton = window.findChild<QPushButton *>(QStringLiteral("applyButton"));
+    auto *discardPendingButton =
+        window.findChild<QPushButton *>(QStringLiteral("discardPendingButton"));
     auto *valueFilter = window.findChild<QLineEdit *>(QStringLiteral("valueFilter"));
     auto *hexButton = window.findChild<QPushButton *>(QStringLiteral("hexViewButton"));
     auto *keyLabel = window.findChild<QLabel *>(QStringLiteral("keyLabel"));
@@ -161,6 +164,8 @@ void TestMainWindow::browsesAndShowsValues()
     QVERIFY(hashBatchButton);
     QVERIFY(undoButton);
     QVERIFY(redoButton);
+    QVERIFY(applyButton);
+    QVERIFY(discardPendingButton);
     QVERIFY(valueFilter);
     QVERIFY(hexButton);
     QVERIFY(keyLabel);
@@ -232,7 +237,9 @@ void TestMainWindow::browsesAndShowsValues()
     }
 
     hashTable->item(0, 1)->setText(QStringLiteral("value2"));
-    QTest::qWait(200);
+    QVERIFY(applyButton->isEnabled());
+    QTest::mouseClick(applyButton, Qt::LeftButton);
+    QTRY_VERIFY_WITH_TIMEOUT(!applyButton->isEnabled(), 5000);
 
     hashTable->selectRow(0);
     QTimer::singleShot(50, qApp, [] {
@@ -245,6 +252,9 @@ void TestMainWindow::browsesAndShowsValues()
     });
     QTest::mouseClick(hashBatchButton, Qt::LeftButton);
     QTRY_COMPARE_WITH_TIMEOUT(hashTable->item(0, 1)->text(), QStringLiteral("batch-value"), 5000);
+    QVERIFY(applyButton->isEnabled());
+    QTest::mouseClick(applyButton, Qt::LeftButton);
+    QTRY_VERIFY_WITH_TIMEOUT(!applyButton->isEnabled(), 5000);
     QTRY_VERIFY_WITH_TIMEOUT(undoButton->isEnabled(), 2000);
     QTest::mouseClick(undoButton, Qt::LeftButton);
     QTRY_COMPARE_WITH_TIMEOUT(hashTable->item(0, 1)->text(), QStringLiteral("value2"), 5000);
@@ -253,6 +263,12 @@ void TestMainWindow::browsesAndShowsValues()
     QTRY_COMPARE_WITH_TIMEOUT(hashTable->item(0, 1)->text(), QStringLiteral("batch-value"), 5000);
     QTest::mouseClick(undoButton, Qt::LeftButton);
     QTRY_COMPARE_WITH_TIMEOUT(hashTable->item(0, 1)->text(), QStringLiteral("value2"), 5000);
+
+    hashTable->item(0, 1)->setText(QStringLiteral("discard-me"));
+    QVERIFY(discardPendingButton->isEnabled());
+    QTest::mouseClick(discardPendingButton, Qt::LeftButton);
+    QTRY_COMPARE_WITH_TIMEOUT(hashTable->item(0, 1)->text(), QStringLiteral("value2"), 5000);
+    QVERIFY(!applyButton->isEnabled());
 
     table->selectRow(bigHashRow);
     QTRY_VERIFY_WITH_TIMEOUT(hashTable->rowCount() >= 500, 5000);

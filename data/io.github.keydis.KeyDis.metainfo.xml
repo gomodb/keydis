@@ -18,6 +18,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.20" date="2026-10-19">
+      <description>
+        <p>Explicit Apply/Discard for collection cell and batch edits, with local pending state and transactional commit.</p>
+      </description>
+    </release>
     <release version="0.4.19" date="2026-10-19">
       <description>
         <p>Redo for collection undo history, plus dirty-state indicators and explicit Discard for String and JSON raw editors.</p>

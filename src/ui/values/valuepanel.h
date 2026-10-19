@@ -130,6 +130,13 @@ private:
     void updateDirtyLabel();
     void discardString();
     void discardJson();
+    void stageCommands(const QString &label, const QList<QList<QByteArray>> &commands,
+                       const QList<QList<QByteArray>> &undoCommands,
+                       const QList<QList<QByteArray>> &redoCommands);
+    void applyPending();
+    void discardPending();
+    void updatePendingButtons();
+    void clearPending();
     void clearUndo();
     void updateUndoButton();
 
@@ -173,6 +180,8 @@ private:
     QTableWidget *m_streamPendingTable = nullptr;
     QPushButton *m_undoButton = nullptr;
     QPushButton *m_redoButton = nullptr;
+    QPushButton *m_applyButton = nullptr;
+    QPushButton *m_discardButton = nullptr;
     struct UndoAction {
         QString label;
         QList<QList<QByteArray>> undoCommands;
@@ -180,6 +189,10 @@ private:
     };
     QVector<UndoAction> m_undoActions;
     QVector<UndoAction> m_redoActions;
+    QList<QList<QByteArray>> m_pendingCommands;
+    QList<QList<QByteArray>> m_pendingUndo;
+    QList<QList<QByteArray>> m_pendingRedo;
+    QString m_pendingLabel;
     QPushButton *m_hashMoreButton = nullptr;
     QPushButton *m_listMoreButton = nullptr;
     QPushButton *m_setMoreButton = nullptr;

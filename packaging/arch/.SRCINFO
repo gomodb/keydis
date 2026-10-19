@@ -1,6 +1,6 @@
 pkgbase = keydis
 	pkgdesc = Native Redis/Valkey client for KDE
-	pkgver = 0.4.18
+	pkgver = 0.4.19
 	pkgrel = 1
 	url = https://github.com/gomodb/keydis
 	install = keydis.install
@@ -25,7 +25,7 @@ pkgbase = keydis
 	optdepends = kwalletmanager: KWallet management UI
 	optdepends = openssh: SSH tunnel support
 	options = !debug
-	source = keydis-0.4.18.tar.gz::https://github.com/gomodb/keydis/archive/refs/tags/v0.4.18.tar.gz
-	sha256sums = c0807d35a43efccd5e91e1b9fe5f5990c45514d52c64f8410e14e373bae8e4c5
+	source = keydis-0.4.19.tar.gz::https://github.com/gomodb/keydis/archive/refs/tags/v0.4.19.tar.gz
+	sha256sums = 114165e21cb2c26d0dff460e90f08496e4aed00c5a6e6d50e7e0d675d0db4bac
 
 pkgname = keydis

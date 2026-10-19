@@ -71,6 +71,8 @@ private:
 
     void loadString();
     void loadFullString();
+    void loadNextStringChunk();
+    void applyStringChunk(const QByteArray &chunk, qint64 totalSize, bool first);
     void applyStringBytes(const QByteArray &bytes, bool partial, qint64 totalSize);
     void updateStringControls();
     void loadHash();
@@ -173,6 +175,7 @@ private:
     QPlainTextEdit *m_stringEdit = nullptr;
     QPushButton *m_stringDiscardButton = nullptr;
     QPushButton *m_stringLoadFullButton = nullptr;
+    QPushButton *m_stringLoadNextButton = nullptr;
     QPushButton *m_bitmapButton = nullptr;
     QPushButton *m_hllButton = nullptr;
     QList<QPushButton *> m_stringWriteButtons;

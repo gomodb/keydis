@@ -16,6 +16,7 @@ private slots:
     void buildsProtobufView();
     void buildsSpecialTypeViews();
     void buildsStreamConsumerView();
+    void loadsLargeStringInChunks();
 };
 
 } // namespace KeyDis::Test

@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.35）
+# KeyDis 使用说明（0.4.36）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -212,7 +212,9 @@ Stream → Groups 下新增 **Consumers** 页：
 - 加载 String 时先执行 `STRLEN`；
 - 超过 **1 MiB** 时只读取前 1 MiB（`GETRANGE 0 1048575`），显示为只读预览；
 - 状态栏显示总字节数和当前预览大小；
-- 点击 **Load full...** 并确认后执行完整 `GET`，恢复编辑；
+- 点击 **Load next...** 继续读取下一段 1 MiB，可分段查看完整内容；
+- 所有分段加载完成后自动恢复编辑；
+- 点击 **Load full...** 并确认后执行完整 `GET`，一次性加载并恢复编辑；
 - 预览状态下 **Save string / Edit bytes / Replace range** 禁用，避免只把预览片段写回服务器；
 - 完整加载后仍是一次性占用内存，没有增量分页编辑。
 

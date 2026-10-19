@@ -25,6 +25,8 @@ namespace KeyDis::Test {
 
 namespace {
 
+constexpr qint64 kLargeSize = 2 * 1024 * 1024 + 123;
+
 class FakeRedisClient : public RedisClient
 {
 public:
@@ -41,7 +43,21 @@ public:
     {
         commands.append(args);
         RespValue reply;
-        if (!args.isEmpty() && args.first() == QByteArrayLiteral("JSON.GET")) {
+        if (args.value(1) == QByteArrayLiteral("large")
+            && args.value(0) == QByteArrayLiteral("STRLEN")) {
+            reply.type = RespType::Integer;
+            reply.integer = kLargeSize;
+        } else if (args.value(1) == QByteArrayLiteral("large")
+                   && args.value(0) == QByteArrayLiteral("GETRANGE")) {
+            const qint64 start = args.value(2).toLongLong();
+            const qint64 end = args.value(3).toLongLong();
+            reply.type = RespType::BulkString;
+            reply.scalar = QByteArray(int(qMin(end - start + 1, kLargeSize - start)), 'x');
+        } else if (args.value(1) == QByteArrayLiteral("large")
+                   && args.value(0) == QByteArrayLiteral("GET")) {
+            reply.type = RespType::BulkString;
+            reply.scalar = QByteArray(int(kLargeSize), 'x');
+        } else if (!args.isEmpty() && args.first() == QByteArrayLiteral("JSON.GET")) {
             reply.type = RespType::BulkString;
             reply.scalar = R"({"name":"Alice","tags":["a","b"],"active":true})";
         } else if (args.value(0) == QByteArrayLiteral("PFCOUNT")) {
@@ -263,6 +279,27 @@ void TestValuePanel::buildsStreamConsumerView()
     groups->selectRow(0);
     QTRY_COMPARE(consumers->rowCount(), 1);
     QCOMPARE(consumers->item(0, 0)->text(), QStringLiteral("worker"));
+}
+
+void TestValuePanel::loadsLargeStringInChunks()
+{
+    FakeRedisClient client;
+    ValuePanel panel(&client);
+    panel.loadKey(KeyInfo{QByteArrayLiteral("large"), QStringLiteral("string"), -1});
+    auto *edit = panel.findChild<QPlainTextEdit *>(QStringLiteral("stringEdit"));
+    auto *next = panel.findChild<QPushButton *>(QStringLiteral("loadNextStringButton"));
+    auto *save = panel.findChild<QPushButton *>(QStringLiteral("saveStringButton"));
+    QVERIFY(edit);
+    QVERIFY(next);
+    QVERIFY(save);
+    QTRY_COMPARE(edit->toPlainText().size(), 1024 * 1024);
+    QVERIFY(!save->isEnabled());
+    QTest::mouseClick(next, Qt::LeftButton);
+    QTRY_COMPARE(edit->toPlainText().size(), 2 * 1024 * 1024);
+    QTest::mouseClick(next, Qt::LeftButton);
+    QTRY_COMPARE(edit->toPlainText().size(), int(kLargeSize));
+    QVERIFY(save->isEnabled());
+    QVERIFY(next->isHidden());
 }
 
 } // namespace KeyDis::Test

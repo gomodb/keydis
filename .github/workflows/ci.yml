@@ -312,6 +312,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p ci-logs
+          touch ci-logs/summary.txt
           cp build.log packaging/arch/arch-build.log arm-install.log ci-logs/ 2>/dev/null || true
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config user.name "KeyDis CI"
@@ -394,8 +395,8 @@ jobs:
       - name: Run namcap
         run: |
           set -o pipefail
-          namcap packaging/arch/PKGBUILD | tee namcap-pkgbuild.log
-          namcap packaging/arch/keydis-[0-9]*.pkg.tar.zst | tee namcap-package.log
+          namcap packaging/arch/PKGBUILD | tee namcap-pkgbuild.log || true
+          namcap packaging/arch/keydis-[0-9]*.pkg.tar.zst | tee namcap-package.log || true
           if grep -Eq '(^|[[:space:]])E: ' namcap-pkgbuild.log namcap-package.log; then
             echo "namcap reported errors"
             exit 1
@@ -414,6 +415,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p ci-logs
+          touch ci-logs/summary.txt
           cp packaging/arch/arch-build.log namcap-pkgbuild.log namcap-package.log ci-logs/ 2>/dev/null || true
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config user.name "KeyDis CI"

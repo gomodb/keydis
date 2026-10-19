@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 3.28)
 
 project(KeyDis
-    VERSION 0.4.9
+    VERSION 0.4.10
     DESCRIPTION "Native Redis/Valkey client for KDE"
     HOMEPAGE_URL "https://github.com/gomodb/keydis"
     LANGUAGES C CXX
@@ -114,6 +114,8 @@ add_library(keydis_core STATIC
     src/core/transfer/keytransfer.h
     src/core/resp/respvalue.cpp
     src/core/resp/respvalue.h
+    src/core/safety/commandsafety.cpp
+    src/core/safety/commandsafety.h
 )
 
 qt_add_library(keydis_ui_models STATIC
@@ -231,6 +233,8 @@ if(BUILD_TESTING)
         tests/fakeserver.h
         tests/test_clusterclient.cpp
         tests/test_clusterclient.h
+        tests/test_commandsafety.cpp
+        tests/test_commandsafety.h
         tests/test_commandencoder.cpp
         tests/test_commandencoder.h
         tests/test_keyscanner.cpp

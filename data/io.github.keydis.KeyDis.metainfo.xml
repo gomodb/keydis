@@ -18,6 +18,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.10" date="2026-10-19">
+      <description>
+        <p>Safety guardrails: confirmation for destructive/caution CLI commands, ACL/read-only server hints, and import overwrite confirmation.</p>
+      </description>
+    </release>
     <release version="0.4.9" date="2026-10-19">
       <description>
         <p>Cluster node overview now includes per-master memory, connected clients and key counts.</p>

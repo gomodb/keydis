@@ -12,6 +12,7 @@
 #include "core/security/secretstore.h"
 #include "ui/dialogs/profiledialog.h"
 #include "core/keyspace/keyscanner.h"
+#include "core/safety/commandsafety.h"
 #include "core/resp/commandencoder.h"
 #include "ui/dashboard/dashboardpage.h"
 #include "ui/tools/servertools.h"
@@ -660,8 +661,15 @@ void MainWindow::buildUi()
     });
     connect(&m_router, &RedisClient::errorOccurred, this, [this](const QString &error) {
         appendOutput(QStringLiteral("[error] ") + error);
-        m_statusLabel->setText(error);
-        m_statusLabel->setToolTip(error);
+        QString displayError = error;
+        if (error.contains(QStringLiteral("NOPERM"), Qt::CaseInsensitive)
+            || error.contains(QStringLiteral("READONLY"), Qt::CaseInsensitive)
+            || error.contains(QStringLiteral("MISCONF"), Qt::CaseInsensitive)) {
+            displayError += QLatin1Char('\n')
+                + tr("The server rejected this operation (ACL or server read-only mode).");
+        }
+        m_statusLabel->setText(displayError);
+        m_statusLabel->setToolTip(displayError);
         m_retryButton->show();
         setConnectedUi(false);
         m_dashboard->setConnected(false);
@@ -1537,6 +1545,19 @@ void MainWindow::sendCommand()
     if (!CommandEncoder::parseLine(line, &args, &error)) {
         appendOutput(QStringLiteral("[error] ") + error);
         return;
+    }
+
+    const CommandDanger danger = CommandSafety::classify(args);
+    if (danger != CommandDanger::Safe) {
+        const QString text = danger == CommandDanger::Destructive
+            ? tr("This command can destroy data or change server state:\n\n%1\n\nExecute?")
+                  .arg(line)
+            : tr("This command may block or alter the server:\n\n%1\n\nExecute?").arg(line);
+        QMessageBox box(QMessageBox::Warning, tr("Confirm command"), text,
+                        QMessageBox::Yes | QMessageBox::No, this);
+        box.setDefaultButton(QMessageBox::No);
+        if (box.exec() != QMessageBox::Yes)
+            return;
     }
 
     appendOutput(QStringLiteral("> ") + line);

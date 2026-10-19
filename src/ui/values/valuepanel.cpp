@@ -1885,7 +1885,14 @@ void ValuePanel::setStatus(const QString &text)
 void ValuePanel::showError(const QString &error)
 {
     m_statusLabel->setStyleSheet(QStringLiteral("color: #da4453;"));
-    m_statusLabel->setText(error);
+    QString message = error;
+    if (error.contains(QStringLiteral("NOPERM"), Qt::CaseInsensitive)
+        || error.contains(QStringLiteral("READONLY"), Qt::CaseInsensitive)
+        || error.contains(QStringLiteral("MISCONF"), Qt::CaseInsensitive)) {
+        message += QLatin1Char('\n')
+            + tr("The server rejected this write (ACL or server read-only mode).");
+    }
+    m_statusLabel->setText(message);
 }
 
 void ValuePanel::runCommand(

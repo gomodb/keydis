@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.9）
+# KeyDis 使用说明（0.4.10）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -158,7 +158,7 @@ Pub/Sub 与 Monitor 不占用主浏览器连接。
   ```json
   {"key":"<base64>","dump":"<base64>","ttl":12345}
   ```
-- **Import...**：逐行执行 `RESTORE key ttl dump REPLACE`；
+- **Import...**：确认后逐行执行 `RESTORE key ttl dump REPLACE`；
 - **Cancel**：取消后续批次；
 - 导出/导入使用二进制安全的 base64，不依赖文本编码；
 - **Copy to connection...** 可从 Key 右键直接复制到另一个 Profile（目标已有 Key 会被 `REPLACE`）；暂不支持 SSH/Sentinel 目标。
@@ -185,6 +185,8 @@ INFO memory
 ```
 
 CLI 与浏览器共用主连接；阻塞命令会占用该连接。Pub/Sub/Monitor 请使用 **Tools** 页签的独立连接。
+
+危险命令（`FLUSHALL`、`FLUSHDB`、`SHUTDOWN`、`CONFIG SET`、`SCRIPT FLUSH`、`ACL SETUSER` 等）执行前会要求确认；`KEYS`、`EVAL`、`MONITOR` 等会提示可能阻塞或改变服务器。服务端返回 `NOPERM`/`READONLY` 时，状态栏会提示 ACL/只读模式。
 
 ## 8. KRunner
 

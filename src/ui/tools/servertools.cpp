@@ -15,6 +15,7 @@
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QInputDialog>
 #include <QPlainTextEdit>
 #include <QPointer>
@@ -640,6 +641,12 @@ void ServerToolsPage::importKeys()
         this, tr("Import keys"), {}, tr("JSON Lines (*.jsonl);;All files (*)"));
     if (path.isEmpty())
         return;
+    if (QMessageBox::question(
+            this, tr("Import keys"),
+            tr("Import uses RESTORE REPLACE and may overwrite existing keys. Continue?"))
+        != QMessageBox::Yes) {
+        return;
+    }
     m_exportButton->setEnabled(false);
     m_importButton->setEnabled(false);
     m_cancelTransferButton->setEnabled(true);

@@ -10,7 +10,7 @@ KeyDis 是一个使用 **C++20、Qt 6 Widgets 和 KDE Frameworks 6** 构建的�
 
 ## 当前状态
 
-**可用版本 0.4.33。** 已具备一个可构建、可安装的 Qt 6 + KF6 客户端：连接 Redis/Valkey、SCAN 浏览 Key、Dashboard、命名空间树、核心类型编辑、Stream/JSON、服务器工具、DUMP/RESTORE 导入导出、多连接配置与 KWallet。Sentinel、SSH key/agent 隧道与 **Cluster 基础支持** 已接入；更完整的 Cluster 运维视图仍在后续。
+**可用版本 0.4.34。** 已具备一个可构建、可安装的 Qt 6 + KF6 客户端：连接 Redis/Valkey、SCAN 浏览 Key、Dashboard、命名空间树、核心类型编辑、Stream/JSON、服务器工具、DUMP/RESTORE 导入导出、多连接配置与 KWallet。Sentinel、SSH key/agent 隧道与 **Cluster 基础支持** 已接入；更完整的 Cluster 运维视图仍在后续。
 
 当前已落地：
 
@@ -18,7 +18,7 @@ KeyDis 是一个使用 **C++20、Qt 6 Widgets 和 KDE Frameworks 6** 构建的�
 - `KXmlGuiWindow` 主窗口、Connections Dock、Dashboard、Key 浏览器、值编辑面板、CLI；
 - 命名空间树 / 平铺列表切换、DB 选择、双击命名空间按前缀过滤；
 - SCAN 分页 + 类型过滤 + TTL 展示；Key 与 Hash/List/Set/ZSet 均支持 `Load more`；
-- String / Hash / List / Set / ZSet 查看与部分编辑（批量选中、SETRANGE）；集合编辑先进入本地待提交状态，Apply 事务提交、Discard 回滚；集合页支持 Undo/Redo、已加载行过滤、Search all 全量加载搜索，Hash 支持字段级 TTL（Redis 7.4+），String 提供大值 1 MiB 预览/显式全量加载、只读 Hex 视图、Hex/Base64 字节编辑、gzip/zlib/zstd/Brotli 解码、MessagePack/Bitmap/HyperLogLog 查看与脏状态 Discard；ZSet 提供 GEO 搜索视图；Stream 条目/组/Pending 查看与 claim/ack；RedisJSON 路径编辑；
+- String / Hash / List / Set / ZSet 查看与部分编辑（批量选中、SETRANGE）；集合编辑先进入本地待提交状态，Apply 事务提交、Discard 回滚；集合页支持 Undo/Redo、已加载行过滤、Search all 全量加载搜索，Hash 支持字段级 TTL（Redis 7.4+），String 提供大值 1 MiB 预览/显式全量加载、只读 Hex 视图、Hex/Base64 字节编辑、gzip/zlib/zstd/Brotli 解码、MessagePack/Protobuf/Bitmap/HyperLogLog 查看与脏状态 Discard；ZSet 提供 GEO 搜索视图；Stream 条目/组/Pending 查看与 claim/ack；RedisJSON 路径编辑；
 - Key 右键菜单：重命名、删除、复制 Key/Value、跨连接复制；Key 表支持多选批量删除与批量 TTL；
 - TTL 修改、PERSIST、UNLINK/DEL 删除；
 - 只读模式禁用编辑/添加/删除与 CLI 写入；

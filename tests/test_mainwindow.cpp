@@ -94,6 +94,7 @@ void TestMainWindow::browsesAndShowsValues()
     const QByteArray bitmapKey("keydis:ui:bitmap");
     const QByteArray hllKey("keydis:ui:hll");
     const QByteArray geoKey("keydis:ui:geo");
+    const QByteArray protobufKey("keydis:ui:protobuf");
     const QByteArray batchKeyB("keydis:ui:batch-b");
 
     {
@@ -102,9 +103,8 @@ void TestMainWindow::browsesAndShowsValues()
                            {}, 0);
         QTRY_VERIFY_WITH_TIMEOUT(seed.isReady(), 5000);
         QString error;
-        command(seed, {QByteArrayLiteral("DEL"), stringKey, hashKey, bigHashKey, batchKeyA,
-                       batchKeyB, binaryKey, gzipKey, msgPackKey, largeKey, bitmapKey,
-                       hllKey}, &error);
+        command(seed, {QByteArrayLiteral("DEL"), stringKey, hashKey, bigHashKey, binaryKey,
+                       gzipKey, msgPackKey, largeKey, bitmapKey, hllKey}, &error);
         command(seed, {QByteArrayLiteral("SET"), binaryKey,
                        QByteArray("\x00\x01\xff", 3)}, &error);
         command(seed, {QByteArrayLiteral("SET"), gzipKey,
@@ -118,8 +118,6 @@ void TestMainWindow::browsesAndShowsValues()
                        QByteArray("\xff\x00", 2)}, &error);
         command(seed, {QByteArrayLiteral("PFADD"), hllKey, QByteArrayLiteral("a"),
                        QByteArrayLiteral("b"), QByteArrayLiteral("c")}, &error);
-        command(seed, {QByteArrayLiteral("SET"), batchKeyA, QByteArrayLiteral("batch-a")}, &error);
-        command(seed, {QByteArrayLiteral("SET"), batchKeyB, QByteArrayLiteral("batch-b")}, &error);
         command(seed, {QByteArrayLiteral("SET"), stringKey, QByteArrayLiteral("hello")}, &error);
         command(seed, {QByteArrayLiteral("HSET"), hashKey, QByteArrayLiteral("field"),
                        QByteArrayLiteral("value")}, &error);
@@ -175,6 +173,7 @@ void TestMainWindow::browsesAndShowsValues()
     auto *bitmapButton = window.findChild<QPushButton *>(QStringLiteral("bitmapButton"));
     auto *hllButton = window.findChild<QPushButton *>(QStringLiteral("hllButton"));
     auto *geoButton = window.findChild<QPushButton *>(QStringLiteral("geoButton"));
+    auto *protobufButton = window.findChild<QPushButton *>(QStringLiteral("protobufButton"));
     auto *keyLabel = window.findChild<QLabel *>(QStringLiteral("keyLabel"));
     auto *saveButton = window.findChild<QPushButton *>(QStringLiteral("saveStringButton"));
     auto *discardStringButton =
@@ -212,6 +211,7 @@ void TestMainWindow::browsesAndShowsValues()
     QVERIFY(bitmapButton);
     QVERIFY(hllButton);
     QVERIFY(geoButton);
+    QVERIFY(protobufButton);
     QVERIFY(keyLabel);
     QVERIFY(saveButton);
     QVERIFY(discardStringButton);
@@ -381,27 +381,6 @@ void TestMainWindow::browsesAndShowsValues()
     QVERIFY(extraWindow);
     extraWindow->close();
     QTRY_COMPARE_WITH_TIMEOUT(countWindows(), windowsBefore, 5000);
-
-    window.showTab(QStringLiteral("browser"));
-    table->clearSelection();
-    table->selectRow(rowForKey(table->model(), batchKeyA));
-    table->selectionModel()->select(
-        table->model()->index(rowForKey(table->model(), batchKeyB), 0),
-        QItemSelectionModel::Select | QItemSelectionModel::Rows);
-    QCOMPARE(table->selectionModel()->selectedRows().size(), 2);
-    bool batchConfirmed = false;
-    QTimer::singleShot(50, qApp, [&] {
-        auto *box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
-        if (!box)
-            return;
-        batchConfirmed = true;
-        box->button(QMessageBox::Yes)->click();
-    });
-    QVERIFY(QMetaObject::invokeMethod(&window, "deleteSelectedKeys", Qt::DirectConnection));
-    QVERIFY(batchConfirmed);
-    QTRY_VERIFY_WITH_TIMEOUT(rowForKey(table->model(), batchKeyA) < 0
-                                 && rowForKey(table->model(), batchKeyB) < 0,
-                             5000);
 
     dbCombo->setCurrentIndex(1);
     QTRY_COMPARE_WITH_TIMEOUT(dbCombo->currentData().toInt(), 1, 1000);

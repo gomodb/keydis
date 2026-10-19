@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 3.28)
 
 project(KeyDis
-    VERSION 0.4.33
+    VERSION 0.4.34
     DESCRIPTION "Native Redis/Valkey client for KDE"
     HOMEPAGE_URL "https://github.com/gomodb/keydis"
     LANGUAGES C CXX
@@ -129,6 +129,8 @@ add_library(keydis_core STATIC
     src/core/format/compressioncodec.h
     src/core/format/msgpackdecoder.cpp
     src/core/format/msgpackdecoder.h
+    src/core/format/protobufdecoder.cpp
+    src/core/format/protobufdecoder.h
 )
 
 qt_add_library(keydis_ui_models STATIC
@@ -179,6 +181,8 @@ add_library(keydis_ui STATIC
     src/ui/dialogs/hyperloglogviewdialog.h
     src/ui/dialogs/geosearchdialog.cpp
     src/ui/dialogs/geosearchdialog.h
+    src/ui/dialogs/protobufviewdialog.cpp
+    src/ui/dialogs/protobufviewdialog.h
     src/ui/tools/servertools.cpp
     src/ui/tools/servertools.h
     src/ui/values/valuepanel.cpp
@@ -270,6 +274,8 @@ if(BUILD_TESTING)
         tests/test_compression.h
         tests/test_msgpack.cpp
         tests/test_msgpack.h
+        tests/test_protobuf.cpp
+        tests/test_protobuf.h
         tests/test_commandencoder.cpp
         tests/test_commandencoder.h
         tests/test_keyscanner.cpp

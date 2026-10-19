@@ -102,6 +102,7 @@ private:
     void showMsgPackValue();
     void showBitmapView();
     void showHyperLogLogView();
+    void showProtobufValue();
     void editStringBytes();
     void stringTextChanged();
     void addJsonChild();

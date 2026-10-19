@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.33）
+# KeyDis 使用说明（0.4.34）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -226,6 +226,14 @@ ZSet 页的 **Geo...** 打开地理搜索：
 - **Auto detect** 通过 magic 识别 gzip/zlib/zstd；Brotli 无统一 magic，需要手动选择；
 - 解码结果只读显示，最大输出 64 MiB，防止压缩炸弹；
 - 状态栏显示压缩格式、压缩后/解码后字节数。
+
+**Protobuf...** 打开 schema-less Protobuf 线格式查看器：
+
+- 无需 `.proto`，按 wire type 解析字段；
+- 显示字段号、varint/fixed32/fixed64/length-delimited；
+- 字符串自动识别，嵌套 message 使用启发式解析，失败时显示字节；
+- 最大输出 8 MiB，最大嵌套 64 层；
+- 没有 schema 时无法还原字段名、枚举名和具体语义。
 
 **Bitmap...** 打开位图查看器：
 

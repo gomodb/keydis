@@ -12,6 +12,7 @@
 #include "ui/dialogs/geosearchdialog.h"
 #include "ui/dialogs/hyperloglogviewdialog.h"
 #include "ui/dialogs/msgpackviewdialog.h"
+#include "ui/dialogs/protobufviewdialog.h"
 
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -330,6 +331,8 @@ QWidget *ValuePanel::buildStringPage()
     decodeButton->setObjectName(QStringLiteral("decodeButton"));
     auto *msgPackButton = new QPushButton(tr("MsgPack..."), page);
     msgPackButton->setObjectName(QStringLiteral("msgPackButton"));
+    auto *protobufButton = new QPushButton(tr("Protobuf..."), page);
+    protobufButton->setObjectName(QStringLiteral("protobufButton"));
     m_bitmapButton = new QPushButton(tr("Bitmap..."), page);
     m_bitmapButton->setObjectName(QStringLiteral("bitmapButton"));
     m_hllButton = new QPushButton(tr("HyperLogLog..."), page);
@@ -348,6 +351,7 @@ QWidget *ValuePanel::buildStringPage()
     row->addWidget(bytesButton);
     row->addWidget(decodeButton);
     row->addWidget(msgPackButton);
+    row->addWidget(protobufButton);
     row->addWidget(m_bitmapButton);
     row->addWidget(m_hllButton);
     row->addWidget(m_stringLoadFullButton);
@@ -361,6 +365,7 @@ QWidget *ValuePanel::buildStringPage()
     connect(bytesButton, &QPushButton::clicked, this, &ValuePanel::editStringBytes);
     connect(decodeButton, &QPushButton::clicked, this, &ValuePanel::showDecodedValue);
     connect(msgPackButton, &QPushButton::clicked, this, &ValuePanel::showMsgPackValue);
+    connect(protobufButton, &QPushButton::clicked, this, &ValuePanel::showProtobufValue);
     connect(m_bitmapButton, &QPushButton::clicked, this, &ValuePanel::showBitmapView);
     connect(m_hllButton, &QPushButton::clicked, this, &ValuePanel::showHyperLogLogView);
     connect(m_stringDiscardButton, &QPushButton::clicked, this, &ValuePanel::discardString);
@@ -1917,6 +1922,14 @@ void ValuePanel::showHyperLogLogView()
     if (m_key.isEmpty() || !m_stringRaw.startsWith("HYLL"))
         return;
     HyperLogLogViewDialog dialog(m_connection, m_key, this);
+    dialog.exec();
+}
+
+void ValuePanel::showProtobufValue()
+{
+    if (m_key.isEmpty())
+        return;
+    ProtobufViewDialog dialog(tr("Protobuf: %1").arg(displayKey(m_key)), m_stringRaw, this);
     dialog.exec();
 }
 

@@ -23,7 +23,7 @@ void TestSshTunnel::failsForUnreachableHost()
         failed = true;
         error = message;
     });
-    tunnel.start(QStringLiteral("127.0.0.1"), 1, {}, {}, QStringLiteral("127.0.0.1"), 6379);
+    tunnel.start(QStringLiteral("127.0.0.1"), 1, {}, {}, {}, QStringLiteral("127.0.0.1"), 6379);
     QTRY_VERIFY_WITH_TIMEOUT(failed, 15000);
     QVERIFY(!error.isEmpty());
     tunnel.stop();

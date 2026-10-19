@@ -878,8 +878,10 @@ void MainWindow::deleteProfile()
     if (m_activeProfileId == id)
         m_activeProfileId.clear();
     SecretStore secrets;
-    if (secrets.isAvailable())
+    if (secrets.isAvailable()) {
         secrets.deletePassword(id);
+        secrets.deleteSshPassword(id);
+    }
     saveProfiles();
     rebuildProfileList();
 }
@@ -1005,6 +1007,20 @@ void MainWindow::connectOrDisconnect(bool retryAuth)
         }
     }
 
+    if (profile.sshTunnel && !profile.id.isEmpty()) {
+        if (profile.sshPassword.isEmpty()) {
+            QString secretError;
+            const QString stored = secrets.readSshPassword(profile.id, &secretError);
+            if (!stored.isEmpty())
+                profile.sshPassword = stored;
+        }
+        if (!profile.sshPassword.isEmpty()) {
+            QString secretError;
+            if (!secrets.writeSshPassword(profile.id, profile.sshPassword, &secretError))
+                appendOutput(QStringLiteral("[warning] ") + secretError);
+        }
+    }
+
     if (profile.cluster) {
         m_router.setBackend(std::make_unique<ClusterClient>());
     } else {
@@ -1038,7 +1054,7 @@ void MainWindow::connectOrDisconnect(bool retryAuth)
             m_connectButton->setText(tr("Connect"));
         });
         m_sshTunnel->start(profile.sshHost, profile.sshPort, profile.sshUser,
-                           profile.sshKeyPath, profile.host, profile.port);
+                           profile.sshKeyPath, profile.sshPassword, profile.host, profile.port);
         return;
     }
     if (profile.sentinel) {

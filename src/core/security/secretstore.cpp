@@ -41,9 +41,9 @@ std::unique_ptr<KWallet::Wallet> openWallet(QString *error)
 
 } // namespace
 
-QString SecretStore::keyFor(const QString &profileId)
+QString SecretStore::keyFor(const QString &profileId, const QString &kind)
 {
-    return QStringLiteral("connection/%1/password").arg(profileId);
+    return QStringLiteral("connection/%1/%2").arg(profileId, kind);
 }
 
 bool SecretStore::isAvailable() const
@@ -57,7 +57,7 @@ QString SecretStore::readPassword(const QString &profileId, QString *error) cons
     if (!wallet)
         return {};
     QString password;
-    const int result = wallet->readPassword(keyFor(profileId), password);
+    const int result = wallet->readPassword(keyFor(profileId, QStringLiteral("password")), password);
     if (result != 0) {
         if (error)
             *error = QStringLiteral("Could not read password from KWallet");
@@ -72,7 +72,7 @@ bool SecretStore::writePassword(const QString &profileId, const QString &passwor
     auto wallet = openWallet(error);
     if (!wallet)
         return false;
-    if (wallet->writePassword(keyFor(profileId), password) != 0) {
+    if (wallet->writePassword(keyFor(profileId, QStringLiteral("password")), password) != 0) {
         if (error)
             *error = QStringLiteral("Could not write password to KWallet");
         return false;
@@ -85,7 +85,45 @@ bool SecretStore::deletePassword(const QString &profileId, QString *error) const
     auto wallet = openWallet(error);
     if (!wallet)
         return false;
-    wallet->removeEntry(keyFor(profileId));
+    wallet->removeEntry(keyFor(profileId, QStringLiteral("password")));
+    return true;
+}
+
+QString SecretStore::readSshPassword(const QString &profileId, QString *error) const
+{
+    auto wallet = openWallet(error);
+    if (!wallet)
+        return {};
+    QString password;
+    if (wallet->readPassword(keyFor(profileId, QStringLiteral("ssh-password")), password) != 0) {
+        if (error)
+            *error = QStringLiteral("Could not read SSH password from KWallet");
+        return {};
+    }
+    return password;
+}
+
+bool SecretStore::writeSshPassword(const QString &profileId, const QString &password,
+                                   QString *error) const
+{
+    auto wallet = openWallet(error);
+    if (!wallet)
+        return false;
+    if (wallet->writePassword(keyFor(profileId, QStringLiteral("ssh-password")), password) != 0) {
+        if (error)
+            *error = QStringLiteral("Could not write SSH password to KWallet");
+        return false;
+    }
+    return true;
+}
+
+bool SecretStore::deleteSshPassword(const QString &profileId, QString *error) const
+{
+    Q_UNUSED(error)
+    auto wallet = openWallet(nullptr);
+    if (!wallet)
+        return false;
+    wallet->removeEntry(keyFor(profileId, QStringLiteral("ssh-password")));
     return true;
 }
 

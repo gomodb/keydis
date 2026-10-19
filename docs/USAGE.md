@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.14）
+# KeyDis 使用说明（0.4.15）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -26,7 +26,7 @@ Profile 字段：
 | DB | standalone 数据库编号；Cluster 固定 0 |
 | Read-only | 左侧 Connections 面板或 Profile 中设置；禁用编辑、添加/删除、TTL 与 CLI 写入 |
 | Sentinel | Profile 中启用；通过 `SENTINEL get-master-addr-by-name` 解析主节点 |
-| SSH | Profile 中启用；本地 `ssh -L` 隧道，仅支持密钥/agent（BatchMode） |
+| SSH | Profile 中启用；本地 `ssh -L` 隧道，支持密钥/agent 或 SSH 密码（askpass，密码存 KWallet） |
 | Cluster | Profile 中勾选 Cluster；Host:Port 作为 seed，DB 固定 0 |
 
 连接成功后，KeyDis 自动执行一次 `SCAN`（默认 `*`）。
@@ -223,7 +223,7 @@ redis 127.0.0.1
 
 - Cluster 已支持 slot 路由和全 master SCAN，但没有 resharding/节点拓扑编辑，Dashboard/工具只显示单节点；
 - Sentinel 通过 Profile 解析主节点，但不做持续 failover 监控；
-- SSH 隧道使用系统 `ssh` 的 BatchMode，仅支持密钥/agent，不支持 SSH 密码；
+- SSH 隧道使用系统 `ssh`；密码通过 `SSH_ASKPASS` 临时辅助脚本从环境变量读取，不写入磁盘；
 - Sentinel 认证复用主连接用户名/密码，暂不支持独立 Sentinel ACL；
 - 只读模式是 UI 层保护，不是服务端 ACL；生产环境仍建议使用只读 ACL 用户；
 - 精确命名空间计数需要 `Index all`，大库会占用较多内存；

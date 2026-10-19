@@ -99,8 +99,12 @@ ProfileDialog::ProfileDialog(const ConnectionProfile &profile, QWidget *parent)
     m_sshKeyEdit = new QLineEdit(profile.sshKeyPath, advancedTab);
     m_sshKeyEdit->setPlaceholderText(tr("Optional private key path"));
     advancedForm->addRow(tr("SSH key"), m_sshKeyEdit);
+    m_sshPasswordEdit = new QLineEdit(profile.sshPassword, advancedTab);
+    m_sshPasswordEdit->setEchoMode(QLineEdit::Password);
+    m_sshPasswordEdit->setPlaceholderText(tr("Optional; stored in KWallet"));
+    advancedForm->addRow(tr("SSH password"), m_sshPasswordEdit);
     advancedForm->addRow(QString(),
-                         new QLabel(tr("SSH uses BatchMode: key/agent authentication only."),
+                         new QLabel(tr("SSH supports keys/agent or password via askpass."),
                                     advancedTab));
     advancedForm->addRow(QString(),
                          new QLabel(tr("Passwords are stored separately in KWallet."), advancedTab));
@@ -214,6 +218,7 @@ void ProfileDialog::accept()
     m_profile.sshPort = static_cast<quint16>(m_sshPortSpin->value());
     m_profile.sshUser = m_sshUserEdit->text().trimmed();
     m_profile.sshKeyPath = m_sshKeyEdit->text().trimmed();
+    m_profile.sshPassword = m_sshPasswordEdit->text();
     if (m_profile.sshTunnel && m_profile.sshHost.isEmpty()) {
         QMessageBox::warning(this, tr("Invalid SSH configuration"),
                              tr("SSH host must not be empty."));

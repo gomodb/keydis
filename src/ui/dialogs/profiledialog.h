@@ -50,6 +50,7 @@ private:
     QSpinBox *m_sshPortSpin = nullptr;
     QLineEdit *m_sshUserEdit = nullptr;
     QLineEdit *m_sshKeyEdit = nullptr;
+    QLineEdit *m_sshPasswordEdit = nullptr;
     QTabWidget *m_tabs = nullptr;
     QLabel *m_testStatus = nullptr;
     bool m_testing = false;

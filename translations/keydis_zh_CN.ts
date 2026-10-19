@@ -362,10 +362,10 @@
       <location filename="../src/app/mainwindow.cpp" line="389" />
       <location filename="../src/app/mainwindow.cpp" line="654" />
       <location filename="../src/app/mainwindow.cpp" line="677" />
-      <location filename="../src/app/mainwindow.cpp" line="1038" />
-      <location filename="../src/app/mainwindow.cpp" line="1087" />
-      <location filename="../src/app/mainwindow.cpp" line="1600" />
-      <location filename="../src/app/mainwindow.cpp" line="1602" />
+      <location filename="../src/app/mainwindow.cpp" line="1054" />
+      <location filename="../src/app/mainwindow.cpp" line="1103" />
+      <location filename="../src/app/mainwindow.cpp" line="1616" />
+      <location filename="../src/app/mainwindow.cpp" line="1618" />
       <source>Connect</source>
       <translation>连接</translation>
     </message>
@@ -588,8 +588,8 @@ Continue?</source>
     </message>
     <message>
       <location filename="../src/app/mainwindow.cpp" line="657" />
-      <location filename="../src/app/mainwindow.cpp" line="1019" />
-      <location filename="../src/app/mainwindow.cpp" line="1020" />
+      <location filename="../src/app/mainwindow.cpp" line="1035" />
+      <location filename="../src/app/mainwindow.cpp" line="1036" />
       <source>Connecting...</source>
       <translation>正在连接...</translation>
     </message>
@@ -629,248 +629,248 @@ Continue?</source>
       <translation>删除已保存的连接“%1”？</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="894" />
+      <location filename="../src/app/mainwindow.cpp" line="896" />
       <source>%1 copy</source>
       <translation>%1 副本</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="959" />
-      <location filename="../src/app/mainwindow.cpp" line="1596" />
-      <location filename="../src/app/mainwindow.cpp" line="1598" />
+      <location filename="../src/app/mainwindow.cpp" line="961" />
+      <location filename="../src/app/mainwindow.cpp" line="1612" />
+      <location filename="../src/app/mainwindow.cpp" line="1614" />
       <source>Disconnect</source>
       <translation>断开</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1025" />
+      <location filename="../src/app/mainwindow.cpp" line="1041" />
       <source>Opening SSH tunnel...</source>
       <translation>正在建立 SSH 隧道...</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1029" />
+      <location filename="../src/app/mainwindow.cpp" line="1045" />
       <source>SSH tunnel ready; connecting...</source>
       <translation>SSH 隧道已就绪，正在连接...</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1036" />
+      <location filename="../src/app/mainwindow.cpp" line="1052" />
       <source>SSH tunnel error: %1</source>
       <translation>SSH 隧道错误：%1</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1045" />
+      <location filename="../src/app/mainwindow.cpp" line="1061" />
       <source>Resolving Sentinel master...</source>
       <translation>正在解析 Sentinel 主节点...</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1049" />
+      <location filename="../src/app/mainwindow.cpp" line="1065" />
       <source>Connecting to master %1:%2...</source>
       <translation>正在连接主节点 %1:%2...</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1064" />
+      <location filename="../src/app/mainwindow.cpp" line="1080" />
       <source>Sentinel failover: connecting to %1:%2...</source>
       <translation>Sentinel 故障转移：正在连接 %1:%2...</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1073" />
+      <location filename="../src/app/mainwindow.cpp" line="1089" />
       <source>[sentinel] </source>
       <translation>[sentinel] </translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1085" />
+      <location filename="../src/app/mainwindow.cpp" line="1101" />
       <source>Sentinel error: %1</source>
       <translation>Sentinel 错误：%1</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1114" />
+      <location filename="../src/app/mainwindow.cpp" line="1130" />
       <source>Scanning...</source>
       <translation>扫描中...</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1127" />
+      <location filename="../src/app/mainwindow.cpp" line="1143" />
       <source>Selecting database %1...</source>
       <translation>正在选择数据库 %1...</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1138" />
+      <location filename="../src/app/mainwindow.cpp" line="1154" />
       <source>Database %1 selected</source>
       <translation>已选择数据库 %1</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1177" />
+      <location filename="../src/app/mainwindow.cpp" line="1193" />
       <source>Namespace %1: %2 loaded keys</source>
       <translation>命名空间 %1：已加载 %2 个 Key</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1202" />
-      <location filename="../src/app/mainwindow.cpp" line="1238" />
+      <location filename="../src/app/mainwindow.cpp" line="1218" />
+      <location filename="../src/app/mainwindow.cpp" line="1254" />
       <source>Rename...</source>
       <translation>重命名...</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1203" />
-      <location filename="../src/app/mainwindow.cpp" line="1239" />
+      <location filename="../src/app/mainwindow.cpp" line="1219" />
+      <location filename="../src/app/mainwindow.cpp" line="1255" />
       <source>Delete...</source>
       <translation>删除...</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1207" />
-      <location filename="../src/app/mainwindow.cpp" line="1243" />
-      <location filename="../src/app/mainwindow.cpp" line="1441" />
+      <location filename="../src/app/mainwindow.cpp" line="1223" />
+      <location filename="../src/app/mainwindow.cpp" line="1259" />
+      <location filename="../src/app/mainwindow.cpp" line="1457" />
       <source>Copy key</source>
       <translation>复制 Key</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1208" />
-      <location filename="../src/app/mainwindow.cpp" line="1244" />
+      <location filename="../src/app/mainwindow.cpp" line="1224" />
+      <location filename="../src/app/mainwindow.cpp" line="1260" />
       <source>Copy value</source>
       <translation>复制值</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1209" />
-      <location filename="../src/app/mainwindow.cpp" line="1245" />
+      <location filename="../src/app/mainwindow.cpp" line="1225" />
+      <location filename="../src/app/mainwindow.cpp" line="1261" />
       <source>Copy to connection...</source>
       <translation>复制到连接...</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1212" />
+      <location filename="../src/app/mainwindow.cpp" line="1228" />
       <source>Refresh value</source>
       <translation>刷新值</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1265" />
+      <location filename="../src/app/mainwindow.cpp" line="1281" />
       <source>Filter this namespace</source>
       <translation>过滤此命名空间</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1266" />
+      <location filename="../src/app/mainwindow.cpp" line="1282" />
       <source>Copy prefix</source>
       <translation>复制前缀</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1277" />
+      <location filename="../src/app/mainwindow.cpp" line="1293" />
       <source>Read-only mode: rename is disabled</source>
       <translation>只读模式：重命名已禁用</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1283" />
+      <location filename="../src/app/mainwindow.cpp" line="1299" />
       <source>Rename key</source>
       <translation>重命名 Key</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1283" />
+      <location filename="../src/app/mainwindow.cpp" line="1299" />
       <source>New key name:</source>
       <translation>新 Key 名称：</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1287" />
+      <location filename="../src/app/mainwindow.cpp" line="1303" />
       <source>Renaming key...</source>
       <translation>正在重命名 Key...</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1297" />
+      <location filename="../src/app/mainwindow.cpp" line="1313" />
       <source>Renamed to %1</source>
       <translation>已重命名为 %1</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1305" />
+      <location filename="../src/app/mainwindow.cpp" line="1321" />
       <source>Read-only mode: delete is disabled</source>
       <translation>只读模式：删除已禁用</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1308" />
+      <location filename="../src/app/mainwindow.cpp" line="1324" />
       <source>Delete key</source>
       <translation>删除 Key</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1309" />
+      <location filename="../src/app/mainwindow.cpp" line="1325" />
       <source>Delete key "%1"?</source>
       <translation>删除 Key“%1”？</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1315" />
+      <location filename="../src/app/mainwindow.cpp" line="1331" />
       <source>Deleting key...</source>
       <translation>正在删除 Key...</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1334" />
-      <location filename="../src/app/mainwindow.cpp" line="1340" />
+      <location filename="../src/app/mainwindow.cpp" line="1350" />
+      <location filename="../src/app/mainwindow.cpp" line="1356" />
       <source>Key deleted</source>
       <translation>已删除 Key</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1347" />
+      <location filename="../src/app/mainwindow.cpp" line="1363" />
       <source>Key copied to clipboard</source>
       <translation>已复制 Key 到剪贴板</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1370" />
+      <location filename="../src/app/mainwindow.cpp" line="1386" />
       <source>Copy value is not supported for type %1</source>
       <translation>类型 %1 不支持复制值</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1400" />
+      <location filename="../src/app/mainwindow.cpp" line="1416" />
       <source>Value copied to clipboard</source>
       <translation>已复制值到剪贴板</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1423" />
+      <location filename="../src/app/mainwindow.cpp" line="1439" />
       <source>No other saved connection</source>
       <translation>没有其他已保存连接</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1427" />
+      <location filename="../src/app/mainwindow.cpp" line="1443" />
       <source>Copy key to connection</source>
       <translation>复制 Key 到连接</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1428" />
+      <location filename="../src/app/mainwindow.cpp" line="1444" />
       <source>Target connection:</source>
       <translation>目标连接：</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1437" />
+      <location filename="../src/app/mainwindow.cpp" line="1453" />
       <source>Copy to SSH/Sentinel/Cluster connections is not supported yet</source>
       <translation>暂不支持复制到 SSH/Sentinel/Cluster 连接</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1442" />
+      <location filename="../src/app/mainwindow.cpp" line="1458" />
       <source>Copy "%1" to %2:%3 (DB %4)? Existing keys are replaced.</source>
       <translation>将“%1”复制到 %2:%3（DB %4）？已有 Key 会被替换。</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1455" />
+      <location filename="../src/app/mainwindow.cpp" line="1471" />
       <source>Target password</source>
       <translation>目标密码</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1455" />
+      <location filename="../src/app/mainwindow.cpp" line="1471" />
       <source>Password:</source>
       <translation>密码：</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1467" />
-      <location filename="../src/app/mainwindow.cpp" line="1481" />
-      <location filename="../src/app/mainwindow.cpp" line="1506" />
+      <location filename="../src/app/mainwindow.cpp" line="1483" />
+      <location filename="../src/app/mainwindow.cpp" line="1497" />
+      <location filename="../src/app/mainwindow.cpp" line="1522" />
       <source>Copy failed: %1</source>
       <translation>复制失败：%1</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1511" />
+      <location filename="../src/app/mainwindow.cpp" line="1527" />
       <source>Copied %1</source>
       <translation>已复制 %1</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1519" />
+      <location filename="../src/app/mainwindow.cpp" line="1535" />
       <source>Copying key...</source>
       <translation>正在复制 Key...</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1539" />
+      <location filename="../src/app/mainwindow.cpp" line="1555" />
       <source>[error] Not connected</source>
       <translation>[错误] 未连接</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1553" />
+      <location filename="../src/app/mainwindow.cpp" line="1569" />
       <source>This command can destroy data or change server state:
 
 %1
@@ -883,7 +883,7 @@ Execute?</source>
 执行？</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1555" />
+      <location filename="../src/app/mainwindow.cpp" line="1571" />
       <source>This command may block or alter the server:
 
 %1
@@ -896,7 +896,7 @@ Execute?</source>
 执行？</translation>
     </message>
     <message>
-      <location filename="../src/app/mainwindow.cpp" line="1556" />
+      <location filename="../src/app/mainwindow.cpp" line="1572" />
       <source>Confirm command</source>
       <translation>确认命令</translation>
     </message>
@@ -1085,100 +1085,110 @@ Execute?</source>
       <translation>SSH 密钥</translation>
     </message>
     <message>
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="103" />
-      <source>SSH uses BatchMode: key/agent authentication only.</source>
-      <translation>SSH 使用 BatchMode：仅支持密钥/agent 认证。</translation>
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="104" />
+      <source>Optional; stored in KWallet</source>
+      <translation>可选；存储在 KWallet</translation>
     </message>
     <message>
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="106" />
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="105" />
+      <source>SSH password</source>
+      <translation>SSH 密码</translation>
+    </message>
+    <message>
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="107" />
+      <source>SSH supports keys/agent or password via askpass.</source>
+      <translation>SSH 支持密钥/agent，或通过 askpass 输入密码。</translation>
+    </message>
+    <message>
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="110" />
       <source>Passwords are stored separately in KWallet.</source>
       <translation>密码单独存储在 KWallet 中。</translation>
     </message>
     <message>
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="107" />
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="111" />
       <source>Advanced</source>
       <translation>高级</translation>
     </message>
     <message>
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="111" />
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="115" />
       <source>Test connection</source>
       <translation>测试连接</translation>
     </message>
     <message>
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="138" />
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="142" />
       <source>Test connection is available for direct connections only.</source>
       <translation>测试连接仅适用于直连。</translation>
     </message>
     <message>
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="142" />
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="146" />
       <source>Host must not be empty.</source>
       <translation>主机不能为空。</translation>
     </message>
     <message>
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="146" />
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="150" />
       <source>Testing...</source>
       <translation>测试中...</translation>
     </message>
     <message>
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="157" />
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="161" />
       <source>Connection test timed out.</source>
       <translation>连接测试超时。</translation>
     </message>
     <message>
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="166" />
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="170" />
       <source>Connection successful.</source>
       <translation>连接成功。</translation>
     </message>
     <message>
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="187" />
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="195" />
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="223" />
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="191" />
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="199" />
       <location filename="../src/ui/dialogs/profiledialog.cpp" line="228" />
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="233" />
       <source>Invalid connection</source>
       <translation>无效连接</translation>
     </message>
     <message>
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="188" />
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="192" />
       <source>Name and host must not be empty.</source>
       <translation>名称和主机不能为空。</translation>
     </message>
     <message>
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="192" />
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="196" />
       <source>Default</source>
       <translation>默认</translation>
     </message>
     <message>
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="196" />
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="200" />
       <source>Color must be a valid color name or hex value.</source>
       <translation>颜色必须是有效的颜色名或十六进制值。</translation>
     </message>
     <message>
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="218" />
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="223" />
       <source>Invalid SSH configuration</source>
       <translation>无效的 SSH 配置</translation>
     </message>
     <message>
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="219" />
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="224" />
       <source>SSH host must not be empty.</source>
       <translation>SSH 主机不能为空。</translation>
     </message>
     <message>
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="224" />
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="229" />
       <source>SSH and Sentinel cannot be combined yet.</source>
       <translation>SSH 与 Sentinel 暂不能同时使用。</translation>
     </message>
     <message>
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="229" />
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="234" />
       <source>Cluster cannot be combined with Sentinel or SSH yet.</source>
       <translation>Cluster 暂不能与 Sentinel 或 SSH 同时使用。</translation>
     </message>
     <message>
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="234" />
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="239" />
       <source>Invalid Sentinel configuration</source>
       <translation>无效的 Sentinel 配置</translation>
     </message>
     <message>
-      <location filename="../src/ui/dialogs/profiledialog.cpp" line="235" />
+      <location filename="../src/ui/dialogs/profiledialog.cpp" line="240" />
       <source>Sentinel master and host must not be empty.</source>
       <translation>Sentinel 主节点和主机不能为空。</translation>
     </message>
@@ -1560,27 +1570,32 @@ Execute?</source>
   <context>
     <name>KeyDis::SshTunnel</name>
     <message>
-      <location filename="../src/core/net/sshtunnel.cpp" line="31" />
+      <location filename="../src/core/net/sshtunnel.cpp" line="35" />
       <source>SSH host and target are required</source>
       <translation>需要 SSH 主机和目标地址</translation>
     </message>
     <message>
-      <location filename="../src/core/net/sshtunnel.cpp" line="37" />
+      <location filename="../src/core/net/sshtunnel.cpp" line="41" />
       <source>Could not allocate a local tunnel port</source>
       <translation>无法分配本地隧道端口</translation>
     </message>
     <message>
-      <location filename="../src/core/net/sshtunnel.cpp" line="64" />
+      <location filename="../src/core/net/sshtunnel.cpp" line="86" />
+      <source>Could not create the SSH askpass helper</source>
+      <translation>无法创建 SSH askpass 辅助程序</translation>
+    </message>
+    <message>
+      <location filename="../src/core/net/sshtunnel.cpp" line="94" />
       <source>SSH tunnel failed: %1</source>
       <translation>SSH 隧道失败：%1</translation>
     </message>
     <message>
-      <location filename="../src/core/net/sshtunnel.cpp" line="70" />
+      <location filename="../src/core/net/sshtunnel.cpp" line="100" />
       <source>SSH tunnel closed before it was ready</source>
       <translation>SSH 隧道在就绪前关闭</translation>
     </message>
     <message>
-      <location filename="../src/core/net/sshtunnel.cpp" line="84" />
+      <location filename="../src/core/net/sshtunnel.cpp" line="114" />
       <source>SSH tunnel timed out</source>
       <translation>SSH 隧道超时</translation>
     </message>

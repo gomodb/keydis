@@ -33,6 +33,7 @@ struct ConnectionProfile {
     quint16 sshPort = 22;
     QString sshUser;
     QString sshKeyPath;
+    QString sshPassword; // transient; KWallet is the durable store
 
     [[nodiscard]] QJsonObject toJson() const;
     static ConnectionProfile fromJson(const QJsonObject &object);

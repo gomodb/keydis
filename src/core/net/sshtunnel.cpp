@@ -3,7 +3,10 @@
 
 #include "core/net/sshtunnel.h"
 
+#include <QFile>
+#include <QDir>
 #include <QProcess>
+#include <QTemporaryFile>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QTimer>
@@ -24,7 +27,8 @@ SshTunnel::~SshTunnel()
 }
 
 void SshTunnel::start(const QString &sshHost, quint16 sshPort, const QString &sshUser,
-                      const QString &keyPath, const QString &targetHost, quint16 targetPort)
+                      const QString &keyPath, const QString &password, const QString &targetHost,
+                      quint16 targetPort)
 {
     stop();
     if (sshHost.isEmpty() || targetHost.isEmpty() || targetPort == 0) {
@@ -45,12 +49,16 @@ void SshTunnel::start(const QString &sshHost, quint16 sshPort, const QString &ss
     QStringList args{
         QStringLiteral("-N"),
         QStringLiteral("-o"), QStringLiteral("ExitOnForwardFailure=yes"),
-        QStringLiteral("-o"), QStringLiteral("BatchMode=yes"),
         QStringLiteral("-o"), QStringLiteral("StrictHostKeyChecking=accept-new"),
-        QStringLiteral("-L"),
-        QStringLiteral("127.0.0.1:%1:%2:%3").arg(m_localPort).arg(targetHost).arg(targetPort),
-        QStringLiteral("-p"), QString::number(sshPort),
     };
+    if (password.isEmpty()) {
+        args << QStringLiteral("-o") << QStringLiteral("BatchMode=yes");
+    } else {
+        args << QStringLiteral("-o") << QStringLiteral("NumberOfPasswordPrompts=1");
+    }
+    args << QStringLiteral("-L")
+         << QStringLiteral("127.0.0.1:%1:%2:%3").arg(m_localPort).arg(targetHost).arg(targetPort)
+         << QStringLiteral("-p") << QString::number(sshPort);
     if (!keyPath.isEmpty())
         args << QStringLiteral("-i") << keyPath;
     const QString destination = sshUser.isEmpty() ? sshHost
@@ -58,6 +66,28 @@ void SshTunnel::start(const QString &sshHost, quint16 sshPort, const QString &ss
     args << destination;
     m_process->setProgram(QStringLiteral("ssh"));
     m_process->setArguments(args);
+    if (!password.isEmpty()) {
+        m_askPass = std::make_unique<QTemporaryFile>(
+            QDir::tempPath() + QStringLiteral("/keydis-askpass-XXXXXX.sh"));
+        if (m_askPass->open()) {
+            m_askPass->write("#!/bin/sh\nprintf '%s\\n' \"$KEYDIS_SSH_PASSWORD\"\n");
+            m_askPass->close();
+            QFile::setPermissions(m_askPass->fileName(),
+                                  QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner);
+            QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+            environment.insert(QStringLiteral("SSH_ASKPASS"), m_askPass->fileName());
+            environment.insert(QStringLiteral("SSH_ASKPASS_REQUIRE"), QStringLiteral("force"));
+            environment.insert(QStringLiteral("KEYDIS_SSH_PASSWORD"), password);
+            if (environment.value(QStringLiteral("DISPLAY")).isEmpty())
+                environment.insert(QStringLiteral("DISPLAY"), QStringLiteral(":0"));
+            m_process->setProcessEnvironment(environment);
+        } else {
+            m_askPass.reset();
+            emit failed(tr("Could not create the SSH askpass helper"));
+            stop();
+            return;
+        }
+    }
 
     connect(m_process.get(), &QProcess::errorOccurred, this, [this](QProcess::ProcessError) {
         if (!m_active)

@@ -10,6 +10,7 @@
 
 class QProcess;
 class QTcpServer;
+class QTemporaryFile;
 class QTcpSocket;
 class QTimer;
 
@@ -24,7 +25,8 @@ public:
     ~SshTunnel() override;
 
     void start(const QString &sshHost, quint16 sshPort, const QString &sshUser,
-               const QString &keyPath, const QString &targetHost, quint16 targetPort);
+               const QString &keyPath, const QString &password, const QString &targetHost,
+               quint16 targetPort);
     void stop();
 
     [[nodiscard]] bool isActive() const;
@@ -41,6 +43,7 @@ private:
     std::unique_ptr<QTcpServer> m_portReserver;
     std::unique_ptr<QTcpSocket> m_probe;
     QTimer *m_timer = nullptr;
+    std::unique_ptr<QTemporaryFile> m_askPass;
     quint16 m_localPort = 0;
     bool m_active = false;
     bool m_probing = false;

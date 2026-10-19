@@ -18,6 +18,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.15" date="2026-10-19">
+      <description>
+        <p>SSH password authentication via SSH_ASKPASS, stored in KWallet; key/agent remains supported.</p>
+      </description>
+    </release>
     <release version="0.4.14" date="2026-10-19">
       <description>
         <p>RedisJSON structural editing: add object children/array elements from the tree and delete non-root nodes.</p>

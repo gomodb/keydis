@@ -398,6 +398,16 @@ void TestMainWindow::hostsMultipleSessionTabs()
 
     tabs->tabCloseRequested(0);
     QTRY_COMPARE_WITH_TIMEOUT(host.sessionCount(), 2, 5000);
+
+    QVERIFY(QMetaObject::invokeMethod(&host, "splitView", Qt::DirectConnection));
+    QTRY_COMPARE_WITH_TIMEOUT(host.sessionCount(), 3, 5000);
+    auto *secondary = host.findChild<QTabWidget *>(QStringLiteral("sessionTabsSecondary"));
+    QVERIFY(secondary);
+    QCOMPARE(secondary->count(), 1);
+    QVERIFY(QMetaObject::invokeMethod(&host, "closeSplit", Qt::DirectConnection));
+    QTRY_COMPARE_WITH_TIMEOUT(host.sessionCount(), 2, 5000);
+    QTRY_VERIFY_WITH_TIMEOUT(
+        !host.findChild<QTabWidget *>(QStringLiteral("sessionTabsSecondary")), 5000);
 }
 
 void TestMainWindow::showsGroupedProfiles()

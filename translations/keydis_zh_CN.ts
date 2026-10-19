@@ -1675,32 +1675,47 @@ Execute?</source>
   <context>
     <name>KeyDis::SessionHost</name>
     <message>
-      <location filename="../src/app/sessionhost.cpp" line="32" />
+      <location filename="../src/app/sessionhost.cpp" line="72" />
       <source>New connection tab</source>
       <translation>新建连接标签页</translation>
     </message>
     <message>
-      <location filename="../src/app/sessionhost.cpp" line="37" />
+      <location filename="../src/app/sessionhost.cpp" line="34" />
       <source>&amp;File</source>
       <translation>文件(&amp;F)</translation>
     </message>
     <message>
-      <location filename="../src/app/sessionhost.cpp" line="38" />
+      <location filename="../src/app/sessionhost.cpp" line="35" />
       <source>New Tab</source>
       <translation>新标签页</translation>
     </message>
     <message>
-      <location filename="../src/app/sessionhost.cpp" line="43" />
+      <location filename="../src/app/sessionhost.cpp" line="40" />
       <source>Close Tab</source>
       <translation>关闭标签页</translation>
     </message>
     <message>
-      <location filename="../src/app/sessionhost.cpp" line="50" />
+      <location filename="../src/app/sessionhost.cpp" line="48" />
       <source>Quit</source>
       <translation>退出</translation>
     </message>
     <message>
-      <location filename="../src/app/sessionhost.cpp" line="65" />
+      <location filename="../src/app/sessionhost.cpp" line="52" />
+      <source>&amp;View</source>
+      <translation>视图(&amp;V)</translation>
+    </message>
+    <message>
+      <location filename="../src/app/sessionhost.cpp" line="53" />
+      <source>Split Right</source>
+      <translation>向右分屏</translation>
+    </message>
+    <message>
+      <location filename="../src/app/sessionhost.cpp" line="57" />
+      <source>Close Split</source>
+      <translation>关闭分屏</translation>
+    </message>
+    <message>
+      <location filename="../src/app/sessionhost.cpp" line="100" />
       <source>Connection %1</source>
       <translation>连接 %1</translation>
     </message>

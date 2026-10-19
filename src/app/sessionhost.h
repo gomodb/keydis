@@ -5,6 +5,7 @@
 
 #include <QMainWindow>
 
+class QSplitter;
 class QTabWidget;
 
 namespace KeyDis {
@@ -22,13 +23,25 @@ public:
     [[nodiscard]] MainWindow *firstSession() const;
     [[nodiscard]] int sessionCount() const;
 
+public slots:
+    void splitView();
+    void closeSplit();
+
 protected:
     void closeEvent(QCloseEvent *event) override;
 
 private:
-    void closeSession(int index);
+    MainWindow *addSession(const QString &profileId, QTabWidget *tabs);
+    QTabWidget *createTabs();
+    QTabWidget *tabsForWidget(const MainWindow *session) const;
+    void closeSession(QTabWidget *tabs, int index);
+    void updateActiveTabs(QTabWidget *tabs);
+    [[nodiscard]] QTabWidget *targetTabs() const;
 
-    QTabWidget *m_tabs = nullptr;
+    QSplitter *m_splitter = nullptr;
+    QTabWidget *m_primaryTabs = nullptr;
+    QTabWidget *m_secondaryTabs = nullptr;
+    QTabWidget *m_activeTabs = nullptr;
     int m_sessionCounter = 0;
 };
 

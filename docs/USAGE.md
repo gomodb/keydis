@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.21）
+# KeyDis 使用说明（0.4.22）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -38,7 +38,10 @@ Profile 字段：
 - 标签可关闭、拖动排序；关闭最后一个标签时退出应用；
 - 点击 **New Tab** 时若有选中的 Profile，会在新标签中直接连接；
 - 每个标签仍使用相同的 Profile 列表；编辑 Profile 后其他标签需重新打开以加载最新列表；
-- 标签左右分屏尚未实现。
+- **View → Split Right**（`Ctrl+Shift+T`）打开右侧分屏，左右各有一个独立标签栏；
+- 新建标签会进入当前活动的分屏侧；
+- **View → Close Split** 关闭右侧分屏及其会话；
+- 分屏布局本身不持久化，重启后恢复单侧标签页。
 
 连接失败时状态栏旁显示 **Retry**；若错误为 `NOAUTH`/`WRONGPASS`，会弹出一次密码输入框，输入后自动重试并写入 KWallet。
 
@@ -238,7 +241,7 @@ redis 127.0.0.1
 
 ## 10. 当前限制
 
-- 多连接已支持单窗口标签页，尚未实现标签左右分屏；
+- 分屏布局不持久化；关闭右侧分屏会关闭其中的会话；
 - Cluster 已支持 slot 路由和全 master SCAN，但没有 resharding/节点拓扑编辑，Dashboard/工具只显示单节点；
 - Sentinel 通过 Profile 解析主节点，但不做持续 failover 监控；
 - SSH 隧道使用系统 `ssh`；密码通过 `SSH_ASKPASS` 临时辅助脚本从环境变量读取，不写入磁盘；

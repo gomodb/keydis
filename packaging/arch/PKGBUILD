@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 pkgname=keydis
-pkgver=0.4.21
+pkgver=0.4.22
 pkgrel=1
 pkgdesc='Native Redis/Valkey client for KDE'
 arch=('x86_64' 'aarch64')

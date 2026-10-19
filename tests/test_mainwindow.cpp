@@ -14,6 +14,8 @@
 #include <QFile>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMenu>
+#include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QApplication>
 #include <QCheckBox>
@@ -83,6 +85,8 @@ void TestMainWindow::browsesAndShowsValues()
     const QByteArray stringKey("keydis:ui:string");
     const QByteArray hashKey("keydis:ui:hash");
     const QByteArray bigHashKey("keydis:ui:big-hash");
+    const QByteArray batchKeyA("keydis:ui:batch-a");
+    const QByteArray batchKeyB("keydis:ui:batch-b");
 
     {
         RedisConnection seed;
@@ -90,7 +94,10 @@ void TestMainWindow::browsesAndShowsValues()
                            {}, 0);
         QTRY_VERIFY_WITH_TIMEOUT(seed.isReady(), 5000);
         QString error;
-        command(seed, {QByteArrayLiteral("DEL"), stringKey, hashKey, bigHashKey}, &error);
+        command(seed, {QByteArrayLiteral("DEL"), stringKey, hashKey, bigHashKey, batchKeyA,
+                       batchKeyB}, &error);
+        command(seed, {QByteArrayLiteral("SET"), batchKeyA, QByteArrayLiteral("batch-a")}, &error);
+        command(seed, {QByteArrayLiteral("SET"), batchKeyB, QByteArrayLiteral("batch-b")}, &error);
         command(seed, {QByteArrayLiteral("SET"), stringKey, QByteArrayLiteral("hello")}, &error);
         command(seed, {QByteArrayLiteral("HSET"), hashKey, QByteArrayLiteral("field"),
                        QByteArrayLiteral("value")}, &error);
@@ -126,6 +133,8 @@ void TestMainWindow::browsesAndShowsValues()
     auto *hashMoreButton = window.findChild<QPushButton *>(QStringLiteral("hashMoreButton"));
     auto *hashBatchButton = window.findChild<QPushButton *>(QStringLiteral("hashBatchEditButton"));
     auto *undoButton = window.findChild<QPushButton *>(QStringLiteral("undoButton"));
+    auto *valueFilter = window.findChild<QLineEdit *>(QStringLiteral("valueFilter"));
+    auto *hexButton = window.findChild<QPushButton *>(QStringLiteral("hexViewButton"));
     auto *keyLabel = window.findChild<QLabel *>(QStringLiteral("keyLabel"));
     auto *saveButton = window.findChild<QPushButton *>(QStringLiteral("saveStringButton"));
     auto *readOnlyCheck = window.findChild<QCheckBox *>(QStringLiteral("readOnlyCheck"));
@@ -147,6 +156,8 @@ void TestMainWindow::browsesAndShowsValues()
     QVERIFY(hashMoreButton);
     QVERIFY(hashBatchButton);
     QVERIFY(undoButton);
+    QVERIFY(valueFilter);
+    QVERIFY(hexButton);
     QVERIFY(keyLabel);
     QVERIFY(saveButton);
     QVERIFY(readOnlyCheck);
@@ -232,6 +243,56 @@ void TestMainWindow::browsesAndShowsValues()
         QTest::mouseClick(hashMoreButton, Qt::LeftButton);
     }
     QTRY_COMPARE_WITH_TIMEOUT(hashTable->rowCount(), 600, 5000);
+    QVERIFY(!valueFilter->isHidden());
+    valueFilter->setText(QStringLiteral("field-599"));
+    QTRY_VERIFY_WITH_TIMEOUT(
+        [hashTable] {
+            int visible = 0;
+            for (int row = 0; row < hashTable->rowCount(); ++row) {
+                if (!hashTable->isRowHidden(row))
+                    ++visible;
+            }
+            return visible == 1;
+        }(),
+        2000);
+    valueFilter->clear();
+
+    bool hexDialogSeen = false;
+    bool hexContentOk = false;
+    QTimer::singleShot(50, qApp, [&] {
+        auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+        if (!dialog)
+            return;
+        hexDialogSeen = true;
+        auto *view = dialog->findChild<QPlainTextEdit *>();
+        if (view && view->toPlainText().contains(QStringLiteral("68 65 6C 6C 6F 32")))
+            hexContentOk = true;
+        dialog->accept();
+    });
+    QTest::mouseClick(hexButton, Qt::LeftButton);
+    QVERIFY(hexDialogSeen);
+    QVERIFY(hexContentOk);
+
+    window.showTab(QStringLiteral("browser"));
+    table->clearSelection();
+    table->selectRow(rowForKey(table->model(), batchKeyA));
+    table->selectionModel()->select(
+        table->model()->index(rowForKey(table->model(), batchKeyB), 0),
+        QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    QCOMPARE(table->selectionModel()->selectedRows().size(), 2);
+    bool batchConfirmed = false;
+    QTimer::singleShot(50, qApp, [&] {
+        auto *box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
+        if (!box)
+            return;
+        batchConfirmed = true;
+        box->button(QMessageBox::Yes)->click();
+    });
+    QVERIFY(QMetaObject::invokeMethod(&window, "deleteSelectedKeys", Qt::DirectConnection));
+    QVERIFY(batchConfirmed);
+    QTRY_VERIFY_WITH_TIMEOUT(rowForKey(table->model(), batchKeyA) < 0
+                                 && rowForKey(table->model(), batchKeyB) < 0,
+                             5000);
 
     dbCombo->setCurrentIndex(1);
     QTRY_COMPARE_WITH_TIMEOUT(dbCombo->currentData().toInt(), 1, 1000);
@@ -251,7 +312,8 @@ void TestMainWindow::browsesAndShowsValues()
             command(cleanup, {QByteArrayLiteral("HGET"), hashKey, QByteArrayLiteral("field")},
                     &error);
         QCOMPARE(hashValue.scalar, QByteArray("value2"));
-        command(cleanup, {QByteArrayLiteral("DEL"), stringKey, hashKey, bigHashKey}, &error);
+        command(cleanup, {QByteArrayLiteral("DEL"), stringKey, hashKey, bigHashKey, batchKeyA,
+                          batchKeyB}, &error);
         command(cleanup, {QByteArrayLiteral("SELECT"), QByteArrayLiteral("1")}, &error);
         command(cleanup, {QByteArrayLiteral("DEL"), QByteArrayLiteral("keydis:ui:db1")}, &error);
         command(cleanup, {QByteArrayLiteral("SELECT"), QByteArrayLiteral("0")}, &error);

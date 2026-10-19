@@ -50,6 +50,10 @@ public:
                                  const QString &username, const QString &password, int db);
     void connectNow();
     void showTab(const QString &name);
+
+public slots:
+    void deleteSelectedKeys();
+    void setSelectedKeysTtl();
     void setClusterMode(bool cluster);
 
 private:
@@ -61,6 +65,7 @@ private:
     void selectKey(const QModelIndex &current, const QModelIndex &previous);
     void selectTreeKey(const QModelIndex &current, const QModelIndex &previous);
     void showKeyContextMenu(const QPoint &position);
+    [[nodiscard]] QVector<KeyInfo> selectedKeys() const;
     void showTreeContextMenu(const QPoint &position);
     void renameKey(const KeyInfo &info);
     void deleteKey(const KeyInfo &info);
@@ -130,6 +135,7 @@ private:
     QLabel *m_scanStatus = nullptr;
     bool m_indexingAll = false;
     bool m_authPromptTried = false;
+    quint64 m_keyGeneration = 0;
     QTableView *m_keyTable = nullptr;
     QTreeView *m_treeView = nullptr;
     NamespaceTreeModel *m_treeModel = nullptr;

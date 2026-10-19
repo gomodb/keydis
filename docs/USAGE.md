@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.16）
+# KeyDis 使用说明（0.4.17）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -69,6 +69,7 @@ Dashboard 只执行一次 `INFO`，不会逐 Key 发命令；适合作为连接�
 - **Load more**：继续当前 cursor，不清空列表。
 - **TTL**：显示 `persistent`、`missing` 或人类可读的剩余时间；小于 60 秒标红。
 - Key 列表使用 `SCAN`，不会执行 `KEYS *`；单页最多 500 个 Key（`COUNT 500`）。
+- Key 表支持 Ctrl/Shift 多选；右键可对选中 Key 批量删除或批量设置 TTL。
 - 重复 Key 会自动去重。
 - **Index all**：完整扫描当前 pattern/type，用于精确命名空间计数；大库会占用较多内存，可随时用 **Scan** 取消并重新开始。
 
@@ -90,6 +91,8 @@ Dashboard 只执行一次 `INFO`，不会逐 Key 发命令；适合作为连接�
 | 其他模块类型 | 只读提示 | 使用 CLI |
 
 Hash/List/Set/ZSet 每次加载最多 500 个元素；点击 **Load more** 继续。所有修改会刷新到第一页。
+
+值面板顶部的 **Filter loaded rows** 只过滤当前已加载的表格行（Hash/List/Set/ZSet/Stream），不会重新向服务器查询。String 页的 **Hex view...** 以只读十六进制 + ASCII 形式查看原始字节。
 
 ### RedisJSON
 
@@ -229,6 +232,8 @@ redis 127.0.0.1
 - 只读模式是 UI 层保护，不是服务端 ACL；生产环境仍建议使用只读 ACL 用户；
 - 精确命名空间计数需要 `Index all`，大库会占用较多内存；
 - Stream 组/Pending 支持查看与 claim/ack，但更完整的 consumer 管理/自动 claim 未实现；RedisJSON 树支持标量编辑、对象/数组添加与节点删除；对象键重命名等复杂重排仍建议 raw 编辑；
+- Key 批量操作目前只覆盖删除与 TTL；批量重命名/移动/复制到其他 DB 尚未实现；
+- 值过滤只作用于已加载行；String 的 Hex 视图为只读，二进制编辑尚未实现；
 - CLI 的阻塞命令会占用主连接；Pub/Sub/Monitor 请用 Tools；
 - 中文翻译已内置（`zh_CN`），其他语言尚未提供；
 - Arch 包位于 `packaging/arch/`；Flatpak 明确不在 v1.0 范围。

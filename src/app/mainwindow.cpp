@@ -280,7 +280,7 @@ void MainWindow::buildUi()
     m_model = new KeyTableModel(this);
     m_keyTable->setModel(m_model);
     m_keyTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    m_keyTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    m_keyTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
     m_keyTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_keyTable->setAlternatingRowColors(true);
     m_keyTable->setWordWrap(false);
@@ -1119,6 +1119,7 @@ void MainWindow::startScan()
     if (!m_router.isReady())
         return;
     m_scanner->stop();
+    ++m_keyGeneration;
     m_indexingAll = false;
     m_model->clear();
     m_treeModel->clear();
@@ -1205,11 +1206,45 @@ void MainWindow::syncDatabaseUi(int db)
     m_dbCombo->setCurrentIndex(index);
 }
 
+QVector<KeyInfo> MainWindow::selectedKeys() const
+{
+    QVector<KeyInfo> keys;
+    if (!m_keyTable)
+        return keys;
+    const QModelIndexList rows = m_keyTable->selectionModel()->selectedRows();
+    for (const QModelIndex &index : rows) {
+        const KeyInfo info = m_model->keyAt(index.row());
+        if (info.isValid())
+            keys.append(info);
+    }
+    return keys;
+}
+
 void MainWindow::showKeyContextMenu(const QPoint &position)
 {
     const QModelIndex index = m_keyTable->indexAt(position);
     if (!index.isValid())
         return;
+    if (!m_keyTable->selectionModel()->isRowSelected(index.row(), QModelIndex()))
+        m_keyTable->selectRow(index.row());
+
+    const QVector<KeyInfo> selection = selectedKeys();
+    if (selection.size() > 1) {
+        QMenu menu(this);
+        QAction *deleteAction = menu.addAction(tr("Delete %1 keys...").arg(selection.size()));
+        deleteAction->setObjectName(QStringLiteral("batchDeleteAction"));
+        QAction *ttlAction = menu.addAction(tr("Set TTL for %1 keys...").arg(selection.size()));
+        ttlAction->setObjectName(QStringLiteral("batchTtlAction"));
+        deleteAction->setEnabled(!m_readOnlyCheck->isChecked());
+        ttlAction->setEnabled(!m_readOnlyCheck->isChecked());
+        const QAction *chosen = menu.exec(m_keyTable->viewport()->mapToGlobal(position));
+        if (chosen == deleteAction)
+            deleteSelectedKeys();
+        else if (chosen == ttlAction)
+            setSelectedKeysTtl();
+        return;
+    }
+
     const KeyInfo info = m_model->keyAt(index.row());
     if (!info.isValid())
         return;
@@ -1240,6 +1275,146 @@ void MainWindow::showKeyContextMenu(const QPoint &position)
         copyKeyToProfile(info);
     else if (chosen == refreshAction)
         m_valuePanel->loadKey(info);
+}
+
+void MainWindow::deleteSelectedKeys()
+{
+    if (m_readOnlyCheck->isChecked()) {
+        m_scanStatus->setText(tr("Read-only mode: delete is disabled"));
+        return;
+    }
+    const QVector<KeyInfo> keys = selectedKeys();
+    if (keys.isEmpty())
+        return;
+    QString sample;
+    for (int index = 0; index < keys.size() && index < 5; ++index)
+        sample += QString::fromUtf8(keys.at(index).key) + QLatin1Char('\n');
+    if (QMessageBox::question(
+            this, tr("Delete keys"),
+            tr("Delete %1 selected keys?\n\n%2").arg(keys.size()).arg(sample)
+                + (keys.size() > 5 ? tr("...") : QString()))
+        != QMessageBox::Yes) {
+        return;
+    }
+
+    struct BatchState {
+        int remaining = 0;
+        int deleted = 0;
+        int failed = 0;
+        quint64 generation = 0;
+    };
+    auto state = std::make_shared<BatchState>();
+    state->remaining = keys.size();
+    state->generation = m_keyGeneration;
+    m_scanStatus->setText(tr("Deleting %1 keys...").arg(keys.size()));
+
+    for (const KeyInfo &info : keys) {
+        const QByteArray key = info.key;
+        auto finish = [this, state, key](bool success) {
+            if (state->generation != m_keyGeneration)
+                return;
+            if (success) {
+                ++state->deleted;
+                removeKeyFromViews(key);
+                if (m_valuePanel->currentKey() == key)
+                    m_valuePanel->clearKey();
+            } else {
+                ++state->failed;
+            }
+            if (--state->remaining == 0) {
+                m_scanStatus->setText(
+                    state->failed == 0
+                        ? tr("Deleted %1 keys").arg(state->deleted)
+                        : tr("Deleted %1 keys; %2 failed")
+                              .arg(state->deleted)
+                              .arg(state->failed));
+            }
+        };
+
+        m_router.sendCommand({QByteArrayLiteral("UNLINK"), key},
+                             [this, key, finish](const RespValue &reply, const QString &error) {
+            if (!error.isEmpty()) {
+                finish(false);
+                return;
+            }
+            if (reply.isError()) {
+                m_router.sendCommand({QByteArrayLiteral("DEL"), key},
+                                     [this, finish](const RespValue &fallback,
+                                                    const QString &fallbackError) {
+                    if (!fallbackError.isEmpty() || fallback.isError())
+                        finish(false);
+                    else
+                        finish(true);
+                });
+                return;
+            }
+            finish(true);
+        });
+    }
+}
+
+void MainWindow::setSelectedKeysTtl()
+{
+    if (m_readOnlyCheck->isChecked()) {
+        m_scanStatus->setText(tr("Read-only mode: TTL is disabled"));
+        return;
+    }
+    const QVector<KeyInfo> keys = selectedKeys();
+    if (keys.isEmpty())
+        return;
+    bool ok = false;
+    const int seconds = QInputDialog::getInt(
+        this, tr("Set TTL for keys"), tr("TTL in seconds (-1 = persist):"), -1, -1,
+        2147483647, 1, &ok);
+    if (!ok)
+        return;
+
+    struct BatchState {
+        int remaining = 0;
+        int updated = 0;
+        int failed = 0;
+        quint64 generation = 0;
+    };
+    auto state = std::make_shared<BatchState>();
+    state->remaining = keys.size();
+    state->generation = m_keyGeneration;
+    m_scanStatus->setText(tr("Updating TTL for %1 keys...").arg(keys.size()));
+
+    for (const KeyInfo &info : keys) {
+        const QList<QByteArray> command = seconds < 0
+            ? QList<QByteArray>{QByteArrayLiteral("PERSIST"), info.key}
+            : QList<QByteArray>{QByteArrayLiteral("EXPIRE"), info.key,
+                                QByteArray::number(seconds)};
+        m_router.sendCommand(command, [this, state, info, seconds](const RespValue &reply,
+                                                                   const QString &error) {
+            if (state->generation != m_keyGeneration)
+                return;
+            bool success = error.isEmpty() && !reply.isError();
+            if (success && seconds >= 0 && reply.type == RespType::Integer
+                && reply.integer == 0) {
+                success = false;
+            }
+            if (success) {
+                KeyInfo updated = info;
+                updated.ttlMs = seconds < 0 ? -1 : qint64(seconds) * 1000;
+                m_model->updateKey(updated);
+                m_treeModel->updateKey(updated);
+                if (m_valuePanel->currentKey() == info.key)
+                    m_valuePanel->loadKey(updated);
+                ++state->updated;
+            } else {
+                ++state->failed;
+            }
+            if (--state->remaining == 0) {
+                m_scanStatus->setText(
+                    state->failed == 0
+                        ? tr("Updated TTL for %1 keys").arg(state->updated)
+                        : tr("Updated TTL for %1 keys; %2 failed")
+                              .arg(state->updated)
+                              .arg(state->failed));
+            }
+        });
+    }
 }
 
 void MainWindow::showTreeContextMenu(const QPoint &position)

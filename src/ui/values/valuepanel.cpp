@@ -40,6 +40,32 @@ namespace KeyDis {
 
 namespace {
 
+QString hexDump(const QByteArray &data)
+{
+    if (data.isEmpty())
+        return QStringLiteral("(empty)");
+    QString output;
+    const int bytesPerLine = 16;
+    for (int offset = 0; offset < data.size(); offset += bytesPerLine) {
+        const int count = qMin(bytesPerLine, data.size() - offset);
+        QString hex;
+        QString ascii;
+        for (int index = 0; index < bytesPerLine; ++index) {
+            if (index < count) {
+                const auto byte = static_cast<unsigned char>(data.at(offset + index));
+                hex += QStringLiteral("%1 ").arg(byte, 2, 16, QLatin1Char('0')).toUpper();
+                ascii += (byte >= 32 && byte < 127) ? QChar(byte) : QLatin1Char('.');
+            } else {
+                hex += QStringLiteral("   ");
+            }
+        }
+        output += QStringLiteral("%1  %2 %3\n")
+                      .arg(offset, 8, 16, QLatin1Char('0'))
+                      .arg(hex, ascii);
+    }
+    return output;
+}
+
 QHash<QString, QString> responseMap(const RespValue &value)
 {
     QHash<QString, QString> result;
@@ -210,6 +236,12 @@ void ValuePanel::buildUi()
     connect(m_undoButton, &QPushButton::clicked, this, &ValuePanel::undoLast);
     layout->addLayout(header);
 
+    m_valueFilter = new QLineEdit(this);
+    m_valueFilter->setObjectName(QStringLiteral("valueFilter"));
+    m_valueFilter->setPlaceholderText(tr("Filter loaded rows"));
+    m_valueFilter->setClearButtonEnabled(true);
+    layout->addWidget(m_valueFilter);
+
     m_stack = new QStackedWidget(this);
     m_stack->setObjectName(QStringLiteral("valueStack"));
 
@@ -237,6 +269,7 @@ void ValuePanel::buildUi()
     });
     connect(ttlButton, &QPushButton::clicked, this, &ValuePanel::editTtl);
     connect(deleteButton, &QPushButton::clicked, this, &ValuePanel::deleteKey);
+    connect(m_valueFilter, &QLineEdit::textChanged, this, &ValuePanel::filterValueRows);
 }
 
 QWidget *ValuePanel::buildStringPage()
@@ -255,13 +288,17 @@ QWidget *ValuePanel::buildStringPage()
     saveButton->setObjectName(QStringLiteral("saveStringButton"));
     auto *rangeButton = new QPushButton(tr("Replace range..."), page);
     rangeButton->setObjectName(QStringLiteral("replaceRangeButton"));
+    auto *hexButton = new QPushButton(tr("Hex view..."), page);
+    hexButton->setObjectName(QStringLiteral("hexViewButton"));
     row->addWidget(saveButton);
     row->addWidget(rangeButton);
+    row->addWidget(hexButton);
     m_writeWidgets << saveButton << rangeButton;
     row->addStretch();
     layout->addLayout(row);
     connect(saveButton, &QPushButton::clicked, this, &ValuePanel::saveString);
     connect(rangeButton, &QPushButton::clicked, this, &ValuePanel::partialStringEdit);
+    connect(hexButton, &QPushButton::clicked, this, &ValuePanel::showHexView);
     return page;
 }
 
@@ -639,6 +676,11 @@ QWidget *ValuePanel::buildRawPage()
     return page;
 }
 
+QByteArray ValuePanel::currentKey() const
+{
+    return m_key;
+}
+
 void ValuePanel::loadKey(const KeyInfo &info)
 {
     if (info.key.isEmpty()) {
@@ -647,8 +689,18 @@ void ValuePanel::loadKey(const KeyInfo &info)
     }
     ++m_generation;
     clearUndo();
+    if (m_valueFilter) {
+        m_valueFilter->clear();
+    }
     m_key = info.key;
     m_type = info.type;
+    if (m_valueFilter) {
+        m_valueFilter->setVisible(m_type == QLatin1String("hash")
+                                  || m_type == QLatin1String("list")
+                                  || m_type == QLatin1String("set")
+                                  || m_type == QLatin1String("zset")
+                                  || m_type == QLatin1String("stream"));
+    }
     m_ttlMs = info.ttlMs;
     m_hashCursor = QByteArrayLiteral("0");
     m_setCursor = QByteArrayLiteral("0");
@@ -692,6 +744,11 @@ void ValuePanel::clearKey()
 {
     ++m_generation;
     clearUndo();
+    if (m_valueFilter) {
+        m_valueFilter->clear();
+        m_valueFilter->setVisible(false);
+    }
+    m_stringRaw.clear();
     m_key.clear();
     m_type.clear();
     m_ttlMs = -2;
@@ -708,6 +765,30 @@ void ValuePanel::clearKey()
     if (m_setMoreButton) m_setMoreButton->setEnabled(false);
     if (m_zsetMoreButton) m_zsetMoreButton->setEnabled(false);
     m_stack->setCurrentIndex(EmptyPage);
+}
+
+void ValuePanel::filterValueRows(const QString &text)
+{
+    const QString needle = text.trimmed();
+    const QList<QTableWidget *> tables{m_hashTable, m_listTable, m_setTable, m_zsetTable,
+                                       m_streamTable};
+    for (QTableWidget *table : tables) {
+        if (!table)
+            continue;
+        for (int row = 0; row < table->rowCount(); ++row) {
+            bool match = needle.isEmpty();
+            if (!match) {
+                for (int column = 0; column < table->columnCount(); ++column) {
+                    if (table->item(row, column)
+                        && table->item(row, column)->text().contains(needle, Qt::CaseInsensitive)) {
+                        match = true;
+                        break;
+                    }
+                }
+            }
+            table->setRowHidden(row, !match);
+        }
+    }
 }
 
 void ValuePanel::setReadOnly(bool readOnly)
@@ -767,6 +848,7 @@ void ValuePanel::loadString()
                        showError(QString::fromUtf8(reply.scalar));
                        return;
                    }
+                   m_stringRaw = reply.scalar;
                    m_stringEdit->setPlainText(scalarText(reply));
                    setStatus(tr("String loaded"));
                });
@@ -812,6 +894,8 @@ void ValuePanel::loadHashPage(const QByteArray &cursor, bool append)
                        m_hashTable->setItem(row, 0, readOnlyItem(field));
                        m_hashTable->setItem(row, 1, new QTableWidgetItem(value));
                    }
+                   if (m_valueFilter)
+                       filterValueRows(m_valueFilter->text());
                    m_loading = false;
                    m_hashCursor = reply.elements[0].scalar;
                    m_hashMoreButton->setEnabled(m_hashCursor != QByteArrayLiteral("0"));
@@ -865,6 +949,8 @@ void ValuePanel::loadListPage(int offset, bool append)
                    }
                    m_listOffset = offset + int(reply.elements.size());
                    m_listMoreButton->setEnabled(reply.elements.size() == 500);
+                   if (m_valueFilter)
+                       filterValueRows(m_valueFilter->text());
                    m_loading = false;
                    setStatus(tr("%1 elements loaded%2")
                                  .arg(m_listTable->rowCount())
@@ -906,6 +992,8 @@ void ValuePanel::loadSetPage(const QByteArray &cursor, bool append)
                        m_setTable->insertRow(row);
                        m_setTable->setItem(row, 0, readOnlyItem(scalarText(member)));
                    }
+                   if (m_valueFilter)
+                       filterValueRows(m_valueFilter->text());
                    m_loading = false;
                    m_setCursor = reply.elements[0].scalar;
                    m_setMoreButton->setEnabled(m_setCursor != QByteArrayLiteral("0"));
@@ -957,6 +1045,8 @@ void ValuePanel::loadZSetPage(const QByteArray &cursor, bool append)
                        m_zsetTable->setItem(row, 0, readOnlyItem(member));
                        m_zsetTable->setItem(row, 1, new QTableWidgetItem(score));
                    }
+                   if (m_valueFilter)
+                       filterValueRows(m_valueFilter->text());
                    m_loading = false;
                    m_zsetCursor = reply.elements[0].scalar;
                    m_zsetMoreButton->setEnabled(m_zsetCursor != QByteArrayLiteral("0"));
@@ -1026,6 +1116,8 @@ void ValuePanel::loadStream()
                        m_streamTable->setItem(row, 1,
                                               readOnlyItem(fields.join(QStringLiteral(", "))));
                    }
+                   if (m_valueFilter)
+                       filterValueRows(m_valueFilter->text());
                    m_loading = false;
                    setStatus(tr("%1 stream entries loaded").arg(m_streamTable->rowCount()));
                    loadStreamGroups();
@@ -1418,6 +1510,23 @@ void ValuePanel::updateJsonButtons()
     m_jsonRenameButton->setEnabled(!m_readOnly && item && !root && objectChild);
 }
 
+void ValuePanel::showHexView()
+{
+    QDialog dialog(this);
+    dialog.setWindowTitle(tr("Hex view: %1").arg(displayKey(m_key)));
+    dialog.resize(760, 520);
+    auto *layout = new QVBoxLayout(&dialog);
+    auto *view = new QPlainTextEdit(&dialog);
+    view->setReadOnly(true);
+    view->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+    view->setPlainText(hexDump(m_stringRaw));
+    layout->addWidget(view, 1);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    layout->addWidget(buttons);
+    dialog.exec();
+}
+
 void ValuePanel::addJsonChild()
 {
     if (m_readOnly || !m_jsonTree)
@@ -1642,6 +1751,7 @@ void ValuePanel::saveString()
                        showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
                        return;
                    }
+                   m_stringRaw = m_stringEdit->toPlainText().toUtf8();
                    setStatus(tr("String saved"));
                    emit keyChanged(m_key);
                });

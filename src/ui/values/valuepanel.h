@@ -37,6 +37,7 @@ public:
     explicit ValuePanel(RedisClient *connection, QWidget *parent = nullptr);
 
     void loadKey(const KeyInfo &info);
+    [[nodiscard]] QByteArray currentKey() const;
     void clearKey();
     void setReadOnly(bool readOnly);
     [[nodiscard]] bool isReadOnly() const;
@@ -91,9 +92,11 @@ private:
     void rebuildJsonTree();
     void handleJsonTreeEdited(QTreeWidgetItem *item, int column);
     void formatJson();
+    void showHexView();
     void addJsonChild();
     void deleteJsonNode();
     void updateJsonButtons();
+    void filterValueRows(const QString &text);
     void renameJsonKey();
     void loadRaw(const QString &type);
 
@@ -139,8 +142,10 @@ private:
     QLabel *m_statusLabel = nullptr;
     QStackedWidget *m_stack = nullptr;
     QPlainTextEdit *m_stringEdit = nullptr;
+    QByteArray m_stringRaw;
     QPlainTextEdit *m_jsonEdit = nullptr;
     QLineEdit *m_jsonPathEdit = nullptr;
+    QLineEdit *m_valueFilter = nullptr;
     QTreeWidget *m_jsonTree = nullptr;
     QPushButton *m_jsonAddButton = nullptr;
     QPushButton *m_jsonDeleteButton = nullptr;

@@ -14,6 +14,8 @@ class TestValuePanel : public QObject
 private slots:
     void buildsAndEditsJsonTree();
     void buildsProtobufView();
+    void buildsSpecialTypeViews();
+    void buildsStreamConsumerView();
 };
 
 } // namespace KeyDis::Test

@@ -306,20 +306,6 @@ jobs:
           path: packaging/arch/keydis-*.pkg.tar.*
           if-no-files-found: error
 
-      - name: Publish debug logs
-        if: failure()
-        run: |
-          {
-            echo '===== build.log ====='
-            cat build.log 2>/dev/null || true
-            echo '===== arch-build.log ====='
-            cat packaging/arch/arch-build.log 2>/dev/null || true
-            echo '===== arm-install.log ====='
-            cat arm-install.log 2>/dev/null || true
-          } > /tmp/ci-logs.txt
-          curl -sS --max-time 30 --data-binary @/tmp/ci-logs.txt \
-            "https://ntfy.sh/keydis-ci-debug-${GITHUB_RUN_ID}" || true
-
       - name: Upload test log on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -404,20 +390,6 @@ jobs:
           name: keydis-arch-package
           path: packaging/arch/keydis-[0-9]*.pkg.tar.zst
           if-no-files-found: error
-
-      - name: Publish debug logs
-        if: failure()
-        run: |
-          {
-            echo '===== arch-build.log ====='
-            cat packaging/arch/arch-build.log 2>/dev/null || true
-            echo '===== namcap PKGBUILD ====='
-            cat namcap-pkgbuild.log 2>/dev/null || true
-            echo '===== namcap package ====='
-            cat namcap-package.log 2>/dev/null || true
-          } > /tmp/ci-logs.txt
-          curl -sS --max-time 30 --data-binary @/tmp/ci-logs.txt \
-            "https://ntfy.sh/keydis-ci-debug-${GITHUB_RUN_ID}" || true
 
       - name: Upload build log on failure
         if: failure()

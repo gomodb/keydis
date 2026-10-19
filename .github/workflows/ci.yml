@@ -303,7 +303,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: keydis-archlinuxarm
-          path: packaging/arch/keydis-[0-9]*.pkg.tar.zst
+          path: packaging/arch/keydis-*.pkg.tar.*
           if-no-files-found: error
 
       - name: Publish debug logs
@@ -456,11 +456,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cd dist
-          sha256sum *.pkg.tar.zst > SHA256SUMS
+          sha256sum *.pkg.tar.* > SHA256SUMS
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" ./*.pkg.tar.zst SHA256SUMS --clobber
+            gh release upload "$GITHUB_REF_NAME" ./*.pkg.tar.* SHA256SUMS --clobber
           else
-            gh release create "$GITHUB_REF_NAME" ./*.pkg.tar.zst SHA256SUMS \
+            gh release create "$GITHUB_REF_NAME" ./*.pkg.tar.* SHA256SUMS \
               --title "KeyDis $GITHUB_REF_NAME" \
               --generate-notes
           fi

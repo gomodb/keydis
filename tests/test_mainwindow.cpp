@@ -87,6 +87,7 @@ void TestMainWindow::browsesAndShowsValues()
     const QByteArray hashKey("keydis:ui:hash");
     const QByteArray bigHashKey("keydis:ui:big-hash");
     const QByteArray batchKeyA("keydis:ui:batch-a");
+    const QByteArray binaryKey("keydis:ui:binary");
     const QByteArray batchKeyB("keydis:ui:batch-b");
 
     {
@@ -96,7 +97,9 @@ void TestMainWindow::browsesAndShowsValues()
         QTRY_VERIFY_WITH_TIMEOUT(seed.isReady(), 5000);
         QString error;
         command(seed, {QByteArrayLiteral("DEL"), stringKey, hashKey, bigHashKey, batchKeyA,
-                       batchKeyB}, &error);
+                       batchKeyB, binaryKey}, &error);
+        command(seed, {QByteArrayLiteral("SET"), binaryKey,
+                       QByteArray("\x00\x01\xff", 3)}, &error);
         command(seed, {QByteArrayLiteral("SET"), batchKeyA, QByteArrayLiteral("batch-a")}, &error);
         command(seed, {QByteArrayLiteral("SET"), batchKeyB, QByteArrayLiteral("batch-b")}, &error);
         command(seed, {QByteArrayLiteral("SET"), stringKey, QByteArrayLiteral("hello")}, &error);
@@ -140,6 +143,8 @@ void TestMainWindow::browsesAndShowsValues()
         window.findChild<QPushButton *>(QStringLiteral("discardPendingButton"));
     auto *valueFilter = window.findChild<QLineEdit *>(QStringLiteral("valueFilter"));
     auto *hexButton = window.findChild<QPushButton *>(QStringLiteral("hexViewButton"));
+    auto *editBytesButton =
+        window.findChild<QPushButton *>(QStringLiteral("editBytesButton"));
     auto *keyLabel = window.findChild<QLabel *>(QStringLiteral("keyLabel"));
     auto *saveButton = window.findChild<QPushButton *>(QStringLiteral("saveStringButton"));
     auto *discardStringButton =
@@ -169,6 +174,7 @@ void TestMainWindow::browsesAndShowsValues()
     QVERIFY(discardPendingButton);
     QVERIFY(valueFilter);
     QVERIFY(hexButton);
+    QVERIFY(editBytesButton);
     QVERIFY(keyLabel);
     QVERIFY(saveButton);
     QVERIFY(discardStringButton);
@@ -371,7 +377,7 @@ void TestMainWindow::browsesAndShowsValues()
                     &error);
         QCOMPARE(hashValue.scalar, QByteArray("value2"));
         command(cleanup, {QByteArrayLiteral("DEL"), stringKey, hashKey, bigHashKey, batchKeyA,
-                          batchKeyB}, &error);
+                          batchKeyB, binaryKey}, &error);
         command(cleanup, {QByteArrayLiteral("SELECT"), QByteArrayLiteral("1")}, &error);
         command(cleanup, {QByteArrayLiteral("DEL"), QByteArrayLiteral("keydis:ui:db1")}, &error);
         command(cleanup, {QByteArrayLiteral("SELECT"), QByteArrayLiteral("0")}, &error);

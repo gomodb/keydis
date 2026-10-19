@@ -6,6 +6,7 @@
 #include "core/net/redisclient.h"
 #include "core/resp/respvalue.h"
 #include "ui/dialogs/batcheditdialog.h"
+#include "ui/dialogs/binaryeditdialog.h"
 
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -311,6 +312,8 @@ QWidget *ValuePanel::buildStringPage()
     rangeButton->setObjectName(QStringLiteral("replaceRangeButton"));
     auto *hexButton = new QPushButton(tr("Hex view..."), page);
     hexButton->setObjectName(QStringLiteral("hexViewButton"));
+    auto *bytesButton = new QPushButton(tr("Edit bytes..."), page);
+    bytesButton->setObjectName(QStringLiteral("editBytesButton"));
     m_stringDiscardButton = new QPushButton(tr("Discard"), page);
     m_stringDiscardButton->setObjectName(QStringLiteral("discardStringButton"));
     m_stringDiscardButton->setEnabled(false);
@@ -318,14 +321,16 @@ QWidget *ValuePanel::buildStringPage()
     row->addWidget(m_stringDiscardButton);
     row->addWidget(rangeButton);
     row->addWidget(hexButton);
-    m_writeWidgets << saveButton << m_stringDiscardButton << rangeButton;
+    row->addWidget(bytesButton);
+    m_writeWidgets << saveButton << m_stringDiscardButton << rangeButton << bytesButton;
     row->addStretch();
     layout->addLayout(row);
     connect(saveButton, &QPushButton::clicked, this, &ValuePanel::saveString);
     connect(rangeButton, &QPushButton::clicked, this, &ValuePanel::partialStringEdit);
     connect(hexButton, &QPushButton::clicked, this, &ValuePanel::showHexView);
+    connect(bytesButton, &QPushButton::clicked, this, &ValuePanel::editStringBytes);
     connect(m_stringDiscardButton, &QPushButton::clicked, this, &ValuePanel::discardString);
-    connect(m_stringEdit, &QPlainTextEdit::textChanged, this, &ValuePanel::updateDirtyLabel);
+    connect(m_stringEdit, &QPlainTextEdit::textChanged, this, &ValuePanel::stringTextChanged);
     return page;
 }
 
@@ -738,6 +743,7 @@ void ValuePanel::clearKey()
         m_valueFilter->setVisible(false);
     }
     m_stringRaw.clear();
+    m_stringLoadedRaw.clear();
     m_stringLoaded.clear();
     m_jsonLoaded.clear();
     m_stringDirty = false;
@@ -845,7 +851,10 @@ void ValuePanel::loadString()
                        return;
                    }
                    m_stringRaw = reply.scalar;
+                   m_stringLoadedRaw = m_stringRaw;
+                   m_stringUpdating = true;
                    m_stringEdit->setPlainText(scalarText(reply));
+                   m_stringUpdating = false;
                    m_stringLoaded = m_stringEdit->toPlainText();
                    m_stringDirty = false;
                    updateDirtyLabel();
@@ -1509,6 +1518,29 @@ void ValuePanel::updateJsonButtons()
     m_jsonRenameButton->setEnabled(!m_readOnly && item && !root && objectChild);
 }
 
+void ValuePanel::editStringBytes()
+{
+    if (m_readOnly || m_key.isEmpty())
+        return;
+    BinaryEditDialog dialog(tr("Edit bytes: %1").arg(displayKey(m_key)), m_stringRaw, this);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+    m_stringRaw = dialog.bytes();
+    m_stringUpdating = true;
+    m_stringEdit->setPlainText(QString::fromUtf8(m_stringRaw));
+    m_stringUpdating = false;
+    updateDirtyLabel();
+    setStatus(tr("Bytes modified; click Save string"));
+}
+
+void ValuePanel::stringTextChanged()
+{
+    if (m_stringUpdating)
+        return;
+    m_stringRaw = m_stringEdit->toPlainText().toUtf8();
+    updateDirtyLabel();
+}
+
 void ValuePanel::showHexView()
 {
     QDialog dialog(this);
@@ -1746,20 +1778,22 @@ void ValuePanel::saveString()
         return;
     if (m_key.isEmpty())
         return;
+    const QByteArray bytes = m_stringRaw;
     QPointer<ValuePanel> guard(this);
-    runCommand({QByteArrayLiteral("SET"), m_key, m_stringEdit->toPlainText().toUtf8(),
-                QByteArrayLiteral("KEEPTTL")},
-               [guard, this](const RespValue &reply, const QString &error) {
+    runCommand({QByteArrayLiteral("SET"), m_key, bytes, QByteArrayLiteral("KEEPTTL")},
+               [guard, this, bytes](const RespValue &reply, const QString &error) {
                    if (!guard)
                        return;
                    if (!error.isEmpty() || reply.isError()) {
                        showError(error.isEmpty() ? QString::fromUtf8(reply.scalar) : error);
                        return;
                    }
-                   m_stringRaw = m_stringEdit->toPlainText().toUtf8();
-                   m_stringLoaded = m_stringEdit->toPlainText();
-                   m_stringDirty = false;
-                   updateDirtyLabel();
+                   if (m_stringRaw == bytes) {
+                       m_stringLoadedRaw = bytes;
+                       m_stringLoaded = m_stringEdit->toPlainText();
+                       m_stringDirty = false;
+                       updateDirtyLabel();
+                   }
                    setStatus(tr("String saved"));
                    emit keyChanged(m_key);
                });
@@ -2519,7 +2553,7 @@ void ValuePanel::clearPending()
 void ValuePanel::updateDirtyLabel()
 {
     if (m_type == QLatin1String("string") && m_stringEdit) {
-        m_stringDirty = m_stringEdit->toPlainText() != m_stringLoaded;
+        m_stringDirty = m_stringRaw != m_stringLoadedRaw;
     } else if ((m_type == QLatin1String("ReJSON-RL") || m_type == QLatin1String("json"))
                && m_jsonEdit) {
         m_jsonDirty = m_jsonEdit->toPlainText() != m_jsonLoaded;
@@ -2541,7 +2575,10 @@ void ValuePanel::discardString()
 {
     if (m_readOnly || !m_stringDirty)
         return;
+    m_stringRaw = m_stringLoadedRaw;
+    m_stringUpdating = true;
     m_stringEdit->setPlainText(m_stringLoaded);
+    m_stringUpdating = false;
     m_stringDirty = false;
     updateDirtyLabel();
     setStatus(tr("String changes discarded"));

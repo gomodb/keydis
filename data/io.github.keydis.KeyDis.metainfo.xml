@@ -18,6 +18,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.23" date="2026-10-19">
+      <description>
+        <p>Binary-safe String editing with an editable Hex/Base64 byte dialog; Save string now writes the raw byte buffer.</p>
+      </description>
+    </release>
     <release version="0.4.22" date="2026-10-19">
       <description>
         <p>Split connection views: two tab panes side by side, with independent sessions and active-pane tab creation.</p>

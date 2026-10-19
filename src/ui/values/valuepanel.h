@@ -93,6 +93,8 @@ private:
     void handleJsonTreeEdited(QTreeWidgetItem *item, int column);
     void formatJson();
     void showHexView();
+    void editStringBytes();
+    void stringTextChanged();
     void addJsonChild();
     void deleteJsonNode();
     void updateJsonButtons();
@@ -157,7 +159,9 @@ private:
     QPlainTextEdit *m_stringEdit = nullptr;
     QPushButton *m_stringDiscardButton = nullptr;
     QByteArray m_stringRaw;
+    QByteArray m_stringLoadedRaw;
     QString m_stringLoaded;
+    bool m_stringUpdating = false;
     bool m_stringDirty = false;
     QPlainTextEdit *m_jsonEdit = nullptr;
     QPushButton *m_jsonDiscardButton = nullptr;

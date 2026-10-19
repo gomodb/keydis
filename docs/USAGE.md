@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.22）
+# KeyDis 使用说明（0.4.23）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -93,7 +93,7 @@ Dashboard 只执行一次 `INFO`，不会逐 Key 发命令；适合作为连接�
 
 | 类型 | 读取 | 编辑 |
 |---|---|---|
-| String | `GET` | 文本框 + `SET ... KEEPTTL`；**Replace range** 使用 `SETRANGE` |
+| String | `GET` | 文本框 + `SET ... KEEPTTL`；**Replace range** 使用 `SETRANGE`；**Edit bytes** 支持 Hex/Base64 原始字节编辑 |
 | Hash | `HSCAN` 分页，500/页 | 单元格 `HSET`；**Edit selected** 多字段 `HSET`，旧服务器回退 `HMSET`；添加/删除字段 |
 | List | `LRANGE` 分页，500/页 | 单元格 `LSET`；**Edit selected** 批量 `LSET`；头/尾插入；按值删除 |
 | Set | `SSCAN` 分页，500/页 | 添加 `SADD`；删除 `SREM`；**Edit selected** 重命名成员（`SREM`+`SADD`） |
@@ -146,6 +146,14 @@ Hash/List/Set/ZSet 每次加载最多 500 个元素；点击 **Load more** 继�
 点击 **Save string** 使用 `SET key value KEEPTTL`。旧版 Redis 不支持 `KEEPTTL` 时会显示错误；可改用 CLI。
 
 编辑 String 后标题旁出现 **● 已修改**，**Discard** 可恢复到最近一次加载/保存的内容。切换 Key 时未保存的 String/JSON 修改会被丢弃，不弹确认框。
+
+**Edit bytes...** 打开原始字节编辑器：
+
+- **Hex**：空格分隔的十六进制，允许换行/`0x`/`:`；
+- **Base64**：标准 Base64；
+- 对话框实时显示字节数和 ASCII 预览；
+- 确认后只修改本地缓冲，仍需点击 **Save string** 才发送 `SET`；
+- Text 模式仍是 UTF-8 文本预览，二进制数据请使用 Edit bytes 或 Hex view。
 
 ### Key 右键菜单
 
@@ -250,7 +258,7 @@ redis 127.0.0.1
 - 精确命名空间计数需要 `Index all`，大库会占用较多内存；
 - Stream 组/Pending 支持查看与 claim/ack，但更完整的 consumer 管理/自动 claim 未实现；RedisJSON 树支持标量编辑、对象/数组添加与节点删除；对象键重命名等复杂重排仍建议 raw 编辑；
 - Key 批量操作目前只覆盖删除与 TTL；批量重命名/移动/复制到其他 DB 尚未实现；
-- 值过滤只作用于已加载行；String 的 Hex 视图为只读，二进制编辑尚未实现；
+- 值过滤只作用于已加载行；String 的普通文本编辑仍是 UTF-8，二进制数据应使用 **Edit bytes**；Hex view 保持只读；
 - Hash/List/Set/ZSet 支持 Apply/Discard；添加/删除字段、成员、列表元素仍是立即写入，尚未纳入同一待提交会话；
 - 切换 Key 时未保存的 String/JSON 修改会被丢弃，尚未弹出确认；
 - CLI 的阻塞命令会占用主连接；Pub/Sub/Monitor 请用 Tools；

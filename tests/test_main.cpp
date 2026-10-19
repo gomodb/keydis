@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 KeyDis contributors
 
 #include "test_clusterclient.h"
+#include "test_byteformat.h"
 #include "test_commandsafety.h"
 #include "test_commandencoder.h"
 #include "test_keyscanner.h"
@@ -31,6 +32,9 @@ int main(int argc, char *argv[])
 
     KeyDis::Test::TestCommandSafety safety;
     status |= QTest::qExec(&safety, argc, argv);
+
+    KeyDis::Test::TestByteFormat byteFormat;
+    status |= QTest::qExec(&byteFormat, argc, argv);
 
     KeyDis::Test::TestClusterClient cluster;
     status |= QTest::qExec(&cluster, argc, argv);

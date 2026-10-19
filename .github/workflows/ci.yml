@@ -289,9 +289,11 @@ jobs:
       - name: Install and smoke test
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         run: |
-          package="$(find packaging/arch -maxdepth 1 -name 'keydis-[0-9]*.pkg.tar.zst' | head -n1)"
+          ls -la packaging/arch >> arm-install.log 2>&1 || true
+          package="$(find packaging/arch -maxdepth 1 -type f -name 'keydis-*.pkg.tar.*' | head -n1)"
+          echo "package=[$package]" >> arm-install.log
           test -n "$package"
-          pacman -U --noconfirm "$package" 2>&1 | tee arm-install.log
+          pacman -U --noconfirm "$package" 2>&1 | tee -a arm-install.log
           QT_QPA_PLATFORM=offscreen keydis --version 2>&1 | tee -a arm-install.log
           desktop-file-validate /usr/share/applications/io.github.keydis.KeyDis.desktop 2>&1 | tee -a arm-install.log
           appstreamcli validate --no-net /usr/share/metainfo/io.github.keydis.KeyDis.metainfo.xml 2>&1 | tee -a arm-install.log

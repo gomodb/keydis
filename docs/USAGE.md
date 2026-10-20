@@ -1,4 +1,4 @@
-# KeyDis 使用说明（0.4.39）
+# KeyDis 使用说明（0.4.40）
 
 ![KeyDis Dashboard](dashboard.png)
 
@@ -10,7 +10,7 @@ cmake --build build -j2
 ./build/keydis
 ```
 
-所有连接操作集中在左侧 **Connections** 面板：**New / Duplicate / Edit / Delete / Connect**（连接后同一按钮变为 **Disconnect**）、**New Tab**，以及 **Read-only** 开关。空列表会提示点击 **New** 创建连接；未选中 Profile 时，编辑/删除/复制/连接按钮禁用。分组可折叠，Profile 可设置颜色标记。双击 Profile 或点 **Connect** 打开。连接配置只保存非敏感字段，密码写入 **KWallet**。
+左侧 **Connections** 面板使用紧凑的两行按钮布局，最小宽度约 210 px，可拖动调整；所有连接操作集中在这里：**New / Duplicate / Edit / Delete / Connect**（连接后同一按钮变为 **Disconnect**）、**New Tab**，以及 **Read-only** 开关。空列表会提示点击 **New** 创建连接；未选中 Profile 时，编辑/删除/复制/连接按钮禁用。分组可折叠，Profile 可设置颜色标记。双击 Profile 或点 **Connect** 打开。连接配置只保存非敏感字段，密码写入 **KWallet**。
 
 Profile 对话框分为 **Connection** / **Advanced** 两页；底部 **Test connection** 可对直连 Host/Port 做一次真实握手测试（SSH/Sentinel 模式不支持测试按钮）。
 

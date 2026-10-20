@@ -23,7 +23,7 @@ KeyDis 使用 **C++20、Qt 6 Widgets 和 KDE Frameworks 6** 构建，面向 Linu
 - **工具**：Dashboard、Slowlog、Clients、Pub/Sub、Monitor、内存分析、Cluster 节点、DUMP/RESTORE 导入导出。
 - **KDE 集成**：KRunner、系统主题、KWallet、中文界面。
 
-当前版本：**0.4.39**。
+当前版本：**0.4.40**。
 
 ## 构建
 

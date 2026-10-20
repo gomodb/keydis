@@ -510,6 +510,8 @@ void MainWindow::buildUi()
     QDockWidget *connectionsDock = m_connectionsDock;
     connectionsDock->setObjectName(QStringLiteral("connectionsDock"));
     auto *connectionsPanel = new QWidget(connectionsDock);
+    connectionsPanel->setObjectName(QStringLiteral("connectionsPanel"));
+    connectionsPanel->setMinimumWidth(210);
     auto *connectionsLayout = new QVBoxLayout(connectionsPanel);
     connectionsLayout->setContentsMargins(6, 6, 6, 6);
     m_profileEmptyLabel = new QLabel(tr("No saved connections. Click New to create one."),
@@ -526,9 +528,13 @@ void MainWindow::buildUi()
     m_profileList->setAlternatingRowColors(true);
     m_profileList->setSelectionMode(QAbstractItemView::SingleSelection);
     m_profileList->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_profileList->setMinimumWidth(0);
     connectionsLayout->addWidget(m_profileList, 1);
-    auto *profileButtons = new QHBoxLayout;
+    auto *profileButtons = new QGridLayout;
+    profileButtons->setHorizontalSpacing(4);
+    profileButtons->setVerticalSpacing(4);
     auto *newProfileButton = new QPushButton(tr("New"), connectionsPanel);
+    newProfileButton->setObjectName(QStringLiteral("newProfileButton"));
     m_profileDuplicateButton = new QPushButton(tr("Duplicate"), connectionsPanel);
     m_profileDuplicateButton->setObjectName(QStringLiteral("duplicateProfileButton"));
     m_profileEditButton = new QPushButton(tr("Edit"), connectionsPanel);
@@ -540,19 +546,23 @@ void MainWindow::buildUi()
     m_profileNewWindowButton = new QPushButton(tr("New Tab"), connectionsPanel);
     m_profileNewWindowButton->setObjectName(QStringLiteral("profileNewWindowButton"));
     m_profileNewWindowButton->setToolTip(tr("Open the selected connection in a new tab"));
-    profileButtons->addWidget(newProfileButton);
-    profileButtons->addWidget(m_profileDuplicateButton);
-    profileButtons->addWidget(m_profileEditButton);
-    profileButtons->addWidget(m_profileDeleteButton);
-    profileButtons->addWidget(m_profileConnectButton);
-    profileButtons->addWidget(m_profileNewWindowButton);
+    profileButtons->addWidget(newProfileButton, 0, 0);
+    profileButtons->addWidget(m_profileDuplicateButton, 0, 1);
+    profileButtons->addWidget(m_profileEditButton, 0, 2);
+    profileButtons->addWidget(m_profileDeleteButton, 1, 0);
+    profileButtons->addWidget(m_profileConnectButton, 1, 1);
+    profileButtons->addWidget(m_profileNewWindowButton, 1, 2);
+    for (int column = 0; column < 3; ++column)
+        profileButtons->setColumnStretch(column, 1);
     connectionsLayout->addLayout(profileButtons);
     m_readOnlyDock = new QCheckBox(tr("Read-only"), connectionsPanel);
     m_readOnlyDock->setObjectName(QStringLiteral("readOnlyDock"));
     m_readOnlyDock->setToolTip(tr("Disable editing and CLI write access for this session"));
     connectionsLayout->addWidget(m_readOnlyDock);
     connectionsDock->setWidget(connectionsPanel);
+    connectionsDock->setMinimumWidth(210);
     addDockWidget(Qt::LeftDockWidgetArea, connectionsDock);
+    resizeDocks({connectionsDock}, {280}, Qt::Horizontal);
     connect(connectionsDock, &QDockWidget::visibilityChanged, this,
             [this](bool visible) { emit connectionsDockVisibilityChanged(visible); });
     QAction *dockToggle = connectionsDock->toggleViewAction();

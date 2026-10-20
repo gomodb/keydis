@@ -18,6 +18,11 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.40" date="2026-10-21">
+      <description>
+        <p>Compact two-row Connections panel actions, reduced dock minimum width, and resizable dock starting at 280 px.</p>
+      </description>
+    </release>
     <release version="0.4.39" date="2026-10-20">
       <description>
         <p>Clang compatibility for RESP3 maps, and CI coverage for aarch64, Clang, ASan/UBSan, metadata and dual-architecture packages.</p>

@@ -445,6 +445,8 @@ void TestMainWindow::hostsMultipleSessionTabs()
     auto *dockAction = host.findChild<QAction *>(QStringLiteral("connectionsDockAction"));
     QVERIFY(dock);
     QVERIFY(dockAction);
+    QVERIFY(dock->minimumWidth() <= 260);
+    QVERIFY(dock->minimumSizeHint().width() <= 300);
     QVERIFY(!dock->isHidden());
     dock->close();
     QVERIFY(dock->isHidden());

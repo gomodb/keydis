@@ -74,7 +74,7 @@ jobs:
 
       - name: Upload test log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: x86_64-test-log
           path: |
@@ -121,7 +121,7 @@ jobs:
 
       - name: Upload test log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: clang-test-log
           path: |
@@ -171,7 +171,7 @@ jobs:
 
       - name: Upload test log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sanitizer-test-log
           path: |
@@ -300,7 +300,7 @@ jobs:
 
       - name: Upload aarch64 package
         if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: keydis-archlinuxarm
           path: packaging/arch/keydis-*.pkg.tar.*
@@ -308,7 +308,7 @@ jobs:
 
       - name: Upload test log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: arm64-test-log
           path: |
@@ -385,7 +385,7 @@ jobs:
           fi
 
       - name: Upload package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: keydis-arch-package
           path: packaging/arch/keydis-[0-9]*.pkg.tar.zst
@@ -393,7 +393,7 @@ jobs:
 
       - name: Upload build log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: package-build-log
           path: |
